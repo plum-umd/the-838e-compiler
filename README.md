@@ -1,12 +1,12 @@
-# CMSC 430: Design and Implementation of Programming Languages
+# CMSC 838E: Advanced Topics in Programming Languages
 
-This repository contains the course material for CMSC 430: Design and
-Implementation of Programming Languages (aka Compilers), taught at the
+This repository contains the course material for CMSC 838E: Advanced 
+Topics in Programming Languages (aka Advanced Compilers), taught at the
 University of Maryland, College Park.
 
 The current instance of this course is:
 
-* http://www.cs.umd.edu/class/spring2021/cmsc430/
+* http://www.cs.umd.edu/class/spring2021/cmsc838e/
 
 Copyright © 2019 David Van Horn
 
