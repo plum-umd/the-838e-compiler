@@ -1,4 +1,3 @@
-
 .boxedtable {
 
     background-color: inherit;
@@ -23,8 +22,11 @@ visibility:hidden;
    float: right;
 }
 
+.tocset td a {
+    color: #92919b;
+}
 .tocset td a.tocviewselflink {
-   color: black;
+    color: #fbfafb;
    text-decoration: underline;
 }
 
@@ -44,14 +46,22 @@ visibility:hidden;
 }
 
 .tocset {
-    background-color: hsl(293, 33%, 90%);
+    color: #fbfafb;
+    background-color: #2a292d;
 }
 
-a, .toclink, .toptoclink, .tocviewlink, .tocviewselflink, .tocviewtoggle, .plainlink, 
+a, .toclink, .toptoclink, .tocviewlink, .tocviewselflink, .tocviewtoggle, .plainlink,
 .techinside, .techoutside:hover, .techinside:hover {
-    color: hsl(296, 100%, 22%);
+    color: #22609e;
 }
 
 .boxed {
     background: linear-gradient(to bottom left, hsl(0, 0%, 99%) 0%, hsl(293, 33%, 90%) 100%);
+}
+
+.navsettop a, .navsetbottom a {
+    color: #fbfafb;
+}
+.navsettop a:hover, .navsetbottom a:hover {
+    background-color: black;
 }
