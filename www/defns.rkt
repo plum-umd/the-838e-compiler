@@ -2,12 +2,12 @@
 (provide (all-defined-out))
 (require scribble/core scribble/html-properties scribble/manual) 
 
-(define prof (link "https://lemonidas.github.io/" "Leonidas Lampropoulos"))
+(define prof (link "https://www.cs.umd.edu/~dvanhorn/" "David Van Horn"))
 (define prof-email "leonidas@umd.edu")
 
 (define semester "spring")
 (define year "2021")
-(define courseno "CMSC 430")
+(define courseno "CMSC 838E")
 
 (define IRB "IRB") 
 (define AVW "AVW")
@@ -20,9 +20,4 @@
 
 (define racket-version "7.9")
 
-(define staff
-  (list (list (link "http://jmct.cc/" "José Manuel Calderón Trilla") "jmct@umd.edu" "-")
-        (list "Deena Postol" "dpostol@umd.edu" "TBA")
-        (list "Tasnim Kabir" "tkabir1@cs.umd.edu" "TBA")        
-        (list "Temur Saidkhodjaev" "temurson@terpmail.umd.edu" "TBA")
-        (list "Vyas Gupta" "vgupta13@terpmail.umd.edu" "TBA")))
+(define staff '())
