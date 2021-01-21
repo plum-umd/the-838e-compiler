@@ -39,13 +39,13 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: www
-        path: cmsc838e
+        path: cmsc838E
     - name: Deploy to web
       uses: plum-umd/github-actions-rsync@master
       with:
         RSYNC_OPTIONS: -rvzp
         RSYNC_TARGET: /fs/www/class/spring2021/
-        RSYNC_SOURCE: cmsc838e
+        RSYNC_SOURCE: cmsc838E
       env:
         SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
         SSH_USERNAME: ${{secrets.SSH_USERNAME}}
