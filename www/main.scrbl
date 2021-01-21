@@ -15,7 +15,7 @@
    (style #f (list (js-addition "js/accessibility.js")
                    (attributes '((lang . "en"))))))
 
-@title[#:style accessible @courseno]{: Design and Implementation of Programming Languages}
+@title[#:style accessible @courseno]{: Advanced Topics in Programming Languages}
 
 @image[#:scale 1/2 #:style float-right]{img/wizard.png}
 
