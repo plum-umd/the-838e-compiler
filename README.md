@@ -1,4 +1,4 @@
-# CMSC 838E: Advanced Topics in Programming Languages
+# CMSC 838E: Advanced Compilers
 
 This repository contains the course material for CMSC 838E: Advanced 
 Topics in Programming Languages (aka Advanced Compilers), taught at the
