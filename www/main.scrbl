@@ -17,7 +17,7 @@
 
 @title[#:style accessible @courseno]{: Advanced Topics in Programming Languages}
 
-@image[#:scale 1/2 #:style float-right]{img/wizard.png}
+@image[#:scale 1/2 #:style float-right]{img/Dore-munchausen-illustration.jpg}
 
 @emph{@string-titlecase[semester], @year}
 
