@@ -8,13 +8,12 @@
          rackunit)
 
 (require (submod a86/printer private))
-(current-shared? #t)
 
 ;; link with byte.o for IO operations
-(unless (file-exists? "../byte.o")
-  (system "make -C .. byte.o"))
+(unless (file-exists? "../byte-shared.o")
+  (system "make -C .. byte-shared.o"))
 (current-objs
- (list (path->string (normalize-path "../byte.o"))))
+ (list (path->string (normalize-path "../byte-shared.o"))))
 
 (define (test-runner run)
   ;; Abscond examples
@@ -73,15 +72,16 @@
   (check-equal? (run '(eof-object? (read-byte)) "") (cons #t ""))
   (check-equal? (run '(eof-object? (read-byte)) "a") (cons #f ""))
   (check-equal? (run '(begin (write-byte 97) (write-byte 98)) "")
-                (cons (void) "ab")))
+                (cons (void) "ab"))
+
+  (check-equal? (run '(peek-byte) "ab") (cons 97 ""))
+  (check-equal? (run '(begin (peek-byte) (read-byte)) "ab") (cons 97 "")))
 
 (test-runner-io (λ (e s) (interp/io (parse e) s)))
 (test-runner-io (λ (e s)
                   (match (asm-interp/io (compile (parse e)) s)
                     [(cons r o)
                      (cons (bits->value r) o)])))
-
-(current-shared? #f)
 
 ;; run command line compiler and compare against Racket as refernece implementation
 (require rackunit "../../test-programs/get-progs.rkt")
