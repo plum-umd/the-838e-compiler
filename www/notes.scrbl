@@ -1,13 +1,13 @@
 #lang scribble/manual
 @title[#:style '(toc unnumbered)]{Notes}
 
-These are the course notes for CMSC 430. They can be a bit
-rough around the edges in places, but please keep in mind
-this is a @emph{living} document. If you spot errors,
-confusing prose, missing parts, or generally have
-suggestions for improving the material, @bold{please},
-@bold{please}, @bold{please} submit an
-@link["https://github.com/cmsc430/www"]{issue on Github}.
+These are the course notes for CMSC 430, which we'll use as the
+foundation for CMSC 838E.  They are rough around the edges and
+incomplete.  So... basically like research software.  As we work
+through the notes and cover topics not included, we will write new
+notes for the topics we get to.  In the meantime, if you spot areas
+for improvement, submit an
+@link["https://github.com/plum-umd/cmsc838e"]{issue on Github}.
 
 @local-table-of-contents[#:style 'immediate-only]
 
