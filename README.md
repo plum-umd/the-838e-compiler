@@ -6,7 +6,7 @@ University of Maryland, College Park.
 
 The current instance of this course is:
 
-* http://www.cs.umd.edu/class/spring2021/cmsc838e/
+* http://www.cs.umd.edu/class/spring2021/cmsc838E/
 
 Copyright © 2019 David Van Horn
 
