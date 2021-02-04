@@ -1,12 +1,11 @@
 #lang scribble/manual
 
-@(require (for-label (except-in racket ... compile)))
+@(require (for-label (except-in racket ... compile) a86))
 @(require redex/pict
           racket/runtime-path
           scribble/examples
 	  (except-in "../../langs/fraud/semantics.rkt" ext lookup)
           (prefix-in sem: (only-in "../../langs/fraud/semantics.rkt" ext lookup))
-          #;(file "/Users/dvanhorn/git/cmsc430-www/www/notes/fraud/interp.rkt")
 	  "utils.rkt"
 	  "ev.rkt"
 	  "../utils.rkt")
@@ -19,36 +18,25 @@
 @(ev `(current-directory ,(path->string (build-path notes "fraud"))))
 @(void (ev '(with-output-to-string (thunk (system "make runtime.o")))))
 @(for-each (λ (f) (ev `(require (file ,f))))
-	   '("interp.rkt" "compile.rkt" "ast.rkt" "parse.rkt" "types.rkt"))
+	   '("interp.rkt" "compile.rkt" "ast.rkt" "parse.rkt" "types.rkt" "translate.rkt"))
 
 
-@title[#:tag "Fraud"]{Fraud: local binding, variables, and binary operations}
+@(define this-lang "Fraud")
+
+@title[#:tag this-lang]{@|this-lang|: local binding, variables, and binary operations}
 
 @emph{To be is to be the value of a variable.}
 
 @table-of-contents[]
 
-@verbatim|{
-TODO:
-* Write about stack adjust around C calls
-* Push/pop etc. discussed in a86; update writing here
-* Note that semantics is for (pure) subset
-* Update random testing for full language
-* Smooth out combination with Grift
-}|
-
 @section{Binding, variables, and binary operations}
 
-@;defmodule[(file "/Users/dvanhorn/git/cmsc430-www/www/notes/fraud/interp.rkt")]
-@;declare-exporting[(file "/Users/dvanhorn/git/cmsc430-www/www/notes/fraud/interp.rkt")]
-@;defidform/inline[interp]
-
 Let's now consider add a notion of @bold{local binding} and
-the ability to use binary operations to our target language
-a
+the ability to use @bold{binary operations} to our target
+language.
 
 
-We'll call it @bold{Fraud}.
+We'll call it @bold{@this-lang}.
 
 First, let's deal with the issue of variables and variable bindings.
 
@@ -59,7 +47,7 @@ We will use the following syntax to bind local variables:
   _e)
 ]
 
-This form binds the identifier @racket[_i0] to value of @racket[_e0]
+This form binds the identifier @racket[_id0] to value of @racket[_e0]
 within the scope of @racket[_e].
 
 This is a specialization of Racket's own local binding form, which
@@ -71,13 +59,13 @@ allows for any number of bindings to be made with @racket[let]:
 ]
 
 We adopt this specialization of Racket's @racket[let] syntax so that
-you can always take a Fraud program and run it in Racket to confirm
+you can always take a @this-lang program and run it in Racket to confirm
 what it should produce.
 
 Adding a notion of variable binding also means we need to add
 variables to the syntax of expressions.
 
-Together this leads to the following grammar for Fraud:
+Together this leads to the following grammar for @|this-lang|:
 
 @centered{@render-language[F-pre]}
 
@@ -94,8 +82,6 @@ Which can be modeled with the following data type definition:
 (struct Let (x e1 e2) #:prefab)
 (struct Var (x) #:prefab)
 }
-We will also need a predicate for well-formed Fraud expressions, but
-let's return to this after considering the semantics and interpreter.
 
 
 Now for binary operations...
@@ -107,7 +93,7 @@ result of a single subexpression. For example,
 @racket[(add1 _e)] depends upon the result of @racket[_e],
 @racket[(zero? _e)] depends upon @racket[_e], and so on.
 Even expressions that involve multiple subexpressions such
-as @racket[(if _e0 _e1 _e2)] really only depends on
+as @racket[(if _e0 _e1 _e2)] really only depend on
 @racket[_e0] to determine which of @racket[_e1] or
 @racket[_e2] to evaluate. And in the case of
 @racket[(begin _e0 _e1)], first we determine the value of
@@ -128,7 +114,7 @@ What's new are the following @emph{binary} operations:
 (- _e0 _e1)
 ]
 
-This leads to the following grammar for Grift:
+This leads to the following revised grammar for @|this-lang|:
 
 @centered[(render-language G)]
 
@@ -145,9 +131,9 @@ We can model it as a datatype as usual:
 }
 
 
-@section{Meaning of Fraud programs}
+@section{Meaning of @this-lang programs}
 
-The meaning of Fraud programs depends on the form of the expression and
+The meaning of @this-lang programs depends on the form of the expression and
 in the case of integers, increments, and decrements, the meaning is
 the same as in the prior languages.
 
@@ -225,20 +211,27 @@ of a sub-expression is not determined by the form of that expression
 alone.  For example, @tt{x} could mean 7, or it could mean 8, or it
 could be meaningless, or it could mean 22, etc.  It depends on the
 context in which it occurs.  So in formulating the meaning of an
-expression, we will have to have take this context into account.
+expression, this context must be taken into account.
 
-Thinking more about what information we need to keep track of reveals
-that when considering the meaning of a let's body, we need to know
-that the variable it's binding means the value of the right hand
-expression.  Since a program potentially consists of nested let
-expressions, we will need to keep track of some number of pairs of
-variables and their meaning.  We will refer to this contextual
-information as an @bold{environment}.
+Thinking more about what information we need to keep track
+of reveals that when considering the meaning of a
+@racket[let]'s body, we need to know that the variable it's
+binding means the value of the right-hand expression. Since
+a program potentially consists of nested @racket[let]
+expressions, we will need to keep track of some number of
+pairs of variables and their meaning. We will refer to this
+contextual information as an @bold{environment}.
 
-The meaning of a variable is resolved by looking up its meaning in the
-environment.  The meaning of a let will depend on the meaning of its
-body with an extended environment that associates its variable binding
-to the value of the right hand side.
+@margin-note{To keep things simple, we omit the treatment of
+ IO in the semantics, but it's easy enough to incorporate
+ back in if desired following the template of @secref{
+  Evildoer}.}
+
+The meaning of a variable is resolved by looking up its
+meaning in the environment. The meaning of a @racket[let]
+will depend on the meaning of its body with an extended
+environment that associates its variable binding to the
+value of the right hand side.
 
 The heart of the semantics is an auxiliary relation, @render-term[F
 𝑭-𝒆𝒏𝒗], which relates an expression and an environement to the integer
@@ -291,17 +284,21 @@ And rules for propagating errors through let:
 
 
 
-The operational semantics for Fraud is then defined as a binary relation
+The operational semantics for @this-lang is then defined as a binary relation
 @render-term[F 𝑭], which says that @math{(e,i)} in @render-term[F 𝑭],
 only when @math{e} evaluates to @math{i} in the empty environment
 according to @render-term[F 𝑭-𝒆𝒏𝒗]:
 
 @(show-judgment 𝑭 '("mt-env"))
 
-The meaning of Grift programs is pretty straightforward.  For
-@racket[(+ _e0 _e1)], the meaning is the sum of the meanings of
-@racket[_e0] and @racket[_e1], when they mean integers, otherwise the
-meaning is an error.
+
+
+With the semantics of @racket[let] and variables out of the
+way, extending the @this-lang semantics to hand binary
+operations is pretty straightforward. For
+@racket[(+ _e0 _e1)], the meaning is the sum of the meanings
+of @racket[_e0] and @racket[_e1], when they mean integers,
+otherwise the meaning is an error.
 
 
 The handling of primitives occurs in the following rule:
@@ -311,7 +308,14 @@ The handling of primitives occurs in the following rule:
 It makes use of an auxiliary judgment for interpreting primitives:
 
 @centered[
-   (with-unquote-rewriter
+
+ (with-compound-rewriters (['+ (rewrite '+)]
+                           ['- (rewrite '–)]
+                           ['= (rewrite '=)]
+                           ['!= (rewrite '≠)])
+   (render-metafunction 𝑭-𝒑𝒓𝒊𝒎 #:contract? #t))
+ 
+   #;(with-unquote-rewriter
       (lambda (lw)
         (build-lw (lw-e lw) (lw-line lw) (lw-line-span lw) (lw-column lw) (lw-column-span lw)))
       (render-metafunction 𝑮-𝒑𝒓𝒊𝒎 #:contract? #t))]
@@ -353,7 +357,7 @@ We can see that it works as expected:
 ]
 
 
-@bold{Interpreter Correctness}: @emph{For all Fraud expressions
+@bold{Interpreter Correctness}: @emph{For all @this-lang expressions
 @racket[e] and values @racket[v], if (@racket[e],@racket[v]) in
 @render-term[F 𝑭], then @racket[(interp e)] equals
 @racket[v].}
@@ -433,14 +437,18 @@ variables, but just lexical addresses:
 @#reader scribble/comment-reader
 (racketblock
 ;; type IExpr =
+;; | (Eof)
 ;; | (Int Integer)
 ;; | (Bool Boolean)
-;; | (Prim Op Expr)
-;; | (If Expr Expr Expr)
-;; | (Let '_ Expr Expr)
+;; | (Char Character)
+;; | (Prim0 Op0)
+;; | (Prim1 Op1 IExpr)
+;; | (Prim2 Op2 IExpr IExpr)
+;; | (If IExpr IExpr IExpr)
+;; | (Begin IExpr IExpr)
+;; | (Let '_ IExpr IExpr)
 ;; | (Var Addr)
 ;; type Addr = Natural
-;; type prim = 'add1 | 'sub1 | 'zero?
 )
 
 Notice that variables have gone away, replaced by a @racket[(Var
@@ -450,7 +458,7 @@ variable name either.
 The idea is that we will translate expression (@tt{Expr}) like:
 
 @racketblock[
-(Let "x" (Int 7) (Var x))]
+(Let 'x (Int 7) (Var 'x))]
 
 into intermediate expressions (@tt{IExpr}) like:
 
@@ -461,13 +469,13 @@ into intermediate expressions (@tt{IExpr}) like:
 And:
 
 @racketblock[
-(Let "x" (Int 7) (Let "y" (Int 9) (Var "x")))
+(Let 'x (Int 7) (Let 'y (Int 9) (Var 'x)))
 ]
 
 into:
 
 @racketblock[
-(Let '_ (Int 7) (Let "y" (Int 9) (Var 1)))
+(Let '_ (Int 7) (Let '_ (Int 9) (Var 1)))
 ]
 
 
@@ -490,12 +498,20 @@ variable names by replacing variable occurrences with their lexical
 addresses.  It does a minor amount of syntax checking while it's at it
 by raising a (compile-time) error in the case of unbound variables.
 
-The interpreter for @tt{IExpr}s will still have an environment data
-structure, however it will be simpler the association list we started
-with.  The run-time environment will consist only of a list of values;
-the lexical address of (what used to be a) variable indicates the
-position in this list.  When a value is bound by a @racket[let], the
-list grows:
+We can try out some examples to confirm it works as expected.
+
+@ex[
+ (translate (Let 'x (Int 7) (Var 'x)))
+ (translate (Let 'x (Int 7) (Let 'y (Int 9) (Var 'x))))
+ ]
+
+The interpreter for @tt{IExpr}s will still have an
+environment data structure, however it will be simpler than
+the association list we started with. The run-time
+environment will consist only of a list of values; the
+lexical address of (what used to be a) variable indicates
+the position in this list. When a value is bound by a
+@racket[let], the list grows:
 
 @codeblock-include["fraud/interp-lexical.rkt"]
 
@@ -503,7 +519,7 @@ Try to convince yourself that the two version of @racket[interp]
 compute the same function.
 
 
-@section{An Example of Fraud compilation}
+@section{Compiling lets and variables}
 
 Suppose we want to compile @racket[(let ((x 7)) (add1 x))].  There
 are two new forms we need to compile: the @racket[(let ((x ...))
@@ -531,15 +547,55 @@ Suppose we want to compile @racket[(let ((x 7)) (let ((y 2)) (add1
 x)))].  Using the intuition developed so far, we should push 7, push
 8, and then run the body.  But notice that the value of @racket['x] is
 no longer on the top of the stack; @racket[y] is.  So to retrieve the
-value of @racket[x] we need jump past the @racket[y].  But calculating
+value of @racket[x] we need skip past the @racket[y].  But calculating
 these offsets is pretty straightforward.  In this example there is one
 binding between the binding of @racket[x] and this occurrence.  Since
 we push every time we enter a let and pop every time we leave, the
 number of bindings between an occurrence and its binder is exactly the
-offset from the top of the stack we need use.
+offset from the top of the stack we need use; in other words, the compiler
+uses lexical addresses just like the alternative interperter above
+and the stack of values plays the role of the run-time envivornment.
 
-@codeblock-include["fraud/compile.rkt"]
+Here are the relevant parts of the compiler:
 
+@filebox-include-fake[codeblock "fraud/compile.rkt"]{
+;; Expr CEnv -> Asm
+(define (compile-e e c)
+  (match e
+    ; ...
+    [(Var x)         (compile-variable x c)]
+    [(Let x e1 e2)   (compile-let x e1 e2 c)]))
+
+;; Id CEnv -> Asm
+(define (compile-variable x c)
+  (let ((i (lookup x c)))
+    (seq (Mov rax (Offset rsp i)))))
+
+;; Id Expr Expr CEnv -> Asm
+(define (compile-let x e1 e2 c)
+  (seq (compile-e e1 c)
+       (Push rax)
+       (compile-e e2 (cons x c))
+       (Add rax 8)))
+
+;; Id CEnv -> Integer
+(define (lookup x cenv)
+  (match cenv
+    ['() (error "undefined variable:" x)]
+    [(cons y rest)
+     (match (eq? x y)
+       [#t 0]
+       [#f (+ 8 (lookup x rest))])]))
+}
+
+Notice that the @racket[lookup] function computes a lexical
+address from an identifier and compile-time environment,
+just like the @racket[lexical-address] function in @tt{
+ translate.rkt}. The only difference is addresses are
+calculated as byte offsets, hence the addition of 8 instead
+of 1 in the recursive case.
+
+Let's take a look at some examples.
 
 @ex[
 (define (show e)
@@ -555,10 +611,9 @@ offset from the top of the stack we need use.
 (show '(let ((x 7)) (let ((x (add1 x))) x)))
 ]
 
-@(void (ev '(current-objs '("runtime.o"))))
-
 And running the examples:
 @ex[
+(current-objs '("runtime.o"))
 (define (tell e)
   (match (asm-interp (compile (parse e)))
     ['err 'err]
@@ -574,7 +629,7 @@ And running the examples:
 (tell '(let ((x 7)) (let ((x (add1 x))) x)))
 ]
 
-
+@section{Compiling binary operations}
 
 Binary expressions are easy to deal with at the level of the semantics
 and interpreter.  However things are more complicated at the level of
@@ -587,9 +642,9 @@ ignoring type errors for the moment):
 (racketblock
 ;; Expr Expr CEnv -> Asm
 (define (compile-+ e0 e1 c)
-  (append (compile-e e0 c)
-          (compile-e e1 c)
-          (list (Add 'rax _????))))
+  (seq (compile-e e0 c)
+       (compile-e e1 c)
+       (Add 'rax _????)))
 )
 
 The problem here is that executing @racket[c0] places its result in
@@ -603,10 +658,10 @@ the first subexpression:
 (racketblock
 ;; Expr Expr CEnv -> Asm
 (define (compile-+ e0 e1 c)
-  (append (compile-e e0 c)
-          (list (Mov 'rbx 'rax))
-          (compile-e e1 c)
-          (list (Add 'rax 'rbx))))
+  (seq (compile-e e0 c)
+       (Mov 'r8 'rax)
+       (compile-e e1 c)
+       (Add 'rax 'r8)))
 )
 
 Can you think of how this could go wrong?
@@ -626,15 +681,15 @@ could emit working code.  For example:
 ;; Integer Expr CEnv -> Asm
 ;; A special case for compiling (+ i0 e1)
 (define (compile-+-int i0 e1 c)
-  (append (compile-e e1 c)
-          (list (Add 'rax (arithmetic-shift i0 imm-shift)))))
+  (seq (compile-e e1 c)
+       (Add 'rax (value->bits i0))))
 
 ;; Id Expr CEnv -> Asm
 ;; A special case for compiling (+ x0 e1)
 (define (compile-+-var x0 e1)
   (let ((i (lookup x0 c)))
-    (append (compile-e e1 c)   
-            (list (Add 'rax (Offset 'rsp (- (add1 i))))))))
+    (seq (compile-e e1 c)
+         (Add 'rax (Offset 'rsp i)))))
 )
 
 The latter suggests a general solution could be to transform binary
@@ -656,7 +711,7 @@ above.  It is @emph{always} 0 because the transformation puts the
 @racket[let] immediately around the occurrence of @racket[_x].  So if
 we're compiling @racket[(+ _e0 _e1)] in environment @racket[_c] using
 this approach, we know the value of @racket[_e0] will live at
-@racket[`(offset rsp ,(- (add1 (length c))))].  There's no need for a
+@racket[(Offset 'rsp 0)].  There's no need for a
 @racket[let] binding or a fresh variable name.  And this observation
 enables us to write a general purpose compiler for binary primitives
 that doesn't require any program transformation: we simply push the
@@ -669,14 +724,14 @@ Here is a first cut:
 ;; Expr Expr CEnv -> Asm
 (define (compile-+ e0 e1 c)
   (let ((x (gensym))) ; generate a fresh variable
-    (append (compile-e e0 c)
-            (list (Mov (Offset 'rsp (add1 (- (length c)))) 'rax))
-            (compile-e e1 (cons x c))
-            (list (Add 'rax (Offset 'rsp (- (add1 (lookup x (cons x c))))))))))
+    (seq (compile-e e0 c)
+         (Push 'rax)
+         (compile-e e1 (cons x c))
+         (Pop 'r8)
+         (Add 'rax 'r8)))) 
 )
 
-There are a couple things to notice.  First: the @racket[(lookup x
-(cons x c))] just produces @racket[(length c)].  Second, when
+There are a couple things to notice.  When
 compiling @racket[_e1] in environment @racket[(cons x c)], we know
 that no variable in @racket[_e1] resolves to @racket[x] because
 @racket[x] is a freshly @racket[gensym]'d symbol.  Putting (an
@@ -688,10 +743,46 @@ the same thing by sticking in something that no variable is equal to:
 
 @#reader scribble/comment-reader
 (racketblock
-;; Expr Expr CEnv -> Asm
 (define (compile-+ e0 e1 c)
-  (append (compile-e e0 c)
-          (list (Mov (Offset 'rsp (add1 (- (length c)))) 'rax))
-          (compile-e e1 (cons #f c))
-          (list (Add 'rax (Offset 'rsp (- (add1 (length c))))))))
+  (seq (compile-e e0 c)
+       (Push 'rax)
+       (compile-e e1 (cons #f c))
+       (Pop 'r8)
+       (Add 'rax 'r8)))
 )
+
+The relevant bits of the compiler are:
+
+@filebox-include-fake[codeblock "fraud/compile.rkt"]{
+#lang racket
+;...
+;; Expr CEnv -> Asm
+(define (compile-e e c)
+  (match e
+    ; ...
+    [(Prim2 p e1 e2) (compile-prim2 p e1 e2 c)]))
+
+;; Op2 Expr Expr CEnv -> Asm
+(define (compile-prim2 p e1 e2 c)
+  (seq (compile-e e1 c)
+       (Push rax)
+       (compile-e e2 (cons #f c))       
+       (match p
+         ['+
+          (seq (Pop r8)
+               (assert-integer r8)
+               (assert-integer rax)
+               (Add rax r8))]
+         ['-
+          (seq (Pop r8)
+               (assert-integer r8)
+               (assert-integer rax)
+               (Sub r8 rax)
+               (Mov rax r8))])))
+}
+
+@section{Complete @this-lang compiler}
+
+The complete code for the compiler:
+
+@codeblock-include["fraud/compile.rkt"]

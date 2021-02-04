@@ -24,6 +24,43 @@
 @(ev `(current-directory ,(path->string (build-path notes "evildoer"))))
 @(void (ev '(with-output-to-string (thunk (system "make runtime.o")))))
 
+@(require (for-syntax racket/base))
+@(begin-for-syntax
+   (require "utils.rkt")
+   (parameterize ([current-directory (build-path notes "evildoer")])
+     (save-file "print.c"
+#<<HERE
+#include <stdio.h>
+#include <inttypes.h>
+
+int64_t entry();
+
+int main(int argc, char** argv) {
+  printf("%" PRId64 "\n", entry());
+  return 0;
+}
+HERE
+)
+     (save-file "life.c"
+#<<HERE
+#include <inttypes.h>
+
+int64_t meaning(void) {
+  return 42;
+}
+HERE
+)
+     (save-file "double.c"
+#<<HERE
+#include <inttypes.h>
+
+int64_t dbl(int64_t x) {
+  return x + x;
+}
+HERE
+)))
+
+
 @title[#:tag "Evildoer"]{Evildoer: change the world a couple nibbles at a time}
 
 @emph{Warning: Side effects may include itching, burning,
@@ -65,8 +102,8 @@ To the syntax of expressions, we add the following operations:
 
 @itemlist[
  @item{@racket[write-byte] @tt|{: Byte -> Void}|: writes given byte to stdout, produces nothing.}
- @item{@racket[read-byte] @tt|{: -> Byte or EOF}|: reads a byte from stdout, if there is one, EOF otherwise.}
- @item{@racket[peek-byte] @tt|{: -> Byte or EOF}|: peeks a byte from stdout, if there is one, EOF otherwise.}
+ @item{@racket[read-byte] @tt|{: -> Byte or EOF}|: reads a byte from stdin, if there is one, EOF otherwise.}
+ @item{@racket[peek-byte] @tt|{: -> Byte or EOF}|: peeks a byte from stdin, if there is one, EOF otherwise.}
  ]
 
 These operations will behave like their Racket counterpart.
@@ -268,11 +305,16 @@ itself having access to them. Racket, on the other hand, can
 model effectful computations directly as effectful Racket
 programs.
 
-Here's an interpreter for Evildoer, that relies on the
-underlying implementations @racket[read-byte],
-@racket[write-byte], etc. from Racket:
+Here's an interpreter for Evildoer:
 
 @codeblock-include["evildoer/interp.rkt"]
+
+The interpretation of primitives relies on the
+underlying implementations @racket[read-byte],
+@racket[write-byte], etc. from Racket (just like it does
+for all the other operations):
+
+@codeblock-include["evildoer/interp-prim.rkt"]
 
 Interpreting a program that reads and writes will itself
 read and write:

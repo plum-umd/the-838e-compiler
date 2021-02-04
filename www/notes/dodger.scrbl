@@ -98,9 +98,13 @@ system, described below, takes care of printing them.
 
 The semantics are ommitted for now (there's really nothing new that's interesting).
 
-The interpeter is much like that of Dupe:
+The interpeter is much like that of Dupe, except we have a new base case:
 
 @codeblock-include["dodger/interp.rkt"]
+
+And the interpretation of primitives is extended:
+
+@codeblock-include["dodger/interp-prim.rkt"]
 
 The meaning of characters and their operations are just lifted from Racket.
 
@@ -110,17 +114,17 @@ We can try out some examples:
 @ex[
 (interp (Char #\a))
 (interp (Char #\b))
-(interp (Prim 'char? (Char #\a)))
-(interp (Prim 'char? (Bool #t)))
-(interp (Prim 'char->integer (Char #\a)))
-(interp (Prim 'integer->char (Prim 'char->integer (Char #\a))))
+(interp (Prim1 'char? (Char #\a)))
+(interp (Prim1 'char? (Bool #t)))
+(interp (Prim1 'char->integer (Char #\a)))
+(interp (Prim1 'integer->char (Prim1 'char->integer (Char #\a))))
 ]
 
 Just as in Dupe, type errors result in the interpreter crashing:
 
 
 @ex[
-(eval:error (interp (Prim 'char->integer (Bool #f))))
+(eval:error (interp (Prim1 'char->integer (Bool #f))))
 ]
 
 Also, not every integer corresponds to a character, so when
@@ -128,7 +132,7 @@ Also, not every integer corresponds to a character, so when
 (more on this in a minute):
 
 @ex[
-(eval:error (interp (Prim 'integer->char (Int -1))))
+(eval:error (interp (Prim1 'integer->char (Int -1))))
 ]
 
 @section{Ex uno plures iterum: Out of One, Many... Again}

@@ -154,16 +154,28 @@ Notice that here we are following the semantics of Racket, which says
 that anything that is not @racket[#f] counts as @emph{true} in a
 conditional.
 
+This semantics has also been refactored slightly so that
+there is a single rule for the @racket[Prim1] case. The new
+rule essentially defers the work to a new metafunction,
+@math{𝑫-𝒑𝒓𝒊𝒎}:
+
+@(centered
+  (with-compound-rewriters (['+ (rewrite '+)]
+                            ['- (rewrite '–)]
+                            ['= (rewrite '=)]
+                            ['!= (rewrite '≠)])
+    (render-metafunction 𝑫-𝒑𝒓𝒊𝒎 #:contract? #t)))
+
 Returning to the issue of type mismatches, what does the
-semantics say about @racket[(Prim 'add1 (Bool #f))]? What about
+semantics say about @racket[(Prim1 'add1 (Bool #f))]? What about
 @racket[(If (Int 7) (Bool #t) (Int -2))]?
 
 What it says is: nothing.  These programs are simply not in the
 semantic relation for this language. There's only one rule for giving
-meaning to an @racket[(Prim 'add1 _e0)] expression and it's premise is that
+meaning to an @racket[(Prim1 'add1 _e0)] expression and it's premise is that
 @racket[_e] means some @emph{integer} @racket[_i0].  But
 @math{(@racket[(Bool #f)], i) ∉ 𝑫} for any @math{i}.  So there's no value
-@math{v} such that @math{(@racket[(Prim 'add1 (Bool #f))], v) ∈ 𝑫}.  This
+@math{v} such that @math{(@racket[(Prim1 'add1 (Bool #f))], v) ∈ 𝑫}.  This
 expression is @bold{undefined} according to the semantics.
 
 
@@ -171,6 +183,10 @@ The interpreter follows the rules of the semantics closely and is
 straightforward:
 
 @codeblock-include["dupe/interp.rkt"]
+
+And the interpretation of primitives closely matches @math{𝑫-𝒑𝒓𝒊𝒎}:
+
+@codeblock-include["dupe/interp-prim.rkt"]
 
 We can confirm the interpreter computes the right result for the
 examples given earlier:
@@ -182,7 +198,7 @@ examples given earlier:
 (interp (If (Bool #t) (Int 1) (Int 2)))
 (interp (If (Int 0) (Int 1) (Int 2)))
 (interp (If (Int 7) (Int 1) (Int 2)))
-(interp (If (Prim 'zero? (Int 7)) (Int 1) (Int 2)))
+(interp (If (Prim1 'zero? (Int 7)) (Int 1) (Int 2)))
 ]
 
 Correctness follows the same pattern as before, although it is worth
@@ -204,7 +220,7 @@ which results in the @racket[interp] program crashing and Racket
 signalling an error:
 
 @ex[
-(eval:error (interp (Prim 'add1 (Bool #f))))
+(eval:error (interp (Prim1 'add1 (Bool #f))))
 ]
 
 This isn't a concern for correctness, because the interpreter is free
@@ -403,11 +419,11 @@ Now let us inline the defintion of @racket[interp]:
    (match e
      [(Int i) i]
      [(Bool b) b]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (add1 (interp e0))]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (sub1 (interp e0))]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (zero? (interp e0))]
      [(If e0 e1 e2)
       (if (interp e0)
@@ -433,11 +449,11 @@ So we get:
   (match e
     [(Int i) (value->bits i)]
     [(Bool b) (value->bits b)]
-    [(Prim 'add1 e0)
+    [(Prim1 'add1 e0)
      (value->bits (add1 (interp- e0)))]
-    [(Prim 'sub1 e0)
+    [(Prim1 'sub1 e0)
      (value->bits (sub1 (interp e0)))]
-    [(Prim 'zero? e0)
+    [(Prim1 'zero? e0)
      (value->bits (zero? (interp e0)))]
     [(If e0 e1 e2) (value->bits
      (if (interp e0)
@@ -462,11 +478,11 @@ rewrite the code as:
    (match e
      [(Int i) (* 2 i)]
      [(Bool b) (if b 3 1)]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (value->bits (add1 (interp e0)))]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (value->bits (sub1 (interp e0)))]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (value->bits (zero? (interp e0)))]
      [(If e0 e1 e2)
       (value->bits
@@ -492,11 +508,11 @@ We can rewrite the last case by the following equation:
    (match e
      [(Int i) (* 2 i)]
      [(Bool b) (if b 3 1)]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (value->bits (add1 (interp e0)))]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (value->bits (sub1 (interp e0)))]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (value->bits (zero? (interp e0)))]
      [(If e0 e1 e2)      
       (if (interp e0)
@@ -527,11 +543,11 @@ to get:
    (match e
      [(Int i) (* 2 i)]
      [(Bool b) (if b 3 1)]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (+ (value->bits (interp e0)) (value->bits 1))]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (- (value->bits (interp e0)) (value->bits 1))]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (value->bits (zero? (interp e0)))]
      [(If e0 e1 e2)      
       (if (interp e0)
@@ -558,11 +574,11 @@ We can now rewrite by the equation of our specification:
    (match e
      [(Int i) (* 2 i)]
      [(Bool b) (if b 3 1)]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (+ (interp-bits e0) 2)]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (- (interp-bits e0) 2)]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (value->bits (zero? (interp e0)))]
      [(If e0 e1 e2)      
       (if (interp e0)
@@ -585,11 +601,11 @@ and inline @racket[value->bits] specialized to a boolean argument:
    (match e
      [(Int i) (* 2 i)]
      [(Bool b) (if b 3 1)]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (+ (interp-bits e0) 2)]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (- (interp-bits e0) 2)]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (match (zero? (interp-bits e0))
         [#t #b11]
         [#f #b01])]
@@ -616,11 +632,11 @@ produces the representation of @racket[#f] (@code[#:lang
    (match e
      [(Int i) (* 2 i)]
      [(Bool b) (if b 3 1)]
-     [(Prim 'add1 e0)
+     [(Prim1 'add1 e0)
       (+ (interp-bits e0) 2)]
-     [(Prim 'sub1 e0)
+     [(Prim1 'sub1 e0)
       (- (interp-bits e0) 2)]
-     [(Prim 'zero? e0)
+     [(Prim1 'zero? e0)
       (match (zero? (interp-bits e0))
         [#t #b11]
         [#f #b01])]
