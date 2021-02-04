@@ -3,51 +3,30 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-18.04, ubuntu-20.04]
+        racket-variant: ['BC', 'CS']
+        racket-version: ['7.8', '7.9']
+    name: Test on Racket ${{ matrix.racket-variant }} ${{ matrix.racket-version }} on ${{ matrix.os }}	
     steps:
     - name: Checkout
       uses: actions/checkout@main
-    - name: Install dependencies
-      run: |
-        curl -Ls https://github.com/jgm/pandoc/releases/download/2.11.2/pandoc-2.11.2-1-amd64.deb -o pandoc.deb
-        sudo dpkg -i pandoc.deb
-        sudo apt-get install nasm
-        sudo apt-get install fonts-stix
+    - name: Install nasm
+      run: sudo apt-get install nasm
     - name: Install Racket
-      uses: Bogdanp/setup-racket@v0.10
+      uses: Bogdanp/setup-racket@v0.13
       with:
         architecture: 'x64'
         distribution: 'full'
-        variant: 'CS'
-        version: '7.9'
-    - name: Build and test
+        variant: ${{ matrix.racket-variant }}
+        version: ${{ matrix.racket-version }}
+    - name: Version info
       run: |
-        raco pkg install langs/
-        raco make www/main.scrbl
-        raco test langs
-        make -C www main
-    - name: Archive www
-      uses: actions/upload-artifact@v2
-      with:
-        name: www
-        path: www/main
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-    - name: Download www
-      uses: actions/download-artifact@v2
-      with:
-        name: www
-        path: cmsc838E
-    - name: Deploy to web
-      uses: plum-umd/github-actions-rsync@master
-      with:
-        RSYNC_OPTIONS: -rvzp
-        RSYNC_TARGET: /fs/www/class/spring2021/
-        RSYNC_SOURCE: cmsc838E
-      env:
-        SSH_PRIVATE_KEY: ${{secrets.SSH_PRIVATE_KEY}}
-        SSH_USERNAME: ${{secrets.SSH_USERNAME}}
-        SSH_HOSTNAME: ${{secrets.SSH_HOSTNAME}}
+        nasm --version
+        gcc --version        
+    - name: Install langs package
+      run: raco pkg install ../the-838e-compiler/
+    - name: Run tests
+      run: raco test -p the-838e-compiler
