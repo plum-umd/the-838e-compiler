@@ -34,8 +34,10 @@
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
+    [(list 'match e0 (list ps es)...)
+     (Match (parse-e e0) (map parse-e ps) (map parse-e es))]
     [(cons (? symbol? f) es)
-     (App f (map parse-e es))]
+     (App f (map parse-e es))] ;;This pattern seems to match more agressively. It was handling the match clause when it was placed below this pattern.
     [_ (error "Parse error" s)]))
 
 (define op0

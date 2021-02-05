@@ -20,6 +20,7 @@
 ;;           | (Let Id Expr Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
+;;           | (Match Expr (Listof Pattern) (Listof Expr))
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero?
@@ -29,6 +30,8 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons
+;; type Pattern = #t | #f | '() | <number> | <string> | <symbol> | Id 
+;;              | (cons Id Id) | (box Id)
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
 (struct Int   (i)          #:prefab)
@@ -42,3 +45,4 @@
 (struct Let   (x e1 e2)    #:prefab)
 (struct Var   (x)          #:prefab)
 (struct App   (f es)       #:prefab)
+(struct Match (e0 ps es)     #:prefab)
