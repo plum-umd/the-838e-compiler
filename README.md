@@ -29,3 +29,12 @@ git checkout -b 'string-dev'
 git push --set-upstream origin string-dev
 ```
 You can commit and push changes.  When you're ready for the changes to be merged into `main`, submit a pull request.
+
+Check the [Issues](https://github.com/plum-umd/the-838e-compiler/issues) list for
+possible things to work on.  If you'd like to work on something else, either discuss
+it on Discord or submit a new issue.
+
+When you decide to work on an issue, assign yourself to it so others know you are
+working on it.  Several people may decide to work on the same issue.  You can
+coordinate your efforts on Discord.  You can either work together or work on separate
+branches developing alternate solutions.
