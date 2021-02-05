@@ -42,10 +42,9 @@
   '(read-byte peek-byte void))
 (define op1
   '(add1 sub1 zero? char? write-byte eof-object?
-         integer->char char->integer box unbox empty? car cdr
-         string? string-length))
+         integer->char char->integer box unbox empty? car cdr))
 (define op2
-  '(+ - eq? cons string-ref make-string))
+  '(+ - eq? cons))
 
 (define (op? ops)
   (λ (x)
