@@ -8,7 +8,7 @@ else
 endif
 
 %.run: %.o runtime.o
-	gcc runtime.o $< -o $@
+	gcc -lunistring runtime.o $< -o $@
 
 runtime.o: main.o char.o io.o
 	ld -r main.o char.o io.o -o runtime.o

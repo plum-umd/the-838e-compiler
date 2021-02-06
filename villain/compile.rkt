@@ -21,6 +21,7 @@
            (Extern 'read_byte)
            (Extern 'write_byte)
            (Extern 'raise_error)
+           (Extern 'uc_is_property_white_space)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e e '(#f))
@@ -123,6 +124,19 @@
                (Sal rax char-shift)
                (Xor rax type-char))]
          ['eof-object? (eq-imm val-eof)]
+         ['char-whitespace?
+          (let ((l (gensym)))
+            (seq (assert-char rax)
+                 (pad-stack c)
+                 (Sar rax char-shift)
+                 (Mov rdi rax)
+                 (Call 'uc_is_property_white_space)
+                 (unpad-stack c)
+                 (Cmp rax 0)
+                 (Mov rax val-true)
+                 (Jne l)
+                 (Mov rax val-false)
+                 (Label l)))]
          ['write-byte
           (seq assert-byte
                (pad-stack c)

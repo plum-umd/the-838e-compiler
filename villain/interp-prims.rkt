@@ -18,6 +18,7 @@
     [(list 'car (? pair?))                (car v)]
     [(list 'cdr (? pair?))                (cdr v)]
     [(list 'empty? v)                     (empty? v)]
+    [(list 'char-whitespace? (? char?))   (char-whitespace? v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer

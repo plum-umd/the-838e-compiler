@@ -166,7 +166,7 @@
         ""
         "-z defs "))
   (unless (parameterize ((current-error-port err-port))  
-            (system (format "gcc ~a-v -shared ~a ~a -o ~a"
+            (system (format "gcc ~a-v -lunistring -shared ~a ~a -o ~a"
                             -z-defs-maybe
                             t.o objs t.so)))
     (define err-msg
