@@ -16,6 +16,7 @@ jobs:
     - name: Install nasm
       run: sudo apt-get install nasm
     - name: Install libunistring
+      run: sudo apt-get install libunistring2
       run: sudo apt-get install libunistring-dev
     - name: Install Racket
       uses: Bogdanp/setup-racket@v0.13
