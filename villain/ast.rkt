@@ -30,7 +30,7 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons
-;; type Pattern = #t | #f | '() | <number> | <string> | <symbol> | Id 
+;; type Pattern = #t | #f | '() | <number> | <string> | <symbol> | <character> | Id 
 ;;              | (cons Id Id) | (box Id)
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)

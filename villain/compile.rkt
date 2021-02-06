@@ -65,7 +65,8 @@
          [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let x e1 e2)      (compile-let x e1 e2 c)])
+         [(Let x e1 e2)      (compile-let x e1 e2 c)]
+         [(Match e0 ps es)   (compile-match e0 ps es c)])
        (%% (format "end ~a" e))))
 
 ;; Value -> Asm
@@ -242,6 +243,55 @@
        (Push rax)
        (compile-e e2 (cons x c))
        (Add rsp 8)))
+
+;; Expr [Listof Pattern] [Listof Expr] CENV-> Asm
+(define (compile-match e0 ps es c)
+  (let ((end-sym (gensym "end")))
+    (seq
+     (%% "The compiled code for the expression to be matched on")
+     (compile-e e0 c)
+     (%% "Store away the result of evaluating the expression")
+     (Push 'rax)
+     (%% "The compiled code for comparing the expression against the different match clauses")
+     (compile-patterns ps es end-sym (cons #f c))
+     (%% "The end of the match")
+     (Label end-sym)
+     (Pop 'rax))))
+
+;; [Listof Patterns] [Listof Expr] symbol CENV -> Asm
+;; This function assumes that ps and es are of the same length
+(define (compile-patterns ps es end-sym c)
+  (let ((continue (gensym "continue")))
+    (match (cons ps es)
+      [(cons '() '())
+       (seq)]
+      [(cons (cons (? value? v) ps) (cons h es))
+       (seq
+        (compile-value (extract-literal v))
+        (Cmp (Offset 'rsp 0) rax)
+        (Jne continue) (% "don't execute the expression associated with this match clause")
+        (%% "the expression associated with this match clause will be executed")
+        (compile-e h c)
+        (Jmp end-sym) (% "don't check any other match clause")
+        (Label continue)
+        (compile-patterns ps es end-sym c))])))
+
+;;Expr -> boolean
+;;Given an expression, determine if it is a value
+(define (value? v)
+  (match v
+    [(or (Int _) (Bool _) (Char _) (Empty) (Eof)) #t]
+    [_ #f]))
+
+;;Value -> (or Integer Boolean Character '() eof) 
+;;Given an Expr that is a Value, extract the data it contains or represents
+(define (extract-literal v)
+  (match v
+    [(Int i) i]
+    [(Bool b) b]
+    [(Char c) c]
+    [(Empty) '()]
+    [(Eof) eof]))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
