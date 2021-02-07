@@ -42,6 +42,7 @@
   '(read-byte peek-byte void))
 (define op1
   '(add1 sub1 zero? char? write-byte eof-object?
+         integer-length
          integer->char char->integer box unbox empty? car cdr))
 (define op2
   '(+ - eq? cons))

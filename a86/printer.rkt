@@ -124,7 +124,11 @@
       [(Lea d x)
        (string-append tab "lea "
                       (arg->string d) ", [rel "
-                      (label-symbol->string x) "]")]))
+                      (label-symbol->string x) "]")]
+      [(Bsr a1 a2)
+       (string-append tab "bsr "
+                      (arg->string a1) ", "
+                      (arg->string a2))]))
 
   (define (comment->string c)
     (match c
