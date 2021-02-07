@@ -127,6 +127,7 @@
 (instruct Push   (a1)      check:push)
 (instruct Pop    (a1)      check:register)
 (instruct Lea    (dst x)   check:lea)
+(instruct Bsr    (dst src) check:src-dest)
 
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
@@ -165,6 +166,7 @@
       (Push? x)
       (Pop? x)
       (Lea? x)
+      (Bsr? x)
       (Comment? x)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

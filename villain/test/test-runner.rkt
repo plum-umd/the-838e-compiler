@@ -104,6 +104,14 @@
                                (+ x (tri (sub1 x)))))
                          (tri 9)))
                 45)
+
+  (check-equal? (run '(integer-length   0)) 0)
+  (check-equal? (run '(integer-length  -1)) 0)
+  (check-equal? (run '(integer-length   1)) 1)
+  (check-equal? (run '(integer-length  -2)) 1)
+  (check-equal? (run '(integer-length  16)) 5)
+  (check-equal? (run '(integer-length -16)) 4)
+
 #|
   (check-equal? (run
                  '(begin (define (even? x)
