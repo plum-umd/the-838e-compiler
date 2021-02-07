@@ -32,7 +32,7 @@ void print_cons(int64_t);
 
 void print_result(int64_t result) {
   if (cons_type_tag == (ptr_type_mask & result)) {
-    printf("(");
+    printf("'(");
     print_cons(result);
     printf(")");
   } else if (box_type_tag == (ptr_type_mask & result)) {

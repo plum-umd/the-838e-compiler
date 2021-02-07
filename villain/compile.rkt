@@ -1,6 +1,6 @@
 #lang racket
 (provide (all-defined-out))
-(require "ast.rkt" "types.rkt" a86/ast)
+(require "ast.rkt" "types.rkt" "externs.rkt" a86/ast)
 
 ;; Registers used
 (define rax 'rax) ; return
@@ -17,11 +17,8 @@
 (define (compile p)
   (match p
     [(Prog ds e)  
-     (prog (Extern 'peek_byte)
-           (Extern 'read_byte)
-           (Extern 'write_byte)
+     (prog (externs p)
            (Extern 'raise_error)
-           (Extern 'uc_is_property_white_space)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e e '(#f))
@@ -124,19 +121,29 @@
                (Sal rax char-shift)
                (Xor rax type-char))]
          ['eof-object? (eq-imm val-eof)]
-         ['char-whitespace?
+         [(or 'char-whitespace? 'char-alphabetic?)
           (let ((l (gensym)))
             (seq (assert-char rax)
                  (pad-stack c)
                  (Sar rax char-shift)
                  (Mov rdi rax)
-                 (Call 'uc_is_property_white_space)
+                 (Call (char-op->uc p))
                  (unpad-stack c)
                  (Cmp rax 0)
                  (Mov rax val-true)
                  (Jne l)
                  (Mov rax val-false)
                  (Label l)))]
+         [(or 'char-upcase 'char-downcase 'char-titlecase)
+          (let ((l (gensym)))
+            (seq (assert-char rax)
+                 (pad-stack c)
+                 (Sar rax char-shift)
+                 (Mov rdi rax)
+                 (Call (char-op->uc p))
+                 (unpad-stack c)
+                 (Sal rax char-shift)
+                 (Or rax type-char)))]
          ['write-byte
           (seq assert-byte
                (pad-stack c)
