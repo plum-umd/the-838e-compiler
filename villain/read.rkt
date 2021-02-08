@@ -32,6 +32,22 @@
   (check-equal? (p "#f") #f)
   (check-equal? (p "#T") #t)
   (check-equal? (p "#F") #f)
+  (check-equal? (p "#b0") 0)
+  (check-equal? (p "#b1") 1)
+  (check-equal? (p "#b101") #b101)
+  (check-equal? (p "#B101") #b101)
+  (check-equal? (p "#o0") 0)
+  (check-equal? (p "#o1") 1)
+  (check-equal? (p "#o701") #o701)
+  (check-equal? (p "#O701") #o701)
+  (check-equal? (p "#d0") 0)
+  (check-equal? (p "#d1") 1)
+  (check-equal? (p "#d901") 901)
+  (check-equal? (p "#D901") 901)
+  (check-equal? (p "#x0") 0)
+  (check-equal? (p "#x1") 1)
+  (check-equal? (p "#xF01") #xF01)
+  (check-equal? (p "#XF01") #xF01)
   (check-equal? (p ";123\n1") 1)
   (check-equal? (p "()") '())
   (check-equal? (p "[]") '())
@@ -161,29 +177,55 @@
     [#\I (unimplemented "inexact number")]
     [#\e (unimplemented "exact number")]
     [#\E (unimplemented "exact number")]
-    [#\x (unimplemented "hex number")] ;; FIXME
-    [#\X (unimplemented "hex number")]
-    [#\o (unimplemented "octal number")]
-    [#\O (unimplemented "octal number")]
-    [#\d (unimplemented "dec number")]
-    [#\D (unimplemented "dec number")]
-    [#\b (unimplemented "bin number")]
-    [#\B (unimplemented "bin number")]
+    [#\b (<general-numbern> char-digit2? char-digit2s->number p)]
+    [#\B (<general-numbern> char-digit2? char-digit2s->number p)]
+    [#\o (<general-numbern> char-digit8? char-digit8s->number p)]
+    [#\O (<general-numbern> char-digit8? char-digit8s->number p)]
+    [#\d (<general-numbern> char-digit10? char-digit10s->number p)]
+    [#\D (<general-numbern> char-digit10? char-digit10s->number p)]
+    [#\x (<general-numbern> char-digit16? char-digit16s->number p)]
+    [#\X (<general-numbern> char-digit16? char-digit16s->number p)]
     [#\< (<here-string> p)]
     [#\r (unimplemented "regexp or reader")]
     [#\p (unimplemented "pregexp")]
     [#\c (unimplemented "case switch")]
     [#\C (unimplemented "case switch")]
     [#\h (unimplemented "hash")]
-    [(? char-digit?) (unimplemented "vector or graph")]
+    [(? char-digit10?) (unimplemented "vector or graph")]
     [_ (err p "bad syntax")]))
     
 
-(define (char-digit? d)
-  (<= 48 (char->integer d) 57))
-
 (define (<here-string> p)
   (unimplemented "here string"))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Numbers
+
+;; have seen '#b', '#o', etc.
+;; simplified to just digits
+(define (<general-numbern> char-digitn? char-digitsn->number p)
+  (local [(define (<digitn>+ p)
+            (match (read-char p)
+              [(? char-digitn? c)  (<digitn>* p (list c))]
+              [_ (err p "error")]))
+          (define (<digitn>* p ds)
+            (if (delim? p)
+                (char-digitsn->number ds)
+                (match (read-char p)
+                  [(? char-digitn? c) (<digitn>* p (cons c ds))]
+                  [_ (err p "error")])))]
+    (match (read-char p)
+      [#\#
+       (match (read-char p)
+         [#\e (<digitn>+ p)]
+         [#\i (unimplemented "inexact")]
+         [_ (err p "error")])]
+      [#\+ (read-char p) (<digitn>+ p)]
+      [#\- (read-char p) (- (<digitn>+ p))]
+      [(? char-digitn? c) (<digitn>* p (list c))]
+      [_ (err p "error")])))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Numbers or Symbols
@@ -208,20 +250,22 @@
   (check-equal? (pn "0123") 123)
   (check-equal? (pn "-123") -123)
   (check-equal? (pn "+123") 123)
-  (check-equal? (pn "5.") 5.0)
-  (check-equal? (pn ".5") 0.5)
-  (check-equal? (pn ".5 ") 0.5)
-  (check-equal? (pn "+.5") 0.5)
-  (check-equal? (pn "-.5") -0.5)
-  (check-equal? (pn "+1.5") 1.5)
-  (check-equal? (pn "-1.5") -1.5)
-  (check-equal? (pn "+.5") 0.5)
-  (check-equal? (pn "-.") '-.)
-  (check-equal? (pn "+.") '+.)
-  (check-equal? (pn "+.x") '+.x)
+  ; removed frac
+  ;(check-equal? (pn "5.") 5.0)
+  ;(check-equal? (pn ".5") 0.5)
+  ;(check-equal? (pn ".5 ") 0.5)
+  ;(check-equal? (pn "+.5") 0.5)
+  ;(check-equal? (pn "-.5") -0.5)
+  ;(check-equal? (pn "+1.5") 1.5)
+  ;(check-equal? (pn "-1.5") -1.5)
+  ;(check-equal? (pn "+.5") 0.5)
+  ;(check-equal? (pn "-.") '-.)
+  ;(check-equal? (pn "+.") '+.)
+  ;(check-equal? (pn "+.x") '+.x)
   (check-equal? (pn "+x") '+x)
   (check-equal? (pn "-x") '-x)
-  (check-equal? (pn ".x") '.x)
+  ; removed frac
+  ;(check-equal? (pn ".x") '.x)
   (check-equal? (pn "1..") '1..)
   (check-equal? (pn "1.1.") '1.1.)  
   (check-pred err? (pn ".")))
@@ -231,7 +275,7 @@
     [#\+ (if (delim? p) '+ (<unsigned-or-symbol> #\+ '() p))]
     [#\- (if (delim? p) '- (<unsigned-or-symbol> #\- '() p))]
     [#\. (if (delim? p) (err p ".") (<frac> #f '() '() p))]
-    [(? char-digit?) (<unsigned-or-symbol> #f (list c) p)]
+    [(? char-digit10?) (<unsigned-or-symbol> #f (list c) p)]
     [_   (<symbol> (list c) p)]))
 
 (define (<unsigned-or-symbol> signed? whole p)
@@ -239,7 +283,7 @@
     [(? eof-object?) (make-whole signed? whole)]
     [(? char-delim?) (make-whole signed? whole)]
     [#\. (read-char p) (<frac> signed? whole '() p)]
-    [(? char-digit? d)
+    [(? char-digit10? d)
      (read-char p)
      (<unsigned-or-symbol> signed? (cons d whole) p)]    
     [_ (<symbol> (cons (read-char p)
@@ -250,7 +294,7 @@
   (match (peek-char p)
     [(? eof-object?) (make-frac signed? whole frac)]
     [(? char-delim?) (make-frac signed? whole frac)]
-    [(? char-digit?) (<frac> signed? whole (cons (read-char p) frac) p)]
+    [(? char-digit10?) (<frac> signed? whole (cons (read-char p) frac) p)]
     [_ (<symbol> (cons (read-char p)
                        (append frac
                                (list #\.)
@@ -259,6 +303,8 @@
                  p)]))
 
 (define (make-frac signed? whole frac)
+  (unimplemented "frac")
+  #; ;; unimplemented because we don't have fractions in the run-time
   (match* (whole frac)
     [('() '()) (chars->symbol (list #\. signed?))]
     [(_ _)
@@ -267,6 +313,7 @@
         [#\- (- (frac->number whole frac))]
         [_ (frac->number whole frac)]))]))
 
+#;; removed frac
 (define (frac->number whole frac)
   (+ (char-digits->number whole)
      (/ (char-digits->number frac)
@@ -274,18 +321,8 @@
   
 (define (make-whole signed? ds)
   (match signed?
-    [#\- (- (char-digits->number ds))]
-    [_      (char-digits->number ds)]))
-
-(define (char-digits->number ds)
-  (match ds
-    ['() 0]
-    [(cons d ds)
-     (+ (char-digit->number d)
-        (* 10 (char-digits->number ds)))]))
-
-(define (char-digit->number d)
-  (- (char->integer d) 48))
+    [#\- (- (char-digit10s->number ds))]
+    [_      (char-digit10s->number ds)]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -374,7 +411,8 @@
   (check-equal? (pd "x y . z ;f\n)") '(x y . z))  
   (check-equal? (pd "x #t)") '(x #t))
   (check-equal? (pd "x .y)") '(x .y))
-  (check-equal? (pd "x .0)") '(x 0.0))
+  ; removed frac
+  ;(check-equal? (pd "x .0)") '(x 0.0))
   (check-equal? (pd "x .y)") '(x .y))
   (check-equal? (pd "[] 0)") '(() 0))
 
@@ -611,25 +649,75 @@
 
 ;; Assume: have already read '#\'
 (define (<char-start> p)
-  (match (cons (read-char p) (peek-char p))
-    [(cons (? eof-object?) _) (err p "error")]
-    ['(#\b . #\a) (read-char p) (committed '(#\c #\k #\s #\p #\a #\c #\e) #\backspace p)]
-    ['(#\l . #\i) (read-char p) (committed '(#\n #\e #\f #\e #\e #\d) #\linefeed p)]
-    ['(#\n . #\e) (read-char p) (committed '(#\w #\l #\i #\n #\e) #\newline p)]
-    ['(#\n . #\u) (read-char p) (<char-start>nu p)]
-    ['(#\p . #\a) (read-char p) (committed '(#\g #\e) #\page p)]   
-    ['(#\r . #\e) (read-char p) (committed '(#\t #\u #\r #\n) #\return p)]
-    ['(#\r . #\u) (read-char p) (committed '(#\b #\o #\u #\t) #\rubout p)]
-    ['(#\s . #\p) (read-char p) (committed '(#\a #\c #\e) #\space p)]
-    ['(#\t . #\a) (read-char p) (committed '(#\b) #\tab p)]
-    ['(#\v . #\t) (read-char p) (committed '(#\a #\b) #\vtab p)]
-    [(cons c (? eof-object?)) c]
-    [(cons #\u (? char-digit16?)) (<char-start><digit16>+ (list (read-char p)) 3 p)]    
-    [(cons #\U (? char-digit16?)) (<char-start><digit16>+ (list (read-char p)) 7 p)]
-    [(cons (? char-digit8? c) _)  (<char-start><digit8> c p)]
-    [(cons (? char-alphabetic? c) (? not-char-alphabetic?)) c]
-    [(cons (? not-char-alphabetic? c) _) c]
-    [_ (err p "error")]))
+  (let ((c (read-char p)))
+    (cond
+      [(eof-object? c) (err p "error")]
+      [(eof-object? (peek-char p)) c]
+      [(char-digit8? c) (<char-start><digit8> c p)]
+      [(not-char-alphabetic? c) c]
+      [else
+       (match c
+         [#\b (<char-start>-special-seq #\b #\a '(#\c #\k #\s #\p #\a #\c #\e) #\backspace p)]
+         [#\l (<char-start>-special-seq #\l #\i '(#\n #\e #\f #\e #\e #\d) #\linefeed p)]
+         [#\p (<char-start>-special-seq #\p #\a '(#\g #\e) #\page p)]
+         [#\s (<char-start>-special-seq #\s #\p '(#\a #\c #\e) #\space p)]
+         [#\t (<char-start>-special-seq #\t #\a '(#\b) #\tab p)]
+         [#\v (<char-start>-special-seq #\v #\t '(#\a #\b) #\vtab p)]
+         [#\r (<char-start>-special-seq-alt #\r
+                                                 #\e '(#\t #\u #\r #\n) #\return
+                                                 #\u '(#\b #\o #\u #\t) #\rubout p)]
+         ;; Move this into <char-start>-nu and rename to -n.
+         [#\n (let ((next (peek-char p)))
+                (cond [(char=? next #\e)
+                       (begin (read-char p)
+                              (committed '(#\w #\l #\i #\n #\e) #\newline p))]
+                      [(char=? next #\u)
+                       (begin (read-char p) (<char-start>nu p))]
+                      [(eof-object? next) #\n]
+                      [(not-char-alphabetic? next) #\n]
+                      [else (error p "error")]))]
+
+         [#\u
+          (cond [(char-digit16? (peek-char p))
+                 (<char-start><digit16>+ (list (read-char p)) 3 p)]
+                [(not-char-alphabetic? (peek-char p))
+                 (read-char p)]
+                [else (err p "error")])]
+         [#\U
+          (cond [(char-digit16? (peek-char p))
+                 (<char-start><digit16>+ (list (read-char p)) 7 p)]
+                [(not-char-alphabetic? (peek-char p))
+                 (read-char p)]
+                [else (err p "error")])]
+         [_
+          (if (and (char-alphabetic? c)
+                   (not-char-alphabetic? (peek-char p)))
+              c
+              (err p "error"))])])))
+
+;; Assume: seen '#\', c0, which may be the start of special sequence for char if c1 comes next
+(define (<char-start>-special-seq c0 c1 seq char p)
+  (let ((next (peek-char p)))
+    (cond [(char=? next c1)
+           (begin (read-char p)
+                  (committed seq char p))]
+          [(eof-object? next) c0]
+          [(not-char-alphabetic? next) c0]
+          [else (error p "error")])))
+
+;; Assume: seen '#\', c0, which may be the start of special sequence;
+;; for char1 if c1 comes next or for char2 if c2 comes next
+(define (<char-start>-special-seq-alt c0 c1 seq1 char1 c2 seq2 char2 p)
+  (let ((next (peek-char p)))
+    (cond [(char=? next c1)
+           (begin (read-char p)
+                  (committed seq1 char1 p))]
+          [(char=? next c2)
+           (begin (read-char p)
+                  (committed seq2 char2 p))]
+          [(eof-object? next) c0]
+          [(not-char-alphabetic? next) c0]
+          [else (error p "error")])))
 
 ;; committed to see #\nul or #\null, error otherwise
 (define (<char-start>nu p)
@@ -682,21 +770,56 @@
         (integer->char x)
         (err 'p "error"))))
 
+(define (char-digit2s->number ds)
+  (match ds
+    ['() 0]
+    [(cons d ds)
+     (+ (char-digit->number d)
+        (*2 (char-digit2s->number ds)))]))
+
+(define (char-digit8s->number ds)
+  (match ds
+    ['() 0]
+    [(cons d ds)
+     (+ (char-digit->number d)
+        (*8 (char-digit8s->number ds)))]))
+
+(define (char-digit10s->number ds)
+  (match ds
+    ['() 0]
+    [(cons d ds)
+     (+ (char-digit->number d)        
+        (*10 (char-digit10s->number ds)))]))
+
 (define (char-digit16s->number ds)
   (match ds
     ['() 0]
     [(cons d ds)
      (+ (char-digit16->number d)
-        (* 16 (char-digit16s->number ds)))]))
+        (*16 (char-digit16s->number ds)))]))
+
+(define (char-digit->number d)
+  (- (char->integer d)
+     (char->integer #\0)))
+
+(define (char-digit2? d)
+  (and (char? d)
+       (<= 48 (char->integer d) 49)))
 
 (define (char-digit8? d)
-  (<= 48 (char->integer d) 55))
+  (and (char? d)
+       (<= 48 (char->integer d) 55)))
+
+(define (char-digit10? d)
+  (and (char? d)
+       (<= 48 (char->integer d) 57)))
 
 (define (char-digit16? d)
-  (let ((x (char->integer d)))
-    (or (<= 48 x 57)
-        (<= 65 x 70)
-        (<= 97 x 102))))
+  (and (char? d)
+       (let ((x (char->integer d)))
+         (or (<= 48 x 57)
+             (<= 65 x 70)
+             (<= 97 x 102)))))
 
 (define (char-digit8->number c)
   (- (char->integer c) 48))
@@ -708,8 +831,8 @@
           [(<= 97 x 102) (- x 87)])))
 
 (define (octal-char d1 d2 d3)
-  (let ((x (+ (* 64 (char-digit8->number d1))
-              (*  8 (char-digit8->number d2))
+  (let ((x (+ (*64 (char-digit8->number d1))
+              (*8  (char-digit8->number d2))
               (char-digit8->number d3))))
     (if (<= 0 x 255)
         (integer->char x)
@@ -826,13 +949,6 @@
         r
         (<string-start-chars> (cons r cs) p))))
 
-(define (char-digit8s->number ds)
-  (match ds
-    ['() 0]
-    [(cons d ds)
-     (+ (char-digit8->number d)
-        (* 8 (char-digit8s->number ds)))]))
-
 (define (char-digit8s->char ds)
   (integer->char (char-digit8s->number ds)))
 
@@ -868,5 +984,24 @@
            (err p "unexpected sequence")))]))
 
 (define (unimplemented x)
-  (err (string-append "unimplemented: " x)))
+  (err #f (string-append "unimplemented: " x)))
   
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Multipliers
+
+(define (*2 a)
+   (arithmetic-shift a 1))
+
+(define (*8 a)
+   (arithmetic-shift a 3))
+
+(define (*16 a)
+   (arithmetic-shift a 4))
+
+(define (*10 a) ; 10a=2^3a+2a
+  (+ (arithmetic-shift a 1)
+     (arithmetic-shift a 3)))
+
+(define (*64 a)
+  (arithmetic-shift a 6))
