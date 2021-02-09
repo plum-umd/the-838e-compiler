@@ -6,7 +6,7 @@
 (define rax 'rax) ; return
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2
-(define r8  'r8)  ; scratch in +, -
+(define r8  'r8)  ; scratch in +, -, integer-length
 (define r9  'r9)  ; scratch in assert-type
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
@@ -102,6 +102,14 @@
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
+         ['integer-length
+          (seq (assert-integer rax)
+               (Sar rax imm-shift)
+               (Mov r8 rax)
+               (Sar r8 63)
+               (Xor rax r8)
+               (Bsr rax rax)
+               (Sal rax int-shift))]
          ['char?
           (let ((l1 (gensym)))
             (seq (And rax mask-char)
