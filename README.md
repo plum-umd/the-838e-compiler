@@ -38,3 +38,13 @@ When you decide to work on an issue, assign yourself to it so others know you ar
 working on it.  Several people may decide to work on the same issue.  You can
 coordinate your efforts on Discord.  You can either work together or work on separate
 branches developing alternate solutions.
+
+## Dependencies
+
+Code emitted by the compiler depends upon the following libraries:
+
+* [`libunistring`](https://www.gnu.org/software/libunistring/)
+
+  To install this library, you can `brew install libunistring-dev` on
+  macOS (with Homebrew) or `apt-get install libunistring-dev` on
+  Ubuntu, or you can download and compile the source code.
