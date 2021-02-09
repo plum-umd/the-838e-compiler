@@ -3,12 +3,14 @@ UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
   format=macho64
+  libs='-lunistring'
 else
   format=elf64
+  libs='-l:libunistring.a'
 endif
 
 %.run: %.o runtime.o
-	gcc runtime.o $< -o $@
+	gcc runtime.o $< -o $@ $(libs)
 
 runtime.o: main.o char.o io.o
 	ld -r main.o char.o io.o -o runtime.o

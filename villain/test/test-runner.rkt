@@ -132,7 +132,11 @@
                                (cons (add1 (car xs))
                                      (map-add1 (cdr xs)))))
                          (map-add1 (cons 1 (cons 2 (cons 3 '()))))))
-                '(2 3 4))|#)
+  '(2 3 4))|#
+
+  (check-equal? (run '(char-whitespace? #\a)) #f)
+  (check-equal? (run '(char-whitespace? #\ )) #t)
+  )
 
 (define (test-runner-io run)
   ;; Evildoer examples
