@@ -4,6 +4,11 @@
 #include "types.h"
 #include "runtime.h"
 
+FILE* in;
+FILE* out;
+void (*error_handler)();
+int64_t *heap;
+
 void print_result(int64_t);
 
 void error_exit() {
@@ -55,10 +60,10 @@ void print_result(int64_t result) {
     case val_void:
       /* nothing */ break;
     }
-  }  
+  }
 }
 
-void print_cons(int64_t a) {  
+void print_cons(int64_t a) {
   int64_t car = *((int64_t *)((a + 8) ^ cons_type_tag));
   int64_t cdr = *((int64_t *)((a + 0) ^ cons_type_tag));
   print_result(car);
