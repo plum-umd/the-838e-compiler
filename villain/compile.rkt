@@ -58,11 +58,13 @@
          [(Char c)           (compile-value c)]
          [(Eof)              (compile-value eof)]
          [(Empty)            (compile-value '())]
+         [(String s)         (compile-string s)]       ;; added
          [(Var x)            (compile-variable x c)]
          [(App f es)         (compile-app f es c)]    
          [(Prim0 p)          (compile-prim0 p c)]
          [(Prim1 p e)        (compile-prim1 p e c)]
          [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
+         [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]   ;; added
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
          [(Let x e1 e2)      (compile-let x e1 e2 c)])
@@ -71,6 +73,40 @@
 ;; Value -> Asm
 (define (compile-value v)
   (seq (Mov rax (imm->bits v))))
+
+;; Added ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; String -> Asm
+(define (compile-string s)
+  (let ((length (string-length s)))
+    ;(displayln (imm->bits length))
+    (seq (Mov 'rax (imm->bits length))
+         (Mov (Offset 'rbx 0) 'rax)
+         (Mov 'r9 0)
+         (compile-str-chars (string->list s) 3 0 1)
+         (Mov 'rax 'rbx)
+         (Or 'rax type-string)
+         (Add 'rbx (* 8 (+ 1 (ceiling (/ length 3))))))))         
+
+;; (Listof Chars) Integer -> Asm
+(define (compile-str-chars cs n rem quot)
+  (match cs
+    ['() (let () 
+           (if (= rem 0)
+               '()
+               (seq (Mov (Offset 'rbx (* 8 quot)) 'r9))))]
+    [(cons c cs)
+     (seq (Mov 'rax (imm->bits c))
+          (if (= rem 0) '() (Sal 'rax (* rem 21)))
+          (Add 'r9 'rax)
+          (if (= rem 2)
+              (seq  (Mov (Offset 'rbx (* 8 quot)) 'r9)
+                    (Mov 'r9 0))
+              '())
+          (let ((m (+ 1 n)))
+            (compile-str-chars cs m (remainder m 3) (quotient m 3))))]))
+       
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;  
+  
 
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
@@ -149,6 +185,12 @@
           (seq (assert-cons rax)
                (Xor rax type-cons)
                (Mov rax (Offset rax 0)))]
+         ['string-length
+          (seq (assert-string rax)
+               (Xor rax type-string)
+               (Mov rax (Offset rax 0)))]   ;; added
+         ['string?
+          (type-pred ptr-mask type-string)]   ;; addded
          ['empty? (eq-imm val-empty)])))
 
 ;; Op2 Expr Expr CEnv -> Asm
@@ -176,6 +218,77 @@
                  (Je l)
                  (Mov rax val-false)
                  (Label l)))]
+         ['string-ref
+          (let ((l1 (gensym 'loop)) (l2 (gensym 'loopII)) (l3 (gensym 'done))) 
+            (seq (Pop r8)
+                 (assert-string r8)
+                 (assert-integer rax)
+                 (Cmp rax 0)
+                 (Jl 'raise_error)
+                 (Xor r8 type-string)
+                 (Mov r9 (Offset r8 0))       ; r9 = length
+                 (Add rax (imm->bits 1))      ; 0-indexing to 1-indexing
+                 (Cmp rax r9)
+                 (Jg 'raise_error)
+
+                 (Label l1)                   ; loop l1 start
+                 (Sub rax (imm->bits 3))
+                 (Add r8 8)
+                 (Cmp rax 0)
+                 (Jg l1)                      ; loop back to l1
+
+                 (Mov r9 (Offset r8 0))       ; r9 the word containing char
+                 
+                 (Label l2)                   ; loop l2 start
+                 (Cmp rax 0)
+                 (Je l3)
+                 (Sal r9 21)
+                 (Add rax (imm->bits 1))
+                 (Jmp l2)                     ; loop back to l2
+                 
+                 (Label l3)
+                 (Sal r9 1)
+                 (Sar r9 43)
+                 (Mov rax r9)))]      ; added
+         ['make-string
+          (let ((l1 (gensym 'loop)) (l2 (gensym 'process)) (l3 (gensym 'done)))
+            (seq (Pop r8)
+                 (assert-integer r8)
+                 (assert-char rax)
+                 (Cmp r8 0)
+                 (Jl 'raise_error)
+                 (Mov 'rcx rbx)               ; save heap pointer
+                 (Mov (Offset rbx 0) r8)
+                 (Add rbx 8)                  ; add rbx 8
+                 (Cmp r8 (imm->bits 1))
+                 (Jl l3)
+                 
+                 (Label l1)                   ; loop l1 start
+                 (Mov r9 rax)
+                 (Sub r8 (imm->bits 1))
+                 (Cmp r8 (imm->bits 1))
+                 (Jl l2)
+                 
+                 (Sal r9 21)
+                 (Add r9 rax)
+                 (Sub r8 (imm->bits 1))
+                 (Cmp r8 (imm->bits 1))
+                 (Jl l2)
+                 
+                 (Sal r9 21)
+                 (Add r9 rax)
+                 
+                 (Label l2)
+                 (Mov (Offset rbx 0) r9)
+                 (Add rbx 8)                   ; increment heap pointer
+                 (Sub r8 (imm->bits 1))
+                 (Cmp r8 (imm->bits 1))
+                 (Jl l3)
+                 (Jmp l1)                      ; loop back to l1
+                 
+                 (Label l3)
+                 (Mov rax 'rcx)
+                 (Or rax type-string)))]    ; added 
          ['cons
           (seq (Mov (Offset rbx 0) rax)
                (Pop rax)
@@ -183,6 +296,61 @@
                (Mov rax rbx)
                (Or rax type-cons)
                (Add rbx 16))])))
+
+;; Added ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Op3 Expr Expr CEnv -> Asm
+
+(define (compile-prim3 p e1 e2 e3 c)
+  (seq (compile-e e1 c)
+       (Push rax)
+       (compile-e e2 (cons #f c))
+       (Push rax)
+       (compile-e e3 (cons #f (cons #f c)))
+       (match p
+         ['string-set!
+          (let ((l1 (gensym 'loop)) (l2 (gensym 'loopII)) (l3 (gensym 'done)))
+            (seq (Pop 'r10)                    ; 2nd arg in r10: index
+                 (Pop r8)                      ; 1st arg in r8: str
+                 (assert-integer 'r10)
+                 (assert-string r8)
+                 (assert-char rax)             ; 3rd arg in rax: char
+                 (Xor r8 type-string)
+                 (Mov r9 (Offset r8 0))        ; r9 = length
+                 (Cmp 'r10 0) 
+                 (Jl 'raise_error)
+                 (Add 'r10 (imm->bits 1))      ; 1-indexing
+                 (Cmp 'r10 r9)
+                 (Jg 'raise_error)
+               
+                 (Label l1)                    ; loop l1 start
+                 (Sub 'r10 (imm->bits 3))  
+                 (Add r8 8)
+                 (Cmp 'r10 0)
+                 (Jg l1)                       ; loop back to l1
+                 
+                 ;; r10 = -2, -1, or 0
+                 ;; r8 points to word containing the char to change
+                 (Add 'r10 (imm->bits 2))
+                 (Mov r9 (Offset r8 0))         ; r9 the word containing char
+                 (Mov 'r11 (- (expt 2 21) 1))
+                 
+                 (Label l2)                    ; loop l2 start
+                 (Cmp 'r10 0)
+                 (Je l3)
+                 (Sal rax 21)
+                 (Sal 'r11 21)
+                 (Sub 'r10 (imm->bits 1))
+                 (Jmp l2)                      ; loop back to l2
+
+                 (Label l3)
+                 (Mov 'r10 (- (expt 2 63) 1))
+                 (Xor 'r10 'r11)
+                 (And r9 'r10)
+                 (Or r9 rax)
+                 (Mov (Offset r8 0) r9)
+                 (Mov rax val-void)))])))   ; added               
+         
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;         
 
 ;; Id [Listof Expr] CEnv -> Asm
 ;; Here's why this code is so gross: you have to align the stack for the call
@@ -300,6 +468,8 @@
   (assert-type ptr-mask type-box))
 (define assert-cons
   (assert-type ptr-mask type-cons))
+(define assert-string                      ;; added
+  (assert-type ptr-mask type-string))      ;; added
 
 (define assert-codepoint
   (let ((ok (gensym)))
@@ -339,3 +509,4 @@
          (string->list (symbol->string s))))
     "_"
     (number->string (eq-hash-code s) 16))))
+

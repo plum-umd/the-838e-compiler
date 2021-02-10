@@ -24,6 +24,32 @@
                           7))
                 7)
 
+  ;; String examples  ;; added
+  (check-equal? (run "Racket") "Racket")
+  (check-equal? (run "Rack") "Rack")
+  (check-equal? (run "Ra") "Ra")
+  (check-equal? (run "R") "R")
+  (check-equal? (run "") "")
+  (check-equal? (run '(string-length "Rack")) 4)
+  (check-equal? (run '(string-length "")) 0)
+  (check-equal? (run '(string-ref "Racket" 0)) #\R)
+  (check-equal? (run '(string-ref "Racket" 5)) #\t)
+  (check-equal? (run '(string-ref "Racket" 3)) #\k)
+  (check-equal? (run '(string-ref "Racket" 6)) 'err)
+  (check-equal? (run '(string-ref "Racket" -1)) 'err)
+  (check-equal? (run '(string? "Racket")) #t)
+  (check-equal? (run '(string? "")) #t)
+  (check-equal? (run '(string? 5)) #f)
+  (check-equal? (run '(string? #\a)) #f)
+  (check-equal? (run '(string? '())) #f)
+  (check-equal? (run '(string? #t)) #f)
+  (check-equal? (run '(make-string 5 #\y)) "yyyyy")
+  (check-equal? (run '(make-string 0 #\y)) "")
+  (check-equal? (run '(make-string -1 #\y)) 'err)
+  (check-equal? (run '(string-set! (make-string 5 #\y) 2 #\n)) (void))
+  (check-equal? (run '(let ((str (make-string 5 #\y))) (begin (string-set! str 2 #\n) str))) "yynyy")
+  
+
   ;; Dupe examples
   (check-equal? (run #t) #t)
   (check-equal? (run #f) #f)
