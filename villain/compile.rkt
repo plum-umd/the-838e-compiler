@@ -171,8 +171,8 @@
                (Mov rax r8))]
          ['eq?
           (let ((l (gensym)))
-            (seq (Cmp rax (Offset rsp 0))
-                 (Pop rax)
+            (seq (Pop r8)
+                 (Cmp rax (Offset rsp 0))
                  (Mov rax val-true)
                  (Je l)
                  (Mov rax val-false)
