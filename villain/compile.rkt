@@ -263,7 +263,9 @@
   (let ((continue (gensym "continue")))
     (match (cons ps es)
       [(cons '() '())
-       (seq)]
+       (seq
+        (%% "If the program reaches here, then all the patterns have been exhausted and this is a match error")
+        (Jmp 'raise-error))] 
       [(cons (cons (? value? v) ps) (cons h es))
        (seq
         (compile-value (extract-literal v))
