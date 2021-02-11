@@ -8,6 +8,7 @@
     [(list 'add1 (? integer?))            (add1 v)]
     [(list 'sub1 (? integer?))            (sub1 v)]
     [(list 'zero? (? integer?))           (zero? v)]
+    [(list 'integer-length (? integer?))  (integer-length v)]
     [(list 'char? v)                      (char? v)]
     [(list 'char->integer (? char?))      (char->integer v)]
     [(list 'integer->char (? codepoint?)) (integer->char v)]
@@ -20,6 +21,7 @@
     [(list 'string-length (? string?))    (string-length v)]   
     [(list 'string? v)                    (string? v)]       
     [(list 'empty? v)                     (empty? v)]
+    [(list 'char-whitespace? (? char?))   (char-whitespace? v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer

@@ -1,3 +1,6 @@
+#ifndef VILLAIN_TYPES_H
+#define VILLAIN_TYPES_H
+
 /*
   Bit layout of values
 
@@ -33,3 +36,5 @@
 #define val_eof   ((2 << char_shift) | nonchar_type_tag)
 #define val_void  ((3 << char_shift) | nonchar_type_tag)
 #define val_empty ((4 << char_shift) | nonchar_type_tag)
+
+#endif

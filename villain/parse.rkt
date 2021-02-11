@@ -45,6 +45,8 @@
 (define op1
   '(add1 sub1 zero? char? write-byte eof-object?
          integer->char char->integer box unbox empty? car cdr
+         integer-length
+         char-alphabetic? char-upcase char-downcase char-titlecase
          string-length string?))   
 (define op2
   '(+ - eq? cons string-ref make-string))  

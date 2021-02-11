@@ -1,6 +1,6 @@
 #lang racket
 (provide (all-defined-out))
-(require "ast.rkt" "types.rkt" a86/ast)
+(require "ast.rkt" "types.rkt" "externs.rkt" a86/ast)
 
 ;; Registers used
 (define rax 'rax) ; return  ; the dividend of div in string-ref and string-set!
@@ -8,7 +8,7 @@
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
-                  ; make-string, compile-prim3, string-ref!
+                  ; make-string, compile-prim3, string-ref!, integer-length
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, 
 (define rsp 'rsp) ; stack
@@ -21,9 +21,7 @@
 (define (compile p)
   (match p
     [(Prog ds e)  
-     (prog (Extern 'peek_byte)
-           (Extern 'read_byte)
-           (Extern 'write_byte)
+     (prog (externs p)
            (Extern 'raise_error)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
@@ -55,8 +53,7 @@
 
 ;; Expr CEnv -> Asm
 (define (compile-e e c)
-  (seq (%% (format "begin ~a" e))
-       (match e
+  (seq (match e
          [(Int i)            (compile-value i)]
          [(Bool b)           (compile-value b)]
          [(Char c)           (compile-value c)]
@@ -71,8 +68,7 @@
          [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let x e1 e2)      (compile-let x e1 e2 c)])
-       (%% (format "end ~a" e))))
+         [(Let x e1 e2)      (compile-let x e1 e2 c)])))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -142,6 +138,14 @@
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
+         ['integer-length
+          (seq (assert-integer rax)
+               (Sar rax imm-shift)
+               (Mov r8 rax)
+               (Sar r8 63)
+               (Xor rax r8)
+               (Bsr rax rax)
+               (Sal rax int-shift))]
          ['char?
           (let ((l1 (gensym)))
             (seq (And rax mask-char)
@@ -161,6 +165,29 @@
                (Sal rax char-shift)
                (Xor rax type-char))]
          ['eof-object? (eq-imm val-eof)]
+         [(or 'char-whitespace? 'char-alphabetic?)
+          (let ((l (gensym)))
+            (seq (assert-char rax)
+                 (pad-stack c)
+                 (Sar rax char-shift)
+                 (Mov rdi rax)
+                 (Call (char-op->uc p))
+                 (unpad-stack c)
+                 (Cmp rax 0)
+                 (Mov rax val-true)
+                 (Jne l)
+                 (Mov rax val-false)
+                 (Label l)))]
+         [(or 'char-upcase 'char-downcase 'char-titlecase)
+          (let ((l (gensym)))
+            (seq (assert-char rax)
+                 (pad-stack c)
+                 (Sar rax char-shift)
+                 (Mov rdi rax)
+                 (Call (char-op->uc p))
+                 (unpad-stack c)
+                 (Sal rax char-shift)
+                 (Or rax type-char)))]
          ['write-byte
           (seq assert-byte
                (pad-stack c)
