@@ -182,6 +182,28 @@
                       [(cons h t) (car t)]
                       [(cons h v) h])))
                 2)
+  
+  (check-equal? (run
+                 '(match 5
+                    [1 #f]
+                    [2 #f]))
+                'err)
+  
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (match lst
+                        [(cons h t) (+ 1 (len t))]
+                        ['() 0]))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                 3)
+    (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (match lst
+                        [(cons h t) (+ 1 (len t))]))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                 'err)
 #|
   (check-equal? (run
                  '(begin (define (even? x)
