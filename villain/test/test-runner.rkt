@@ -103,7 +103,23 @@
                                0
                                (+ x (tri (sub1 x)))))
                          (tri 9)))
-                45)
+                45) 
+  
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri 9 6)))
+                'err) 
+  
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri )))
+                'err)
 
   (check-equal? (run '(integer-length   0)) 0)
   (check-equal? (run '(integer-length  -1)) 0)
