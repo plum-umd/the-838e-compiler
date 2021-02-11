@@ -7,6 +7,9 @@
 ;; type Defn = (Defn Id (Listof Id) Expr)
 (struct Defn (f xs e) #:prefab)
 
+;; type Lib = (Lib (Listof provide symbols) (Listof Defn))
+(struct Lib (ps xs) #:prefab)
+
 ;; type Expr = (Eof)
 ;;           | (Empty)
 ;;           | (Int Integer)

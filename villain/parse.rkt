@@ -2,13 +2,16 @@
 (provide parse parse-e)
 (require "ast.rkt")
 
-;; S-Expr -> Prog
+;; S-Expr -> Prog / Lib
 (define (parse s)
   (match s
-    [(list 'begin (and ds (list 'define _ _)) ... e)
+    [(list (list 'begin (and ds (list 'define _ _)) ... e))
      (Prog (map parse-d ds) (parse-e e))]
-    [e (Prog '() (parse-e e))]))
+    [(list e) (Prog '() (parse-e e))]
+    [(list (list 'provide ps ... ) (and ds (list 'define _ _)) ...)
+     (Lib ps (map parse-d ds))]))
 
+    
 ;; S-Expr -> Defn
 (define (parse-d s)
   (match s

@@ -24,7 +24,19 @@
            (compile-e e '(#f))
            (Mov rdx rbx) ; return heap pointer in second return register           
            (Ret)
-           (compile-defines ds))]))
+           (compile-defines ds))]
+    [(Lib ps ds)
+     (seq 
+          (compile-provides ps)
+          (Extern 'raise_error)
+          (compile-defines ds))]))
+
+(define (compile-provides ps)
+  (match ps
+    ['() (seq)]
+    [(cons p ps)
+     (seq (Global (symbol->label p))
+          (compile-provides ps))]))
 
 ;; [Listof Defn] -> Asm
 (define (compile-defines ds)

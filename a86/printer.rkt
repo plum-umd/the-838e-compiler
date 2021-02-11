@@ -61,6 +61,7 @@
       [(Label l)   (string-append (label-symbol->string l) ":")]
       [(Extern l)  (begin0 (string-append tab "extern " (label-symbol->string l))
                            (set! external-labels (cons l external-labels)))]
+      [(Global l)  (string-append tab "global " (symbol->string l))]
       [(Mov a1 a2)
        (string-append tab "mov "
                       (arg->string a1) ", "
@@ -152,12 +153,19 @@
        (string-append (instr->string i) "\n" (instrs->string a))]))
   
   ;; entry point will be first label
-  (match (findf Label? a)
-    [(Label g)
-     (string-append
-      tab "global " (label-symbol->string g) "\n"
-      tab "default rel\n"
-      tab "section .text\n"
-      (instrs->string a))]
+  (match (first a)
+    [(Global _)
+      (string-append
+        tab "default rel\n"
+        tab "section .text\n"
+        (instrs->string a))]
     [_
-     (error "program does not have an initial label")]))
+      (match (findf Label? a)
+        [(Label g)
+        (string-append
+          tab "global " (label-symbol->string g) "\n"
+          tab "default rel\n"
+          tab "section .text\n"
+          (instrs->string a))]
+        [_
+        (error "program does not have an initial label")])]))

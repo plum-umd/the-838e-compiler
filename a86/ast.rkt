@@ -131,6 +131,7 @@
 
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
+(instruct Global (x)       check:label-symbol)
 
 (provide offset? register? instruction? label?)
 
@@ -147,6 +148,7 @@
 (define (instruction? x)
   (or (Label? x)
       (Extern? x)
+      (Global? x)
       (Call? x)
       (Ret? x)
       (Mov? x)
@@ -194,10 +196,10 @@
 (define (prog . xs)
   (let ((p (apply seq xs)))
     (check-unique-label-decls p)
-    (check-label-targets-declared p)
+    ;(check-label-targets-declared p)
     (check-has-initial-label p)
     ;; anything else?
-    p))
+    (handle-undeclared-labels p)))
 
 ;; Asm -> Void
 (define (check-unique-label-decls xs)
@@ -253,6 +255,20 @@
       (unless (set-empty? undeclared)
         (error 'prog "undeclared labels found: ~v" (set->list undeclared))))))
 
+;; Convert undeclared label to extern statements
+(define (handle-undeclared-labels asm)
+  (let ((ds (apply set (label-decls asm)))
+        (us (apply set (label-uses asm))))
+    (let ((undeclared (set-subtract us ds)))
+        (prepend-externs (set->list undeclared) asm)
+      )))
+
+(define (prepend-externs uds asm)
+  (match uds
+    ['() asm]
+    [(cons l rest)
+     (cons (Extern l) (prepend-externs rest asm))]))
+ 
 ;; Asm -> Void
 (define (check-has-initial-label asm)
   (unless (findf Label? asm)
