@@ -36,6 +36,7 @@
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
+    [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(cons (? symbol? f) es)
      (App f (map parse-e es))]
     [_ (error "Parse error" s)]))
