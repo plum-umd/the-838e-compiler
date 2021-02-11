@@ -1,6 +1,6 @@
 #lang racket
 (provide (all-defined-out))
-(require "ast.rkt" "types.rkt" a86/ast)
+(require "ast.rkt" "types.rkt" "utility.rkt" a86/ast)
 
 ;; Registers used
 (define rax 'rax) ; return
@@ -309,26 +309,6 @@
             (Jmp end-sym)
             (Label continue)
             (compile-patterns ps es end-sym c))])))
-        
-       
-
-
-;;Expr -> boolean
-;;Given an expression, determine if it is a value
-(define (value? v)
-  (match v
-    [(or (Int _) (Bool _) (Char _) (Empty) (Eof)) #t]
-    [_ #f]))
-
-;;Value -> (or Integer Boolean Character '() eof) 
-;;Given an Expr that is a Value, extract the data it contains or represents
-(define (extract-literal v)
-  (match v
-    [(Int i) i]
-    [(Bool b) b]
-    [(Char c) c]
-    [(Empty) '()]
-    [(Eof) eof]))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments

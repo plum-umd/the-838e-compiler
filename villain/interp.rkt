@@ -2,7 +2,8 @@
 (provide interp interp-env interp-prim1)
 (require "ast.rkt"
          "env.rkt"
-         "interp-prims.rkt")
+         "interp-prims.rkt"
+         "utility.rkt")
 
 ;; type Answer = Value | 'err
 
@@ -71,7 +72,26 @@
            (if (= (length xs) (length vs))
                (interp-env e (zip xs vs) ds)
                'err)])]
-       [_ 'err])]))
+       [_ 'err])]
+    [(Match e0 ps es)
+     (interp-match (interp-env e0 r ds) ps es r ds)]))
+
+;;Answer Env Defs -> Answer
+(define (interp-match guard ps es r ds)
+  (match (cons ps es)
+    [(cons '() '()) 'err] ;The method assumes that ps and es have the same length
+    [(cons (cons (? value? v) ps) (cons h es))
+     (if (eq? guard (extract-literal v))
+         (interp-env h r ds)
+         (interp-match guard ps es r ds))]
+    [(cons (cons (Prim2 'cons (Var (? symbol? v1)) (Var (? symbol? v2))) ps) (cons h es))
+     (match guard
+       [(cons a b) (interp-env h (ext (ext r v2 b) v1 a) ds)]
+       [_ (interp-match guard ps es r ds)])]
+    [(cons (cons (Prim1 'box (Var (? symbol? v1))) ps) (cons h es))
+     (match guard
+       [(box a) (interp-env h (ext r v1 a) ds)]
+       [_ (interp-match guard ps es r ds)])]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | 'err
 (define (interp-env* es r ds)
