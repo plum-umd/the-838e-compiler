@@ -24,6 +24,9 @@ char.o: char.c types.h
 io.o: io.c runtime.h
 	gcc -fPIC -c io.c -o io.o
 
+symbol.o: symbol.c
+	gcc -fPIC -c symbol.c -o symbol.o
+
 %.o: %.s
 	nasm -f $(format) -o $@ $<
 
