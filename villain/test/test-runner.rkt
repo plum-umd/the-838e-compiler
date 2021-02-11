@@ -183,6 +183,8 @@
 
   (check-equal? (run '(char-whitespace? #\a)) #f)
   (check-equal? (run '(char-whitespace? #\ )) #t)
+
+  (check-equal? (run '#"asdf") #"asdf")
   )
 
 (define (test-runner-io run)

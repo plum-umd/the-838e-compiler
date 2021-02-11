@@ -33,6 +33,7 @@
     [(Bool b) b]
     [(Char c) c]
     [(String s) s]
+    [(Bytes b) b]
     [(Eof)    eof]
     [(Empty)  '()]
     [(Var x)  (lookup r x)]

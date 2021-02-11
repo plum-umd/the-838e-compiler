@@ -25,6 +25,7 @@
     [(? string?)                   (String s)] 
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
+    [(? bytes?)                    (Bytes s)]
     [(list 'quote (list))          (Empty)]
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
@@ -47,7 +48,9 @@
          integer->char char->integer box unbox empty? car cdr
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string?))   
+         string-length string?
+         bytes?
+         ))   
 (define op2
   '(+ - eq? cons string-ref make-string))  
 (define op3

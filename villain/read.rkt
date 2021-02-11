@@ -191,6 +191,7 @@
     [#\c (unimplemented "case switch")]
     [#\C (unimplemented "case switch")]
     [#\h (unimplemented "hash")]
+    [#\" (string->bytes (<string-start-chars> '() p))]
     [(? char-digit10?) (unimplemented "vector or graph")]
     [_ (err p "bad syntax")]))
     
@@ -891,6 +892,14 @@
   (check-pred err? (ps "a\\q\""))
   (check-pred err? (ps "\\UFFFFFFFF\""))
   #;(check-pred err? (ps "\\Uag")))
+
+
+(define (string->bytes s)
+  (for-each (λ (c)
+              (when (> (char->integer c) 255)
+                (error "character is out of range in byte string")))
+            (string->list s))  
+  (string->bytes/utf-8 s))
 
 ;; Assume: have already read '"'
 (define (<string-start-chars> cs p)
