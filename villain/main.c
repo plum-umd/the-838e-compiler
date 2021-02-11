@@ -10,6 +10,7 @@ void (*error_handler)();
 int64_t *heap;
 
 void print_result(int64_t);
+void print_str(int64_t);
 
 void error_exit() {
   printf("err\n");
@@ -47,6 +48,10 @@ void print_result(int64_t result) {
     printf("%" PRId64, result >> int_shift);
   } else if (char_type_tag == (char_type_mask & result)) {
     print_char(result);
+  } else if (str_type_tag == (ptr_type_mask & result)) { 
+    printf("\"");
+    print_str(result);
+    printf("\"");
   } else {
     switch (result) {
     case val_true:
