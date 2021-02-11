@@ -125,6 +125,18 @@ void print_cons(vl_cons *cons)
   }
 }
 
+void print_bytes(int64_t a) {
+  int64_t* bs = (int64_t *)(a ^ bytes_type_tag); 
+  int64_t len = (bs[0]);
+  char* cs = (char*)&(bs[1]);
+  printf("#\"");
+  for (int i = 0; i < len; i++) {
+    printf("%c", cs[i]);
+  }
+  printf("\"");
+}
+
+
 int main(int argc, char** argv)
 {
   vl_val result;
@@ -142,4 +154,3 @@ int main(int argc, char** argv)
 
   free(heap);
   return 0;
-}

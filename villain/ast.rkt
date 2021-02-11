@@ -24,6 +24,7 @@
 ;;           | (String String)
 ;;           | (Vec (Listof Expr))
 ;;           | (Symbol Symbol)
+;;           | (Bytes Bytes)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
 ;;           | (Prim2 Op2 Expr Expr)      
@@ -46,7 +47,8 @@
 ;;           | 'char? | 'integer->char | 'char->integer
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
-;;           | 'string-length | 'string? | make-string    
+;;           | 'string-length | 'string? | make-string
+;;           | 'bytes?    
 ;;           | 'empty?  |'vector? |'vector-length |list?
 ;; type Op2  = '+ | '- | * | quotient| remainder
 ;;           | 'eq? | 'cons | 'string-ref | 'make-vector 
@@ -69,14 +71,14 @@
 ;;           | (Lam* Label Formals Formal Expr)
 ;; type LabelledLambda = Lambda
 
-
 (struct Eof   ()              #:prefab)
 (struct Empty ()              #:prefab)
 (struct Int   (i)             #:prefab)
 (struct Bool  (b)             #:prefab)
 (struct Char  (c)             #:prefab)
 (struct Flonum (f)            #:prefab)
-(struct String (s)            #:prefab)   
+(struct String (s)            #:prefab)
+(struct Bytes (b)             #:prefab)   
 (struct Bignum (i)            #:prefab)   
 (struct Symbol (s)            #:prefab)
 (struct Prim0 (p)             #:prefab)

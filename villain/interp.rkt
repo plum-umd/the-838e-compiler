@@ -41,6 +41,7 @@
     [(Flonum f) f]
     [(String s) s]
     [(Symbol s) s]
+    [(Bytes b) b]
     [(Eof)    eof]
     [(Empty)  '()]
     [(Vec es) (list->vector (interp-env* es r ds))]

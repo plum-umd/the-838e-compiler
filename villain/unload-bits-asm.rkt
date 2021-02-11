@@ -19,6 +19,9 @@
     [(? cons-bits? i)
      (cons (unload-value (heap-ref (+ i (arithmetic-shift 1 imm-shift))))
            (unload-value (heap-ref i)))]
+    [(? bytes-bits? i)
+     (let ((len (heap-ref i)))
+       (list->bytes (build-list len (lambda (j) (heap-byte-ref i (+ 8 j))))))]
     [(? string-bits? i)
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))

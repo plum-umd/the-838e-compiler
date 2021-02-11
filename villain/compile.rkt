@@ -242,6 +242,7 @@
     [(Eof)              (compile-value eof)]
     [(Empty)            (compile-value '())]
     [(String s)         (compile-string s)]
+    [(Bytes b)          (compile-bytes b)]
     [(Symbol s)         (compile-symbol s c)]
     [(Vec ds)           (compile-vector ds c)]
     [(Var x)            (compile-variable x c)]
@@ -709,6 +710,40 @@
   (seq (compile-prim1 'string->symbol
                       (String (symbol->string s))
                       c)))
+  
+;; Bytes -> Asm
+(define (compile-bytes b)
+  (seq (Mov rax (bytes-length b))
+       (Mov (Offset rbx 0) rax)
+       (compile-bytes-list (bytes->list b) 8)
+       (Mov rax rbx)       
+       (Add rbx (* 8 (add1 (bytes-length b))))       
+       (Or rax type-bytes)))
+
+;; (Listof Byte) Natural -> Asm
+(define (compile-bytes-list bs i)
+  (seq (compile-bytes-word i (take bs (min 8 (length bs))))
+       (if (> (length bs) 8)
+           (compile-bytes-list (drop bs 8))
+           (seq))))
+
+(define (list-ref0 ls i)
+  (if (<= (length ls) i)
+      0
+      (list-ref ls i)))
+
+;; Nat (Listof Byte) -> Asm
+;; Write four bytes into word at offset i in heap
+(define (compile-bytes-word i bs)  
+  (seq (Mov rax (+ (arithmetic-shift (list-ref0 bs 7) (* 8 7))
+                   (arithmetic-shift (list-ref0 bs 6) (* 8 6))
+                   (arithmetic-shift (list-ref0 bs 5) (* 8 5))
+                   (arithmetic-shift (list-ref0 bs 4) (* 8 4))
+                   (arithmetic-shift (list-ref0 bs 3) (* 8 3))
+                   (arithmetic-shift (list-ref0 bs 2) (* 8 2))
+                   (arithmetic-shift (list-ref0 bs 1) (* 8 1))
+                   (arithmetic-shift (list-ref0 bs 0) (* 8 0))))
+       (Mov (Offset rbx i) rax)))
 
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
@@ -853,6 +888,7 @@
 (define (compile-prim1 p e c)
   (seq (compile-e-nontail e c)
        (match p
+         ;['bytes? ...]
          ['add1
           (let ((end (gensym))
                 (pos-bignum (gensym)))

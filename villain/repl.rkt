@@ -8,7 +8,7 @@
     (display "$> ")
     (let ((r (read)))
       (unless (eof-object? r)
-        (println (unload/free (asm-interp (compile (parse r)))))
+        (writeln (unload/free (asm-interp (compile (parse r)))))
         (loop)))))
 
 (module+ main

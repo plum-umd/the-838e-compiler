@@ -68,6 +68,7 @@
     [(? vector?)                   (Vec  (parse-vec-lit (vector->list s)))]
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
+    [(? bytes?)                    (Bytes s)]
     [(list 'quote (list))          (Empty)]
     [(list 'apply f e)             (Apply (parse-e f) (parse-e e))]
     [(list (? (op? op0) p0))       (Prim0 p0)]
@@ -159,6 +160,7 @@
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string? integer?
          flonum?
+         bytes?
          symbol->string string->symbol symbol?
          vector? vector-length
          string-length string?

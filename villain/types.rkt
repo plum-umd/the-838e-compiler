@@ -16,6 +16,7 @@
 (define type-proc       #x1000000000000002)
 (define proc-mask       #x7000000000000002)
 (define type-bignum     #x1000000000000003)
+(define type-bytes      #x1000000000000004)
 
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
@@ -147,6 +148,9 @@
 
 (define (string-bits? v) 
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-string))) 
+
+(define (bytes-bits? v)
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-bytes)))
 
 (define (symbol-bits? v)
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-symbol)))
