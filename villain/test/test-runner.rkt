@@ -23,8 +23,8 @@
                           (if (zero? 1) 1 2)
                           7))
                 7)
-
-  ;; String examples  ;; added
+  
+  ;; String examples 
   (check-equal? (run "Racket") "Racket")
   (check-equal? (run "Rack") "Rack")
   (check-equal? (run "Ra") "Ra")
@@ -44,11 +44,28 @@
   (check-equal? (run '(string? '())) #f)
   (check-equal? (run '(string? #t)) #f)
   (check-equal? (run '(make-string 5 #\y)) "yyyyy")
+  (check-equal? (run '(make-string 3 #\y)) "yyy")
+  (check-equal? (run '(make-string 1 #\y)) "y")
   (check-equal? (run '(make-string 0 #\y)) "")
   (check-equal? (run '(make-string -1 #\y)) 'err)
   (check-equal? (run '(string-set! (make-string 5 #\y) 2 #\n)) (void))
-  (check-equal? (run '(let ((str (make-string 5 #\y))) (begin (string-set! str 2 #\n) str))) "yynyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 2 #\n) str))) "yynyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 1 #\n) str))) "ynyyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 3 #\n) str))) "yyyny")
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str 2 #\n) str))) "yyn")
+  (check-equal? (run '(let ((str (make-string 2 #\y)))
+                        (begin (string-set! str 0 #\n) str))) "ny")  
   
+  ;; if r8 is not pushed backed on stack before jump to 'raise error, these two
+  ;; tests cause invalid memory reference and loss of some debugging context
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str 3 #\n) str))) 'err) 
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str -1 #\n) str))) 'err)
 
   ;; Dupe examples
   (check-equal? (run #t) #t)

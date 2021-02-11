@@ -28,6 +28,13 @@
       (error n "expects exact integer, register, or offset; given ~v" a2))
     (values a1 a2)))
 
+(define check:arith-div  
+  (λ (a1 n)
+    (unless (register? a1)
+      (error n "expects register; given ~v" a1))
+    (values a1)))
+
+
 (define check:register
   (λ (a1 n)
     (unless (register? a1)
@@ -113,6 +120,7 @@
 (instruct Mov    (dst src) check:src-dest)
 (instruct Add    (dst src) check:arith)
 (instruct Sub    (dst src) check:arith)
+(instruct Div    (dst)     check:arith-div)
 (instruct Cmp    (a1 a2)   check:src-dest)
 (instruct Jmp    (x)       check:target)
 (instruct Je     (x)       check:target)
@@ -151,6 +159,7 @@
       (Mov? x)
       (Add? x)
       (Sub? x)
+      (Div? x)
       (Cmp? x)
       (Jmp? x)
       (Je? x)

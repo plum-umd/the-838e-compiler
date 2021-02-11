@@ -1,6 +1,6 @@
 #lang racket
 (require "ast.rkt")
-(provide interp-prim1 interp-prim2 interp-prim3) ;; modified
+(provide interp-prim1 interp-prim2 interp-prim3)
 
 ;; Op1 Value -> Answer
 (define (interp-prim1 p1 v)
@@ -17,8 +17,8 @@
     [(list 'unbox (? box?))               (unbox v)]
     [(list 'car (? pair?))                (car v)]
     [(list 'cdr (? pair?))                (cdr v)]
-    [(list 'string-length (? string?))    (string-length v)]   ;; added
-    [(list 'string? v)                    (string? v)]        ;; added 
+    [(list 'string-length (? string?))    (string-length v)]   
+    [(list 'string? v)                    (string? v)]       
     [(list 'empty? v)                     (empty? v)]
     [_                                    'err]))
 
@@ -30,9 +30,9 @@
     [(list 'eq? v1 v2)                    (eqv? v1 v2)]
     [(list 'cons v1 v2)                   (cons v1 v2)]
     [(list 'string-ref
-           (? string?) (? integer?))      (if (or (< v2 0) (>= v2 (string-length v1)))
-                                              'err
-                                              (string-ref v1 v2))]    ;; added
+           (? string?) (? integer?))      (if (<= 0 v2 (sub1 (string-length v1)))
+                                              (string-ref v1 v2)
+                                              'err)]   
     [(list 'make-string
            (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]                         
     [_                                    'err]))
@@ -41,9 +41,9 @@
 (define (interp-prim3 p v1 v2 v3)
   (match (list p v1 v2 v3)
     [(list 'string-set! (? string?)
-           (? integer?) (? char?))        (if (or (< v2 0) (>= v2 (string-length v1)))
-                                              'err
-                                              (string-set! v1 v2 v3))]   ;; added
+           (? integer?) (? char?))        (if (<= 0 v2 (sub1 (string-length v1)))
+                                              (string-set! v1 v2 v3)
+                                              'err)]  
     [_                                    'err]))
 
 ;; Any -> Boolean

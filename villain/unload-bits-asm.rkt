@@ -21,9 +21,8 @@
            (unload-value (heap-ref i)))]
     [(? string-bits? i)
         (let ((length (unload-value (heap-ref i))))
-
-            (let ((str-chars (string-loop length i)))
-              (list->string (reverse str-chars))))]))
+          (let ((str-chars (string-loop length i)))
+            (list->string (reverse str-chars))))]))
                      
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))

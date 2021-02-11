@@ -3,7 +3,7 @@
 #include "types.h"
 
 void print_codepoint(int64_t);
-void print_str(int64_t);   // added
+void print_str(int64_t);   
 void print_str_char(int64_t);
 
 void print_char (int64_t v) {
@@ -57,8 +57,6 @@ void print_codepoint(int64_t v) {
   }
 }
 
-// added
-
 void print_str(int64_t v) {
   int64_t* str = (int64_t *)(v ^ str_type_tag);
   int64_t len = (str[0] >> int_shift);
@@ -71,7 +69,8 @@ void print_str(int64_t v) {
       print_str_char(temp);
     }
   }
-  for (j = 0; j < (len % 3); j++){
+  i = (len % 3 == 0) ? 3 : (len % 3);
+  for (j = 0; j < i; j++){
     temp = str[n] >> (j * 21);
     print_str_char(temp);
   }

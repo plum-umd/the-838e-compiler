@@ -10,7 +10,7 @@
 ;; | Integer
 ;; | Boolean
 ;; | Character
-;; | String         ;; added
+;; | String        
 ;; | Eof
 ;; | Void
 ;; | '()
@@ -32,7 +32,7 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
-    [(String s) s]  ; added
+    [(String s) s]
     [(Eof)    eof]
     [(Empty)  '()]
     [(Var x)  (lookup r x)]
@@ -56,7 +56,7 @@
              ['err 'err]
              [v2 (match (interp-env e3 r ds)
                    ['err 'err]
-                   [v3 (interp-prim3 p v1 v2 v3)])])])] ;; added
+                   [v3 (interp-prim3 p v1 v2 v3)])])])]
     [(If p e1 e2)
      (match (interp-env p r ds)
        ['err 'err]

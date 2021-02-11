@@ -69,6 +69,9 @@
        (string-append tab "add "
                       (arg->string a1) ", "
                       (arg->string a2))]
+      [(Div a1)
+       (string-append tab "div "
+                      (arg->string a1) ", ")]
       [(Sub a1 a2)
        (string-append tab "sub "
                       (arg->string a1) ", "
