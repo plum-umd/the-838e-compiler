@@ -136,7 +136,24 @@
 
   (check-equal? (run '(char-whitespace? #\a)) #f)
   (check-equal? (run '(char-whitespace? #\ )) #t)
-  )
+
+
+  ;; symbols
+  (check-equal? (run '((eq? 'foo
+                            (string->symbol "foo"))))
+                #t)
+  (check-equal? (run '((eq? (string->symbol "foo")
+                            (string->symbol "foo"))))
+                #t)
+  (check-equal? (run '((eq? (string->symbol "foo")
+                            (string->symbol "bar"))))
+                #f)
+  (check-equal? (run '((symbol->string 'foo)))
+                "foo")
+  (check-equal? (run '((eq? (gensym) (gensym))))
+                #f)
+  (check-equal? (run '((let ([x (gensym)]) (eq? x x))))
+                #t))
 
 (define (test-runner-io run)
   ;; Evildoer examples
