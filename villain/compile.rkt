@@ -7,13 +7,13 @@
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
-(define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, compile-prim3
+(define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
+                  ; make-string, compile-prim3, string-ref!
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!
+                  ; string-set!, make-string, 
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string
-(define r11 'r11) ; scratch in make-string
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
 
 ;; type CEnv = [Listof Variable]
 
@@ -258,21 +258,21 @@
                  (Add rbx 8)                  ; advance heap pointer
                  (Cmp r8 (imm->bits 1))
                  (Jl l3)
-                 (Mov r9 rax)
+                 (Mov r9 rax)                ; r9 = char arg
                  (Mov rax r8)                ; rax = dividend = length
                  (Mov rdx 0)
-                 (Mov r11 (imm->bits 3))
-                 (Div r11)                   ; divide rax by (imm->bits 3)
+                 (Mov r8 (imm->bits 3))
+                 (Div r8)                    ; divide rax by (imm->bits 3)
                                              ; quot. in rax; rem. in rdx
-                 (Mov r11 r9)
-                 (Sal r11 21)
-                 (Add r11 r9)
-                 (Sal r11 21)
-                 (Add r11 r9)         ; r11 = [char arg][char arg][char arg]                 
+                 (Mov r8 r9)                 ; r8 = register to build the word
+                 (Sal r8 21)
+                 (Add r8 r9)
+                 (Sal r8 21)
+                 (Add r8 r9)          ; r8 = [char arg][char arg][char arg]                 
                  (Label l1)           ; loop to set quot. number of words to r11
                  (Cmp rax 0)
                  (Je l4)
-                 (Mov (Offset rbx 0) r11)
+                 (Mov (Offset rbx 0) r8)
                  (Add rbx 8)                 ; advance the heap pointer
                  (Sub rax 1)
                  (Jmp l1)
@@ -290,7 +290,7 @@
                  (Label l2)               ; case that remainder = 1 
                  (Mov (Offset rbx -8) rax)
                  (Label l3)                  
-                 (Mov rax r10)
+                 (Mov rax r10)            ; pointer to word 0 of the str
                  (Or rax type-string)))]    
          ['cons
           (seq (Mov (Offset rbx 0) rax)
