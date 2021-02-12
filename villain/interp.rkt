@@ -2,8 +2,7 @@
 (provide interp interp-env interp-prim1)
 (require "ast.rkt"
          "env.rkt"
-         "interp-prims.rkt"
-         "utility.rkt")
+         "interp-prims.rkt")
 
 ;; type Answer = Value | 'err
 
@@ -79,7 +78,7 @@
 (define (interp-match guard ps es r ds)
   (match (cons ps es)
     [(cons '() '()) 'err] ;The method assumes that ps and es have the same length
-    [(cons (cons (? value? v) ps) (cons h es))
+    [(cons (cons (? literal? v) ps) (cons h es))
      (if (eq? guard (extract-literal v))
          (interp-env h r ds)
          (interp-match guard ps es r ds))]

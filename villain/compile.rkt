@@ -1,6 +1,6 @@
 #lang racket
 (provide (all-defined-out))
-(require "ast.rkt" "types.rkt" "utility.rkt" a86/ast)
+(require "ast.rkt" "types.rkt" a86/ast)
 
 ;; Registers used
 (define rax 'rax) ; return
@@ -275,7 +275,7 @@
        (seq
         (%% "If the program reaches here, then all the patterns have been exhausted and this is a match error")
         (Jmp err-sym))]
-      [(cons (cons (? value? v) ps) (cons h es))
+      [(cons (cons (? literal? v) ps) (cons h es))
        (seq
         (compile-value (extract-literal v))
         (Cmp (Offset rsp 0) rax)
