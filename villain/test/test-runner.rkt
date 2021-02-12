@@ -191,13 +191,13 @@
                       [(cons h v) h])))
                 2)
 
-  #|(check-equal? (run
+  (check-equal? (run
                  '(match 5
                     [1 #f]
                     [2 #f]))
                 'err)
 
-  (check-equal? (run
+  #|(check-equal? (run
                  '(begin
                     (define (len lst)
                       (match lst
