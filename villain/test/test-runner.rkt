@@ -104,6 +104,84 @@
                                (+ x (tri (sub1 x)))))
                          (tri 9)))
                 45)
+
+  ;; Pattern Matching Tests
+  (check-equal? (run
+                 '(match 2 [1 1] [2 2]))
+                2)
+  (check-equal? (run
+                 '(match #t [#t #t] [#f #f]))
+                #t)
+  (check-equal? (run
+                 '(match #\a [#\b #\b] [#\a #\a] [#\c #\c]))
+                #\a)
+  (check-equal? (run
+                 '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
+                #t)
+  (check-equal? (run
+                 '(match eof [5 #f] [#t #f] [#\e #f] [eof (let ((x 5)) (let ((y 6)) (+ x y)))]))
+                11)
+  (check-equal? (run
+                 '(match (let ((x (cons 5 (cons 6 (cons #\a '()))))) (car x))
+                    [eof (+ 1 2)]
+                    [5 #t]
+                    [1 #f]
+                    [2 (let ((y #\c)) (char->integer y))]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) a]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) b]
+                    [5 2]))
+                #f)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (char? a)]
+                    [5 2]))
+                #f)
+
+  (check-equal? (run
+                 '(match (cons 1 2)
+                    [(cons a b) (+ a b)]
+                    [5 2]))
+                3)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (eq? a #t)]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (eq? b #f)]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (begin (eq? a #t) (eq? b #f))]
+                    [5 2]))
+                #t)
+  (check-equal? (run
+                 '(match (box 5)
+                    [5 #f]
+                    [(box v) (let ((y v)) (+ y v))]))
+                10)
+
+  (check-equal? (run
+                 '(let ((x (cons #\a (cons 2 (cons #\c '())))))
+                    (match x
+                      [(cons h t) (car t)]
+                      [(cons h v) h])))
+                2)
 #|
   (check-equal? (run
                  '(begin (define (even? x)

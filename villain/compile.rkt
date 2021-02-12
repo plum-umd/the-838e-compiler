@@ -6,7 +6,7 @@
 (define rax 'rax) ; return
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2
-(define r8  'r8)  ; scratch in +, -
+(define r8  'r8)  ; scratch in +, -, match
 (define r9  'r9)  ; scratch in assert-type
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
@@ -171,8 +171,8 @@
                (Mov rax r8))]
          ['eq?
           (let ((l (gensym)))
-            (seq (Cmp rax (Offset rsp 0))
-                 (Sub rsp 8)
+            (seq (Pop r8)
+                 (Cmp rax r8)
                  (Mov rax val-true)
                  (Je l)
                  (Mov rax val-false)
@@ -251,12 +251,12 @@
      (%% "The compiled code for the expression to be matched on")
      (compile-e e0 c)
      (%% "Store away the result of evaluating the expression")
-     (Push 'rax)
+     (Push rax)
      (%% "The compiled code for comparing the expression against the different match clauses")
      (compile-patterns ps es end-sym (cons #f c))
      (%% "The end of the match")
      (Label end-sym)
-     (Pop 'rax))))
+     (Pop r8))))
 
 ;; [Listof Patterns] [Listof Expr] symbol CENV -> Asm
 ;; This function assumes that ps and es are of the same length
@@ -268,13 +268,48 @@
       [(cons (cons (? value? v) ps) (cons h es))
        (seq
         (compile-value (extract-literal v))
-        (Cmp (Offset 'rsp 0) rax)
+        (Cmp (Offset rsp 0) rax)
         (Jne continue) (% "don't execute the expression associated with this match clause")
         (%% "the expression associated with this match clause will be executed")
         (compile-e h c)
         (Jmp end-sym) (% "don't check any other match clause")
         (Label continue)
-        (compile-patterns ps es end-sym c))])))
+        (compile-patterns ps es end-sym c))]
+      [(cons (cons (Prim2 'cons (Var (? symbol? v1)) (Var (? symbol? v2))) ps) (cons h es))
+       (seq
+            (Mov r8 (Offset rsp 0))
+            (And r8 ptr-mask) (% "Get the type of the value of the expression being matched on")
+            (Cmp r8 type-cons)
+            (Jne continue)
+            (%% "Place the head and rest of the list on the stack")
+            (Mov rax (Offset rsp 0))
+            (Xor rax type-cons)
+            (Mov r8 (Offset rax 0)) (% "the rest of the list")
+            (Push r8)
+            (Mov r8 (Offset rax 8)) (% "The head of the list")
+            (Push r8)
+            (compile-e h (cons v1 (cons v2 c)))
+            (Pop r8)
+            (Pop r8)
+            (Jmp end-sym)
+            (Label continue)
+            (compile-patterns ps es end-sym c))]
+      [(cons (cons (Prim1 'box (Var (? symbol? v1))) ps) (cons h es))
+       (seq
+            (Mov r8 (Offset rsp 0))
+            (And r8 ptr-mask) (% "Get the type of the value in rax")
+            (Cmp r8 type-box)
+            (Jne continue)
+            (%% "Place the value in the box on the stack")
+            (Mov rax (Offset rsp 0))
+            (Xor rax type-box)
+            (Mov r8 (Offset rax 0)) (% "the value in the box")
+            (Push r8)
+            (compile-e h (cons v1 c))
+            (Pop r8)
+            (Jmp end-sym)
+            (Label continue)
+            (compile-patterns ps es end-sym c))])))
 
 ;;Expr -> boolean
 ;;Given an expression, determine if it is a value
