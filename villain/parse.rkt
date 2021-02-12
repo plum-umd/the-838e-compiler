@@ -49,12 +49,12 @@
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string?
-         bytes?
-         ))   
+         bytes? bytes-length))
 (define op2
-  '(+ - eq? cons string-ref make-string))  
+  '(+ - eq? cons string-ref make-string
+      bytes-ref))
 (define op3
-  '(string-set!))  
+  '(string-set! bytes-set!))
 
 (define (op? ops)
   (λ (x)

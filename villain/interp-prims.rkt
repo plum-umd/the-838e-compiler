@@ -19,7 +19,9 @@
     [(list 'car (? pair?))                (car v)]
     [(list 'cdr (? pair?))                (cdr v)]
     [(list 'string-length (? string?))    (string-length v)]   
-    [(list 'string? v)                    (string? v)]       
+    [(list 'string? v)                    (string? v)]
+    [(list 'bytes? v)                     (bytes? v)]
+    [(list 'bytes-length (? bytes?))      (bytes-length v)]
     [(list 'empty? v)                     (empty? v)]
     [(list 'char-whitespace? (? char?))   (char-whitespace? v)]
     [_                                    'err]))
@@ -37,6 +39,10 @@
                                               'err)]   
     [(list 'make-string
            (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]                         
+    [(list 'bytes-ref
+           (? bytes?) (? integer?))       (if (<= 0 v2 (sub1 (bytes-length v1)))
+                                              (bytes-ref v1 v2)
+                                              'err)]
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
@@ -46,6 +52,10 @@
            (? integer?) (? char?))        (if (<= 0 v2 (sub1 (string-length v1)))
                                               (string-set! v1 v2 v3)
                                               'err)]  
+    [(list 'bytes-set! (? bytes?)
+           (? integer?) (? byte?))        (if (<= 0 v2 (sub1 (bytes-length v1)))
+                                              (bytes-set! v1 v2 v3)
+                                              'err)]
     [_                                    'err]))
 
 ;; Any -> Boolean

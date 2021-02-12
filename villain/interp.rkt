@@ -33,7 +33,7 @@
     [(Bool b) b]
     [(Char c) c]
     [(String s) s]
-    [(Bytes b) b]
+    [(Bytes b) (bytes-copy b)] ; work around to make literals mutable
     [(Eof)    eof]
     [(Empty)  '()]
     [(Var x)  (lookup r x)]
