@@ -8,7 +8,7 @@
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
-                  ; make-string, compile-prim3, string-ref!, integer-length
+                  ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, 
 (define rsp 'rsp) ; stack
@@ -71,7 +71,8 @@
          [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let x e1 e2)      (compile-let x e1 e2 c)])))
+         [(Let x e1 e2)      (compile-let x e1 e2 c)]
+         [(Match e0 ps es)   (compile-match e0 ps es c)])))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -242,8 +243,8 @@
                (Mov rax r8))]
          ['eq?
           (let ((l (gensym)))
-            (seq (Cmp rax (Offset rsp 0))
-                 (Sub rsp 8)
+            (seq (Pop r8)
+                 (Cmp rax r8)
                  (Mov rax val-true)
                  (Je l)
                  (Mov rax val-false)
@@ -446,6 +447,83 @@
        (Push rax)
        (compile-e e2 (cons x c))
        (Add rsp 8)))
+
+;; Expr [Listof Pattern] [Listof Expr] CENV-> Asm
+(define (compile-match e0 ps es c)
+  (let ((end-sym (gensym "end"))
+        (err-sym (gensym "err"))
+        (continue (gensym "continue")))
+    (seq
+     (%% "The compiled code for the expression to be matched on")
+     (compile-e e0 c)
+     (%% "Store away the result of evaluating the expression")
+     (Push rax)
+     (%% "The compiled code for comparing the expression against the different match clauses")
+     (compile-patterns ps es end-sym err-sym (cons #f c))
+     (%% "The end of the match")
+     (Label end-sym)
+     (Pop r8)
+     (Jmp continue)
+     (%% "If there is a match error, clean up the stack before erroring out")
+     (Label err-sym) 
+     (Pop r8)
+     (Jmp 'raise_error)
+     (Label continue))))
+
+;; [Listof Patterns] [Listof Expr] symbol CENV -> Asm
+;; This function assumes that ps and es are of the same length
+(define (compile-patterns ps es end-sym err-sym c)
+  (let ((continue (gensym "continue")))
+    (match (cons ps es)
+      [(cons '() '())
+       (seq
+        (%% "If the program reaches here, then all the patterns have been exhausted and this is a match error")
+        (Jmp err-sym))]
+      [(cons (cons (? literal? v) ps) (cons h es))
+       (seq
+        (compile-value (extract-literal v))
+        (Cmp (Offset rsp 0) rax)
+        (Jne continue) (% "don't execute the expression associated with this match clause")
+        (%% "the expression associated with this match clause will be executed")
+        (compile-e h c)
+        (Jmp end-sym) (% "don't check any other match clause")
+        (Label continue)
+        (compile-patterns ps es end-sym err-sym c))]
+      [(cons (cons (Prim2 'cons (Var (? symbol? v1)) (Var (? symbol? v2))) ps) (cons h es))
+       (seq
+            (Mov r8 (Offset rsp 0))
+            (And r8 ptr-mask) (% "Get the type of the value of the expression being matched on")
+            (Cmp r8 type-cons)
+            (Jne continue)
+            (%% "Place the head and rest of the list on the stack")
+            (Mov rax (Offset rsp 0))
+            (Xor rax type-cons)
+            (Mov r8 (Offset rax 0)) (% "the rest of the list")
+            (Push r8)
+            (Mov r8 (Offset rax 8)) (% "The head of the list")
+            (Push r8)
+            (compile-e h (cons v1 (cons v2 c)))
+            (Pop r8)
+            (Pop r8)
+            (Jmp end-sym)
+            (Label continue)
+            (compile-patterns ps es end-sym err-sym c))]
+      [(cons (cons (Prim1 'box (Var (? symbol? v1))) ps) (cons h es))
+       (seq
+            (Mov r8 (Offset rsp 0))
+            (And r8 ptr-mask) (% "Get the type of the value in rax")
+            (Cmp r8 type-box)
+            (Jne continue)
+            (%% "Place the value in the box on the stack")
+            (Mov rax (Offset rsp 0))
+            (Xor rax type-box)
+            (Mov r8 (Offset rax 0)) (% "the value in the box")
+            (Push r8)
+            (compile-e h (cons v1 c))
+            (Pop r8)
+            (Jmp end-sym)
+            (Label continue)
+            (compile-patterns ps es end-sym err-sym c))])))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
