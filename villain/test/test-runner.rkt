@@ -197,7 +197,7 @@
                     [2 #f]))
                 'err)
 
-  #|(check-equal? (run
+  (check-equal? (run
                  '(begin
                     (define (len lst)
                       (match lst
@@ -211,7 +211,7 @@
                       (match lst
                         [(cons h t) (+ 1 (len t))]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
-                 'err)|#
+                 'err)
 #|
   (check-equal? (run
                  '(begin (define (even? x)
