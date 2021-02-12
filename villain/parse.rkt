@@ -13,7 +13,9 @@
 (define (parse-d s)
   (match s
     [(list 'define (list (? symbol? f) (? symbol? xs) ...) e)
-     (Defn f xs (parse-e e))]
+     (Defn f xs (parse-e e))] 
+    [(list 'define (list-rest (? symbol? f) (? symbol? xs) ... xs') e) 
+     (Defn* f xs xs' (parse-e e))]
     [_ (error "Parse defn error" s)]))
 
 ;; S-Expr -> Expr

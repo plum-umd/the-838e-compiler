@@ -47,6 +47,12 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
+          (Ret))] 
+    [(Defn* f xs xs' e) 
+     (seq (Label (symbol->label f)) 
+          (Cmp rcx (imm-bits (length xs))) 
+          (Jl 'raise_error) 
+          (compile-e e (parity (cons #f (append (reverse xs') (reverse xs))))) 
           (Ret))]))
 
 (define (parity c)

@@ -5,7 +5,10 @@
 (struct Prog (ds e) #:prefab)
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
-(struct Defn (f xs e) #:prefab)
+(struct Defn (f xs e) #:prefab) 
+
+;; type Defn* = (Defn* Id (Listof Id) (Listof Id) Expr)
+(struct Defn* (f xs xs' e) #:prefab)
 
 ;; type Expr = (Eof)
 ;;           | (Empty)
