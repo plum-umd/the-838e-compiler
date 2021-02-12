@@ -12,9 +12,11 @@
 ;;           | (Int Integer)
 ;;           | (Bool Boolean)
 ;;           | (Char Character)
+;;           | (String)         
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
-;;           | (Prim1 Op2 Op2 Expr)
+;;           | (Prim2 Op2 Expr Expr)      
+;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
 ;;           | (Let Id Expr Expr)
@@ -27,19 +29,24 @@
 ;;           | 'char? | 'integer->char | 'char->integer
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
+;;           | 'string-length | 'string? | make-string     
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
-;;           | 'cons
+;;           | 'cons | 'string-ref
+;; type Op3  = 'string-set!                    
 ;; type Pattern = #t | #f | '() | <number> | <string> | <symbol> | <character> | Id 
 ;;              | (cons Id Id) | (box Id)
+
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
 (struct Int   (i)          #:prefab)
 (struct Bool  (b)          #:prefab)
 (struct Char  (c)          #:prefab)
+(struct String (s)         #:prefab)   
 (struct Prim0 (p)          #:prefab)
 (struct Prim1 (p e)        #:prefab)
 (struct Prim2 (p e1 e2)    #:prefab)
+(struct Prim3 (p e1 e2 e3) #:prefab)
 (struct If    (e1 e2 e3)   #:prefab)
 (struct Begin (e1 e2)      #:prefab)
 (struct Let   (x e1 e2)    #:prefab)

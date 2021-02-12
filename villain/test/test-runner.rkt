@@ -23,6 +23,53 @@
                           (if (zero? 1) 1 2)
                           7))
                 7)
+  
+  ;; String examples 
+  (check-equal? (run "Racket") "Racket")
+  (check-equal? (run "Rack") "Rack")
+  (check-equal? (run "Ra") "Ra")
+  (check-equal? (run "R") "R")
+  (check-equal? (run "") "")
+  (check-equal? (run '(string-length "Rack")) 4)
+  (check-equal? (run '(string-length "")) 0)
+  (check-equal? (run '(string-ref "Racket" 0)) #\R)
+  (check-equal? (run '(string-ref "Racket" 5)) #\t)
+  (check-equal? (run '(string-ref "Racket" 3)) #\k)
+  (check-equal? (run '(string-ref "Racket" 6)) 'err)
+  (check-equal? (run '(string-ref "Racket" -1)) 'err)
+  (check-equal? (run '(string? "Racket")) #t)
+  (check-equal? (run '(string? "")) #t)
+  (check-equal? (run '(string? 5)) #f)
+  (check-equal? (run '(string? #\a)) #f)
+  (check-equal? (run '(string? '())) #f)
+  (check-equal? (run '(string? #t)) #f)
+  (check-equal? (run '(make-string 5 #\y)) "yyyyy")
+  (check-equal? (run '(make-string 3 #\y)) "yyy")
+  (check-equal? (run '(make-string 1 #\y)) "y")
+  (check-equal? (run '(make-string 0 #\y)) "")
+  (check-equal? (run '(make-string -1 #\y)) 'err)
+  (check-equal? (run '(string-set! (make-string 5 #\y) 2 #\n)) (void))
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 2 #\n) str))) "yynyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 1 #\n) str))) "ynyyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 3 #\n) str))) "yyyny")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 4 #\n) str))) "yyyyn")
+  (check-equal? (run '(let ((str (make-string 4 #\y)))
+                        (begin (string-set! str 3 #\n) str))) "yyyn")
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str 2 #\n) str))) "yyn")
+  (check-equal? (run '(let ((str (make-string 2 #\y)))
+                        (begin (string-set! str 0 #\n) str))) "ny")  
+  
+  ;; if r8 is not pushed backed on stack before jump to 'raise error, these two
+  ;; tests cause invalid memory reference and loss of some debugging context
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str 3 #\n) str))) 'err) 
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str -1 #\n) str))) 'err)
 
   ;; Dupe examples
   (check-equal? (run #t) #t)
@@ -212,6 +259,30 @@
                         [(cons h t) (+ 1 (len t))]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
                  'err)
+
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri 9 6)))
+                'err) 
+  
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri )))
+                'err)
+
+  (check-equal? (run '(integer-length   0)) 0)
+  (check-equal? (run '(integer-length  -1)) 0)
+  (check-equal? (run '(integer-length   1)) 1)
+  (check-equal? (run '(integer-length  -2)) 1)
+  (check-equal? (run '(integer-length  16)) 5)
+  (check-equal? (run '(integer-length -16)) 4)
+
 #|
   (check-equal? (run
                  '(begin (define (even? x)
@@ -232,7 +303,11 @@
                                (cons (add1 (car xs))
                                      (map-add1 (cdr xs)))))
                          (map-add1 (cons 1 (cons 2 (cons 3 '()))))))
-                '(2 3 4))|#)
+  '(2 3 4))|#
+
+  (check-equal? (run '(char-whitespace? #\a)) #f)
+  (check-equal? (run '(char-whitespace? #\ )) #t)
+  )
 
 (define (test-runner-io run)
   ;; Evildoer examples
