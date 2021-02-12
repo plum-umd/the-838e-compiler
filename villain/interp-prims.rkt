@@ -21,7 +21,9 @@
     [(list 'car (? pair?))                (car v)]
     [(list 'cdr (? pair?))                (cdr v)]
     [(list 'string-length (? string?))    (string-length v)]   
-    [(list 'string? v)                    (string? v)]       
+    [(list 'string? v)                    (string? v)]
+    [(list 'bytes? v)                     (bytes? v)]
+    [(list 'bytes-length (? bytes?))      (bytes-length v)]
     [(list 'empty? v)                     (empty? v)]
     [(list 'char-whitespace? (? char?))   (char-whitespace? v)]
     [(list 'string->symbol (? string?))   (string->symbol v)]
@@ -73,6 +75,11 @@
            (? vector?) (? integer?)) (if (<= 0 v2 (sub1 (vector-length v1)))
                                          (vector-ref v1 v2)
                                          'err)]           
+                      
+    [(list 'bytes-ref
+           (? bytes?) (? integer?))       (if (<= 0 v2 (sub1 (bytes-length v1)))
+                                              (bytes-ref v1 v2)
+                                              'err)]
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
@@ -86,6 +93,10 @@
            (? integer?) v3)        (if (<= 0 v2 (sub1 (vector-length v1)))
                                               (vector-set! v1 v2 v3)
                                               'err)]  
+    [(list 'bytes-set! (? bytes?)
+           (? integer?) (? byte?))        (if (<= 0 v2 (sub1 (bytes-length v1)))
+                                              (bytes-set! v1 v2 v3)
+                                              'err)]
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer

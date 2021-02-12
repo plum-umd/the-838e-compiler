@@ -164,16 +164,18 @@
          symbol->string string->symbol symbol?
          vector? vector-length
          string-length string?
+         bytes? bytes-length
          close-input-port open-input-file port? read-byte peek-byte))
 
 (define op2
   '(+ - quotient remainder eq? cons string-ref make-string 
       > < <= >=
       make-vector vector-ref
+      bytes-ref
       fl+ fl- fl<= fl=))
 
 (define op3
-  '(string-set!  vector-set!))  
+  '(string-set!  vector-set! bytes-set!))  
 (define op4
   '(vector-cas!))  
 

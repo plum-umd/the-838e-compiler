@@ -820,9 +820,22 @@
   (check-equal? (run '(let ((z 0)) (apply (λ x z) (cons 1 '())))) 0)
   (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)
   (check-equal? (run '#"asdf") #"asdf")
- ) 
-
-;; Variable
+  (check-equal? (run '(bytes? #"asdf")) #t)
+  (check-equal? (run '(bytes? "asdf")) #f)
+  (check-equal? (run '(bytes-ref #"asdf" 0)) 97)
+  (check-equal? (run '(bytes-ref #"asdf" 3)) 102)
+  (check-equal? (run '(bytes-ref #"asdf" -1)) 'err)
+  (check-equal? (run '(bytes-ref #"asdf" 4)) 'err)
+  (check-equal? (run '(let ((x #"asdf"))
+                        (begin (bytes-set! x 0 98) x)))
+                #"bsdf")
+  (check-equal? (run '(let ((x #"asdf"))
+                        (begin (bytes-set! x 1 99) x)))
+                #"acdf")
+  (check-equal? (run '(bytes-set! #"asdf" -1 97)) 'err)
+  (check-equal? (run '(bytes-set! #"asdf" 4 97)) 'err)
+  (check-equal? (run '(bytes-set! #"asdf" 0 256)) 'err)
+  )
 
 (define (test-runner-io run)
   ;; Evildoer examples

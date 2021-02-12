@@ -41,7 +41,7 @@
     [(Flonum f) f]
     [(String s) s]
     [(Symbol s) s]
-    [(Bytes b) b]
+    [(Bytes b) (bytes-copy b)] ; work around to make literals mutable
     [(Eof)    eof]
     [(Empty)  '()]
     [(Vec es) (list->vector (interp-env* es r ds))]

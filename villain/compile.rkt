@@ -713,12 +713,18 @@
   
 ;; Bytes -> Asm
 (define (compile-bytes b)
-  (seq (Mov rax (bytes-length b))
-       (Mov (Offset rbx 0) rax)
-       (compile-bytes-list (bytes->list b) 8)
-       (Mov rax rbx)       
-       (Add rbx (* 8 (add1 (bytes-length b))))       
-       (Or rax type-bytes)))
+  (let ((len (bytes-length b)))
+    (seq (Mov rax len)
+         (Mov (Offset rbx 0) rax)
+         (compile-bytes-list (bytes->list b) 8)
+         (Mov rax rbx)
+         (Add rbx (* 8 (add1 (words-for-bytes len))))
+         (Or rax type-bytes))))
+
+;; how many words do you need to represent len bytes
+(define (words-for-bytes len)
+  (+ (arithmetic-shift len -3)
+     (if (zero? (bitwise-and len 7)) 0 1)))
 
 ;; (Listof Byte) Natural -> Asm
 (define (compile-bytes-list bs i)
@@ -888,7 +894,6 @@
 (define (compile-prim1 p e c)
   (seq (compile-e-nontail e c)
        (match p
-         ;['bytes? ...]
          ['add1
           (let ((end (gensym))
                 (pos-bignum (gensym)))
@@ -1032,7 +1037,7 @@
                  (Sal rax char-shift)
                  (Or rax type-char)))]
          ['write-byte
-          (seq (assert-byte c)
+          (seq (assert-byte rax)
                (pad-stack c)
                (Mov rdi rax)
                (Call 'write_byte)
@@ -1148,6 +1153,13 @@
                (Mov rax (Offset rax 0))
                (Sal rax int-shift)
                (Or rax type-int))]
+         ['bytes?
+          (type-pred ptr-mask type-bytes)]
+         ['bytes-length
+          (seq (assert-bytes rax)
+               (Xor rax type-bytes)
+               (Mov rax (Offset rax 0))
+               (Sal rax int-shift))]
          ['flonum?
           (type-pred ptr-mask type-flonum)])))
 
@@ -1425,6 +1437,16 @@
                  (Label l3)
                  (Mov rax r10)            ; pointer to word 0 of the str
                  (Or rax type-string)))]
+         ['bytes-ref
+          (seq (Pop r8)
+               (assert-bytes r8)
+               (assert-integer rax)
+               (Sar rax int-shift)
+               (assert-valid-index r8 rax)
+               (Add r8 rax)
+               (Mov rax (Offset r8 8))
+               (And rax #xFF)
+               (Sal rax int-shift))]
          ['cons
           (seq (Mov (Offset rbx 0) rax)
                (Pop rax)
@@ -1509,6 +1531,22 @@
        (Push rax)
        (compile-e-nontail e3 (cons #f (cons #f c)))
        (match p
+         ['bytes-set!
+          (seq (Pop r8)   ; e2
+               (Pop r10)  ; e1
+               (assert-bytes r10)
+               (assert-integer r8)
+               (assert-byte rax)
+               (Sar r8 int-shift)
+               (Sar rax int-shift)
+               (assert-valid-index r10 r8)
+               (Add r10 r8)
+               ;; this would all be nicer with byte memory writes
+               (Mov r8 (Offset r10 8))     ;; instead: fetch word
+               (And r8 #xFFFFFFFFFFFFFF00) ;; zero last byte
+               (Or  rax r8)                ;; combine with byte input
+               (Mov (Offset r10 8) rax)    ;; write word back
+               (Mov rax val-void))]
          ['string-set!
           (let ((l1 (gensym 'loopmax2x)) (l2 (gensym 'exit_loop))
                     (l3 (gensym 'done)))
@@ -1845,6 +1883,8 @@
   (assert-type ptr-mask type-vector))
 (define assert-proc
   (assert-type proc-mask type-proc))
+(define assert-bytes
+  (assert-type ptr-mask type-bytes))
 
 (define assert-integer/bignum
   (λ (arg c)
@@ -1875,13 +1915,24 @@
          (Jg ok)
          (Jmp (error-label c))
          (Label ok))))
+       
+(define (assert-byte r)
+  (seq (assert-integer r)
+       (Cmp r (imm->bits 0))
+       (Jl 'raise_error)
+       (Cmp r (imm->bits 255))
+       (Jg 'raise_error)))
 
-(define (assert-byte c)
-  (seq (assert-integer rax c)
-       (Cmp rax (imm->bits 0))
-       (Jl (error-label c))
-       (Cmp rax (imm->bits 255))
-       (Jg (error-label c))))
+;; Assume: r-ptr holds is a tagged pointer and first word is size of heap object
+;; Use r9 as scratch
+;; has the effect of untagging the pointer
+(define (assert-valid-index r-ptr r-i)
+  (seq (Cmp r-i 0)
+       (Jl 'raise_error)
+       (And r-ptr #xFFFFFFFFFFFFFFF8) ; drop tag
+       (Mov r9 (Offset r-ptr 0))
+       (Cmp r9 r-i)
+       (Jle 'raise_error)))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label
