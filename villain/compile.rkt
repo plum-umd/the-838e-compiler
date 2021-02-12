@@ -14,6 +14,7 @@
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
+(define rcx 'rcx) ; arity indicator
 
 ;; type CEnv = [Listof Variable]
 
@@ -42,7 +43,9 @@
 (define (compile-define d)
   (match d
     [(Defn f xs e)
-     (seq (Label (symbol->label f))
+     (seq (Label (symbol->label f)) 
+          (Cmp rcx (imm->bits (length xs))) ; arity check
+          (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
           (Ret))]))
 
@@ -391,11 +394,13 @@
 ;; environment that accounts for that frame, hence:
 (define (compile-app f es c)
   (if (even? (+ (length es) (length c))) 
-      (seq (compile-es es c)
+      (seq (compile-es es c) 
+           (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
            (Add rsp (* 8 (length es))))            ; pop args
       (seq (Sub rsp 8)                             ; adjust stack
-           (compile-es es (cons #f c))
+           (compile-es es (cons #f c)) 
+           (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
            (Add rsp (* 8 (add1 (length es)))))))   ; pop args and pad
 
