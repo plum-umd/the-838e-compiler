@@ -246,27 +246,35 @@
 
 ;; Expr [Listof Pattern] [Listof Expr] CENV-> Asm
 (define (compile-match e0 ps es c)
-  (let ((end-sym (gensym "end")))
+  (let ((end-sym (gensym "end"))
+        (err-sym (gensym "err"))
+        (continue (gensym "continue")))
     (seq
      (%% "The compiled code for the expression to be matched on")
      (compile-e e0 c)
      (%% "Store away the result of evaluating the expression")
      (Push rax)
      (%% "The compiled code for comparing the expression against the different match clauses")
-     (compile-patterns ps es end-sym (cons #f c))
+     (compile-patterns ps es end-sym err-sym (cons #f c))
      (%% "The end of the match")
      (Label end-sym)
-     (Pop r8))))
+     (Pop r8)
+     (Jmp continue)
+     (%% "If there is a match error, clean up the stack before erroring out")
+     (Label err-sym) 
+     (Pop r8)
+     (Jmp 'raise_error)
+     (Label continue))))
 
 ;; [Listof Patterns] [Listof Expr] symbol CENV -> Asm
 ;; This function assumes that ps and es are of the same length
-(define (compile-patterns ps es end-sym c)
+(define (compile-patterns ps es end-sym err-sym c)
   (let ((continue (gensym "continue")))
     (match (cons ps es)
       [(cons '() '())
        (seq
         (%% "If the program reaches here, then all the patterns have been exhausted and this is a match error")
-        (Jmp 'raise_error))]
+        (Jmp err-sym))]
       [(cons (cons (? value? v) ps) (cons h es))
        (seq
         (compile-value (extract-literal v))
@@ -276,7 +284,7 @@
         (compile-e h c)
         (Jmp end-sym) (% "don't check any other match clause")
         (Label continue)
-        (compile-patterns ps es end-sym c))]
+        (compile-patterns ps es end-sym err-sym c))]
       [(cons (cons (Prim2 'cons (Var (? symbol? v1)) (Var (? symbol? v2))) ps) (cons h es))
        (seq
             (Mov r8 (Offset rsp 0))
@@ -295,7 +303,7 @@
             (Pop r8)
             (Jmp end-sym)
             (Label continue)
-            (compile-patterns ps es end-sym c))]
+            (compile-patterns ps es end-sym err-sym c))]
       [(cons (cons (Prim1 'box (Var (? symbol? v1))) ps) (cons h es))
        (seq
             (Mov r8 (Offset rsp 0))
@@ -311,7 +319,7 @@
             (Pop r8)
             (Jmp end-sym)
             (Label continue)
-            (compile-patterns ps es end-sym c))])))
+            (compile-patterns ps es end-sym err-sym c))])))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
