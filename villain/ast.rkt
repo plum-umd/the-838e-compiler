@@ -29,6 +29,8 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons
+
+
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
 (struct Int   (i)          #:prefab)
@@ -41,4 +43,6 @@
 (struct Begin (e1 e2)      #:prefab)
 (struct Let   (x e1 e2)    #:prefab)
 (struct Var   (x)          #:prefab)
+(struct Float   (fl)          #:prefab)
 (struct App   (f es)       #:prefab)
+
