@@ -186,20 +186,20 @@
 
 
   ;; symbols
-  (check-equal? (run '((eq? 'foo
-                            (string->symbol "foo"))))
+  (check-equal? (run '(eq? 'foo
+                            (string->symbol "foo")))
                 #t)
-  (check-equal? (run '((eq? (string->symbol "foo")
-                            (string->symbol "foo"))))
+  (check-equal? (run '(eq? (string->symbol "foo")
+                            (string->symbol "foo")))
                 #t)
-  (check-equal? (run '((eq? (string->symbol "foo")
-                            (string->symbol "bar"))))
+  (check-equal? (run '(eq? (string->symbol "foo")
+                            (string->symbol "bar")))
                 #f)
-  (check-equal? (run '((symbol->string 'foo)))
+  (check-equal? (run '(symbol->string 'foo))
                 "foo")
-  (check-equal? (run '((eq? (gensym) (gensym))))
+  (check-equal? (run '(eq? (gensym) (gensym)))
                 #f)
-  (check-equal? (run '((let ([x (gensym)]) (eq? x x))))
+  (check-equal? (run '(let ([x (gensym)]) (eq? x x)))
                 #t))
 
 (define (test-runner-io run)

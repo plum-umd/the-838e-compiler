@@ -23,6 +23,8 @@
   (match e
     [(App f es)
      (externs-es es)]
+    [(Symbol _)
+     (list (Extern 'str_to_symbol))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
@@ -60,6 +62,8 @@
     ['peek-byte 'peek_byte]
     ['read-byte 'read_byte]
     ['write-byte 'write_byte]
+    ['gensym 'gensym]
+    ['string->symbol 'str_to_symbol]
     [_ (char-op->uc o)]))
 
 (define (char-op->uc o)

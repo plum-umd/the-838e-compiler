@@ -12,8 +12,8 @@ endif
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs)
 
-runtime.o: main.o char.o io.o
-	ld -r main.o char.o io.o -o runtime.o
+runtime.o: main.o char.o io.o symbol.o
+	ld -r main.o char.o io.o symbol.o -o runtime.o
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o

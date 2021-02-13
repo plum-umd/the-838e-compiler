@@ -61,3 +61,6 @@
 
 (define (string-bits? v) 
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-string))) 
+
+(define (symbol-bits? v)
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-symbol)))

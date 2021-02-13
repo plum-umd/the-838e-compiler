@@ -42,13 +42,14 @@
     [_ (error "Parse error" s)]))
 
 (define op0
-  '(read-byte peek-byte void))
+  '(read-byte peek-byte void gensym))
 (define op1
   '(add1 sub1 zero? char? write-byte eof-object?
          integer->char char->integer box unbox empty? car cdr
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string?))   
+         string-length string?
+         symbol->string string->symbol symbol?))
 (define op2
   '(+ - eq? cons string-ref make-string))  
 (define op3

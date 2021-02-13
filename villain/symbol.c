@@ -33,7 +33,6 @@ mystrdup(const char *s)
 	return memcpy(d, s, l+1);
 }
 
-// TODO: take care of marshalling. this depends on #8
 char *str_to_symbol(const char *str) {
   struct Node **curr = &symbol_tbl;
 
@@ -56,10 +55,6 @@ char *str_to_symbol(const char *str) {
   t->elem = mystrdup(str);
 
   return t->elem;
-}
-
-char *str_to_uninterned_symbol(const char *str) {
-  return mystrdup(str);
 }
 
 char *gensym(const char *base) {

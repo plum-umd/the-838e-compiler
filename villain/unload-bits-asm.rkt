@@ -22,6 +22,10 @@
     [(? string-bits? i)
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
+            (list->string (reverse str-chars))))]
+    [(? symbol-bits? i)
+        (let ((length (unload-value (heap-ref i))))
+          (let ((str-chars (string-loop length i)))
             (list->string (reverse str-chars))))]))
                      
 (define (untag i)
