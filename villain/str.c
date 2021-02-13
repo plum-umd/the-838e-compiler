@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include "types.h"
 
-int64_t *str_dup(const int64_t *s) {
+int64_t *str_dup(const int64_t *s)
+{
   int64_t len = (s[0] >> int_shift);
   int n = (len % 3 == 0) ? len / 3 : (len / 3 + 1);
   int64_t *d;
@@ -16,7 +17,8 @@ int64_t *str_dup(const int64_t *s) {
   return memcpy(d, s, (1+n) * sizeof(int64_t));
 }
 
-int64_t str_cmp(const int64_t *s1, const int64_t *s2) {
+int64_t str_cmp(const int64_t *s1, const int64_t *s2)
+{
   int64_t len1 = (s1[0] >> int_shift);
   int64_t len2 = (s2[0] >> int_shift);
   int64_t len = len1 < len2 ? len1 : len2;
@@ -35,7 +37,13 @@ int64_t str_cmp(const int64_t *s1, const int64_t *s2) {
     return s2[i+1];
 }
 
-int64_t *str_from_cstr(const char *s) {
+static int64_t char_to_bits (char c)
+{
+  return ((int64_t)c << char_shift) | char_type_tag;
+}
+
+int64_t *str_from_cstr(const char *s)
+{
   int64_t len = strlen(s);
   int n = (len % 3 == 0) ? len / 3 : (len / 3 + 1);
   int64_t *vs = NULL;
@@ -49,14 +57,15 @@ int64_t *str_from_cstr(const char *s) {
 
   vs[0] = len << int_shift;
 
+  // the inverse of print_str
   for (i = 1; i < n; i++) {
     for (j = 0; j < 3; j++) {
-      vs[i] |= s[pos++] << (j * 21);
+      vs[i] |= char_to_bits(s[pos++]) << (j * 21);
     }
   }
   remain = (len % 3 == 0) ? 3 : (len % 3);
   for (j = 0; j < remain; j++){
-    vs[i] |= s[pos++] << (j * 21);
+    vs[i] |= char_to_bits(s[pos++]) << (j * 21);
   }
   return vs;
 }

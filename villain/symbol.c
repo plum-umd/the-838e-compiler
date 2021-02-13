@@ -13,7 +13,8 @@ struct Node {
 static struct Node *symbol_tbl = NULL;
 static uint64_t gensym_ctr = 0;
 
-int64_t *str_to_symbol(const int64_t *str) {
+int64_t *str_to_symbol(const int64_t *str)
+{
   struct Node **curr = &symbol_tbl;
 
   while (*curr) {
@@ -37,7 +38,8 @@ int64_t *str_to_symbol(const int64_t *str) {
   return t->elem;
 }
 
-int64_t *gensym(void) {
+int64_t *gensym(void)
+{
   char s[100]; // uint64_t has maximum 20 digits
   sprintf(s, "g%" PRIu64, gensym_ctr++);
   return str_from_cstr(s); // uninterned symbol
