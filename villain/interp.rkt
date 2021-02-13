@@ -31,6 +31,7 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
+    [(Float f) f]
     [(Eof)    eof]
     [(Empty)  '()]
     [(Var x)  (lookup r x)]
