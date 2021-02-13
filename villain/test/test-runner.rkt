@@ -174,11 +174,7 @@
                  '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
                 #t)
   (check-equal? (run
-                 '(match eof [5 #f] [#t #f] [#\e #f] [eof (let ((x 5)) (let ((y 6)) (+ x y)))]))
-                11)
-  (check-equal? (run
                  '(match (let ((x (cons 5 (cons 6 (cons #\a '()))))) (car x))
-                    [eof (+ 1 2)]
                     [5 #t]
                     [1 #f]
                     [2 (let ((y #\c)) (char->integer y))]))

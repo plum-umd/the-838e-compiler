@@ -22,7 +22,7 @@
 ;;           | (Let Id Expr Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
-;;           | (Match Expr (Listof Pattern) (Listof Expr))
+;;           | (Match Expr (Listof Pat))
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero?
@@ -34,8 +34,13 @@
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons | 'string-ref
 ;; type Op3  = 'string-set!                    
-;; type Pattern = #t | #f | '() | <number> | <string> | <symbol> | <character> | Id 
-;;              | (cons Id Id) | (box Id)
+;; type Pat  = (Wild)
+;;           | (Var Id)
+;;           | (Lit Literal)
+;;           | (Cons Id Id)
+;;           | (Box Id)
+;; type Litral = Boolean | '() | Char | Integer
+
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
@@ -52,21 +57,13 @@
 (struct Let   (x e1 e2)    #:prefab)
 (struct Var   (x)          #:prefab)
 (struct App   (f es)       #:prefab)
-(struct Match (e0 ps es)     #:prefab)
+(struct Match (e0 cs)      #:prefab)
 
-;; Expr -> Boolean
-;; Given an expression, determine if it is a value
-(define (literal? v)
-  (match v
-    [(or (Int _) (Bool _) (Char _) (Empty) (Eof)) #t]
-    [_ #f]))
+;; Match clause
+(struct Clause (p e)       #:prefab)
+;; Pattern constructors
+(struct Wild ()            #:prefab)
+(struct Lit (l)            #:prefab)
+(struct Cons (p1 p2)       #:prefab)
+(struct Box (p)            #:prefab)
 
-;; Value -> (or Integer Boolean Character '() eof) 
-;; Given an Expr that is a Value, extract the data it contains or represents
-(define (extract-literal v)
-  (match v
-    [(Int i)  i]
-    [(Bool b) b]
-    [(Char c) c]
-    [(Empty)  '()]
-    [(Eof)    eof]))

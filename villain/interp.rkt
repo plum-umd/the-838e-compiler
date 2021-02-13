@@ -81,25 +81,33 @@
            (if (= (length xs) (length vs))
                (interp-env e (zip xs vs) ds)
                'err)])])]
-    [(Match e0 ps es)
-     (interp-match (interp-env e0 r ds) ps es r ds)]))
+    [(Match e0 cs)
+     (match (interp-env e0 r ds)
+       ['err 'err]
+       [v (interp-match v cs r ds)])]))
 
-;;Answer Env Defs -> Answer
-(define (interp-match guard ps es r ds)
-  (match (cons ps es)
-    [(cons '() '()) 'err] ;The method assumes that ps and es have the same length
-    [(cons (cons (? literal? v) ps) (cons h es))
-     (if (eq? guard (extract-literal v))
-         (interp-env h r ds)
-         (interp-match guard ps es r ds))]
-    [(cons (cons (Prim2 'cons (Var (? symbol? v1)) (Var (? symbol? v2))) ps) (cons h es))
-     (match guard
-       [(cons a b) (interp-env h (ext (ext r v2 b) v1 a) ds)]
-       [_ (interp-match guard ps es r ds)])]
-    [(cons (cons (Prim1 'box (Var (? symbol? v1))) ps) (cons h es))
-     (match guard
-       [(box a) (interp-env h (ext r v1 a) ds)]
-       [_ (interp-match guard ps es r ds)])]))
+;; Value (Listof Clause) Env Defs -> Answer
+(define (interp-match v cs r ds)
+  (match cs
+    ['() 'err]
+    [(cons c cs)
+     (match c
+       [(Clause p e)
+        (match p
+          [(Wild)  (interp-env e r ds)]
+          [(Var x) (interp-env e (ext r x v) ds)]
+          [(Lit l)
+           (if (eq? l v)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
+          [(Box x)
+           (if (box? v)
+               (interp-env e (ext r x (unbox v)) ds)
+               (interp-match v cs r ds))]
+          [(Cons x1 x2)
+           (if (cons? v)
+               (interp-env e (ext (ext r x2 (cdr v)) x1 (car v)) ds)
+               (interp-match v cs r ds))])])]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | 'err
 (define (interp-env* es r ds)
