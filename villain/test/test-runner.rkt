@@ -186,19 +186,19 @@
 
 
   ;; symbols
-  (check-equal? (run ''foo 'foo)
-  (check-equal? (run '(string->symbol "foo")
-                 'foo)
+  (check-equal? (run ''foo) 'foo)
+  (check-equal? (run '(string->symbol "foo"))
+                'foo)
   (check-equal? (run '(symbol? "foo")
-                 #f)
+                 #f))
   (check-equal? (run '(symbol? 'foo)
-                 #t)
+                 #t))
   (check-equal? (run '(symbol? (string->symbol "foo"))
-                 #t)
+                 #t))
   (check-equal? (run '(symbol? (gensym))
-                 #t)
+                 #t))
   (check-equal? (run '(symbol->string 'foo)
-                 "foo")
+                 "foo"))
   (check-equal? (run '(eq? 'foo
                             (string->symbol "foo")))
                 #t)
