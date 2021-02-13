@@ -17,7 +17,8 @@
 
 (define (externs-d d)
   (match d
-    [(Defn f xs e) (externs-e e)]))
+    [(Defn f xs e) (externs-e e)]
+    [(Defn* f xs xs* e) (externs-e e)]))
 
 (define (externs-e e)
   (match e

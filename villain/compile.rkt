@@ -48,12 +48,32 @@
           (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
           (Ret))] 
-    [(Defn* f xs xs' e) 
-     (seq (Label (symbol->label f)) 
-          (Cmp rcx (imm-bits (length xs))) 
+    [(Defn* f xs xs* e) 
+     (let ((loop (gensym 'loop)) 
+           (end (gensym 'end))) 
+          ;; following code makes use of scratch registers r8 and r9
+          (seq (Label (symbol->label f)) 
+          (Cmp rcx (imm->bits (length xs))) 
           (Jl 'raise_error) 
-          (compile-e e (parity (cons #f (append (reverse xs') (reverse xs))))) 
-          (Ret))]))
+          (Mov r8 rcx) 
+          (Sub r8 (imm->bits (length xs))) ; r8 holds # things to get from stack 
+          (compile-value '()) ; rax now holds the empty list 
+          (Mov r9 0) ; r9 is our looping variable 
+          (Label loop) 
+          (Cmp r9 r8) 
+          (Je end)
+          (Mov (Offset rbx 0) rax)
+          (Pop rax) 
+          (Mov (Offset rbx 8) rax) 
+          (Mov rax rbx) 
+          (Or rax type-cons) 
+          (Add rbx 16)
+          (Add r9 (imm->bits 1)) 
+          (Jmp loop)
+          (Label end) ; at this point, rax holds the list we want 
+          (Push rax)
+          (compile-e e (parity (cons #f (cons xs* (reverse xs))))) 
+          (Ret)))]))
 
 (define (parity c)
   (if (even? (length c))

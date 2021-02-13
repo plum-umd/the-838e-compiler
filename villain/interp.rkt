@@ -80,7 +80,10 @@
            ; check arity matches
            (if (= (length xs) (length vs))
                (interp-env e (zip xs vs) ds)
-               'err)])])]
+               'err)] 
+          [(Defn* f xs xs* e) 
+           (if (> (length vs) (length xs)) 
+               (interp-env e (append (zip xs (take vs (length xs))) (list 'xs* (list-tail vs (length xs))))))])])]
     [(Match e0 ps es)
      (interp-match (interp-env e0 r ds) ps es r ds)]))
 
