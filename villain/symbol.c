@@ -1,11 +1,11 @@
 #include <inttypes.h>
 #include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
+#include "str.h"
 
 // binary tree node
 struct Node {
-  char* elem;
+  int64_t* elem;
   struct Node* left;
   struct Node* right;
 };
@@ -13,32 +13,12 @@ struct Node {
 static struct Node *symbol_tbl = NULL;
 static uint64_t gensym_ctr = 0;
 
-static int
-ndigits(unsigned long x)
-{
-  int d = 0;
-  if (x == 0) return 1;
-  while (x) {
-    x /= 10;
-    d++;
-  }
-  return d;
-}
-
-static char *
-mystrdup(const char *s)
-{
-	size_t l = strlen(s);
-	char *d = malloc(l+1);
-	return memcpy(d, s, l+1);
-}
-
-char *str_to_symbol(const char *str) {
+int64_t *str_to_symbol(const int64_t *str) {
   struct Node **curr = &symbol_tbl;
 
   while (*curr) {
     struct Node *t = *curr;
-    int r = strcmp(str, t->elem);
+    int64_t r = str_cmp(str, t->elem);
     if (r == 0) {
       return t->elem;
     } else if (r < 0) {
@@ -52,13 +32,38 @@ char *str_to_symbol(const char *str) {
   // TODO: clean up memory
   *curr = malloc(sizeof(struct Node));
   struct Node* t = *curr;
-  t->elem = mystrdup(str);
+  t->elem = str_dup(str);
 
   return t->elem;
 }
 
-char *gensym(const char *base) {
-  char *s = calloc(strlen(base) + ndigits(gensym_ctr) + 1, 1);
-  sprintf(s, "%s%" PRIu64, base, gensym_ctr++);
-  return s;
+int64_t *gensym(void) {
+  char s[100]; // uint64_t has maximum 20 digits
+  sprintf(s, "g%" PRIu64, gensym_ctr++);
+  return str_from_cstr(s); // uninterned symbol
 }
+
+#ifdef CHECK
+// $ gcc -DCHECK symbol.c str.o
+#include <assert.h>
+
+int main(void)
+{
+  int64_t *foo = str_from_cstr("foo");
+  int64_t *foo_ = str_from_cstr("foo");
+
+  int64_t *foo1 = str_from_cstr("foo1");
+  int64_t *fo = str_from_cstr("fo");
+
+  assert(str_to_symbol(foo) == str_to_symbol(foo_));
+  assert(str_to_symbol(foo1) == str_to_symbol(foo1));
+  assert(str_to_symbol(fo) == str_to_symbol(fo));
+  assert(str_to_symbol(foo) != str_to_symbol(foo1));
+  assert(str_to_symbol(foo) != str_to_symbol(fo));
+  assert(str_to_symbol(foo1) != str_to_symbol(fo));
+
+  assert(gensym() != gensym());
+  
+  return 0;
+}
+#endif

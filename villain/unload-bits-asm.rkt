@@ -26,7 +26,7 @@
     [(? symbol-bits? i)
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
-            (list->string (reverse str-chars))))]))
+            (list->string (cons #\' (reverse str-chars)))))]))
                      
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))

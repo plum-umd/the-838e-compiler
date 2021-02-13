@@ -12,8 +12,8 @@ endif
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs)
 
-runtime.o: main.o char.o io.o symbol.o
-	ld -r main.o char.o io.o symbol.o -o runtime.o
+runtime.o: main.o char.o io.o symbol.o str.o
+	ld -r main.o char.o io.o symbol.o str.o -o runtime.o
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o
@@ -24,8 +24,11 @@ char.o: char.c types.h
 io.o: io.c runtime.h
 	gcc -fPIC -c io.c -o io.o
 
-symbol.o: symbol.c
+symbol.o: symbol.c str.h
 	gcc -fPIC -c symbol.c -o symbol.o
+
+str.o: str.c
+	gcc -fPIC -c str.c -o str.o
 
 %.o: %.s
 	nasm -f $(format) -o $@ $<
