@@ -22,6 +22,7 @@
     [(? integer?)                  (Int s)]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
+    [(? flonum?)                   (Float s)]
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
@@ -52,3 +53,5 @@
   (λ (x)
     (and (symbol? x)
          (memq x ops))))
+
+ (parse 2)
