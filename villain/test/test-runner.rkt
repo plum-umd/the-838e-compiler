@@ -203,7 +203,7 @@
                             (string->symbol "foo")))
                 #t)
   (check-equal? (run '(eq? (string->symbol "foo")
-                            (string->symbol "foo")))
+                           (string->symbol "foo")))
                 #t)
   (check-equal? (run '(eq? (string->symbol "foo")
                            (string->symbol "bar")))
