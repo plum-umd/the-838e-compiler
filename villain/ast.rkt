@@ -36,6 +36,7 @@
 (struct Int   (i)          #:prefab)
 (struct Bool  (b)          #:prefab)
 (struct Char  (c)          #:prefab)
+(struct Float (f)          #:prefab)
 (struct Prim0 (p)          #:prefab)
 (struct Prim1 (p e)        #:prefab)
 (struct Prim2 (p e1 e2)    #:prefab)
@@ -43,6 +44,5 @@
 (struct Begin (e1 e2)      #:prefab)
 (struct Let   (x e1 e2)    #:prefab)
 (struct Var   (x)          #:prefab)
-(struct Float   (fl)          #:prefab)
 (struct App   (f es)       #:prefab)
 
