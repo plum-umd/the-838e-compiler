@@ -98,7 +98,7 @@
 
      ;; converts the mantissa to binary
     [(cons exp dec) (let ([mantissa (dec->binary dec 0 22)])
-                 (if (= mantissa (- (arithmetic-shift 1 23) 1)) (float->bits_helper 0 (+ exp 1) 0) (float->bits_helper sign exp mantissa sig)))]
+                 (if (= mantissa (arithmetic-shift 1 23)) (float->bits_helper 0 (+ exp 1) 0) (float->bits_helper sign exp mantissa sig)))]
      [_ (error "Bad")]
     )
   )
