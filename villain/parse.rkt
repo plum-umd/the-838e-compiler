@@ -46,7 +46,7 @@
          integer-length
          char-whitespace? char-alphabetic? char-upcase char-downcase char-titlecase))
 (define op2
-  '(+ - eq? cons))
+  '(+ - eq? cons make-prefab-struct))
 
 (define (op? ops)
   (λ (x)

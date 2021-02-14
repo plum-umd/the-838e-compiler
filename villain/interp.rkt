@@ -14,6 +14,7 @@
 ;; | Void
 ;; | '()
 ;; | (cons Value Value)
+;; | #s(Value Value Value)
 ;; | (box Value)
 
 ;; type REnv = (Listof (List Id Value))
