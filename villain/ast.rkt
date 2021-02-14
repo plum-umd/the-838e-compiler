@@ -20,6 +20,7 @@
 ;;           | (Let Id Expr Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
+
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero?
@@ -29,6 +30,7 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons
+;;           | 'make-prefab-struct
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
 (struct Int   (i)          #:prefab)
