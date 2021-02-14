@@ -22,31 +22,40 @@
     [(? integer?)                  (Int s)]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
+    [(? string?)                   (String s)] 
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
+    [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
     [(list 'if e1 e2 e3)
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
+    [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(cons (? symbol? f) es)
      (App f (map parse-e es))]
     [_ (error "Parse error" s)]))
 
 (define op0
-  '(read-byte peek-byte void))
+  '(read-byte peek-byte void gensym))
 (define op1
   '(add1 sub1 zero? char? write-byte eof-object?
          integer->char char->integer box unbox empty? car cdr
          integer-length
-         char-whitespace? char-alphabetic? char-upcase char-downcase char-titlecase))
+         char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
+         string-length string?
+         symbol->string string->symbol symbol?))
 (define op2
-  '(+ - eq? cons make-prefab-struct))
+  '(+ - eq? cons string-ref make-string make-prefab-struct))
+  
+(define op3
+  '(string-set!))  
+>>>>>>> symbol
 
 (define (op? ops)
   (λ (x)
