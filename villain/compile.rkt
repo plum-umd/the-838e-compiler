@@ -53,6 +53,7 @@
          [(Int i)            (compile-value i)]
          [(Bool b)           (compile-value b)]
          [(Char c)           (compile-value c)]
+         [(Float f)          (compile-value f)]
          [(Eof)              (compile-value eof)]
          [(Empty)            (compile-value '())]
          [(Var x)            (compile-variable x c)]
