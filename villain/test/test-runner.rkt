@@ -146,6 +146,8 @@
   (check-equal? (run 3.3333) 3.3333)
   (check-equal? (run 790.321) 790.321)
   (check-equal? (run -8990.32) -8990.32)
+  (check-equal? (run -9999999) -9999999)
+  (check-equal? (run .9999999) .9999999)
   )
 
 (define (test-runner-io run)
