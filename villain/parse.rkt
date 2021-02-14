@@ -53,5 +53,3 @@
   (λ (x)
     (and (symbol? x)
          (memq x ops))))
-
- (parse 2)
