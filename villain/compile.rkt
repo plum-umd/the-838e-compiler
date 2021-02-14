@@ -270,7 +270,7 @@
          ['eq?
           (let ((l (gensym)))
             (seq (Cmp rax (Offset rsp 0))
-                 (Sub rsp 8)
+                 (Pop rax)
                  (Mov rax val-true)
                  (Je l)
                  (Mov rax val-false)
