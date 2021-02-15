@@ -7,6 +7,7 @@
 (define type-box        #b001)
 (define type-cons       #b010)
 (define type-string     #b011)  
+(define type-symbol     #b100)
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
 (define type-int       #b0000)
@@ -175,3 +176,6 @@
 
 (define (string-bits? v) 
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-string))) 
+
+(define (symbol-bits? v)
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-symbol)))
