@@ -32,6 +32,7 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
+    [(Float f) f]
     [(String s) s]
     [(Eof)    eof]
     [(Empty)  '()]

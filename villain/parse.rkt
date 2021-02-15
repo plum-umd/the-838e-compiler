@@ -22,6 +22,7 @@
     [(? integer?)                  (Int s)]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
+    [(? flonum?)                   (Float s)]
     [(? string?)                   (String s)] 
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]

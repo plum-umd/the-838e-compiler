@@ -7,6 +7,8 @@
   (check-equal? (run 7) 7)
   (check-equal? (run -8) -8)
 
+  
+
   ;; Blackmail examples
   (check-equal? (run '(add1 (add1 7))) 9)
   (check-equal? (run '(add1 (sub1 7))) 7)
@@ -304,6 +306,17 @@
   (check-equal? (run '(char-whitespace? #\a)) #f)
   (check-equal? (run '(char-whitespace? #\ )) #t)
 
+
+    ;; Testing floats
+  (check-equal? (run 4.2) 4.2)
+   (check-equal? (run -4.2) -4.2)
+  
+  (check-equal? (run 3.3333) 3.3333)
+  (check-equal? (run 790.321) 790.321)
+  (check-equal? (run -8990.32) -8990.32)
+  (check-equal? (run -9999999) -9999999)
+  (check-equal? (run .9999999) .9999999)
+
   ;; Errors and stack alignment
   (define (check-err e)
     ;; check error in both aligned and unaligned config
@@ -406,4 +419,9 @@
                                           (print-alphabet (sub1 i)))))
                              (print-alphabet 26))
                      "")
-                (cons (void) "abcdefghijklmnopqrstuvwxyz")))
+                (cons (void) "abcdefghijklmnopqrstuvwxyz"))
+
+
+ 
+
+  )
