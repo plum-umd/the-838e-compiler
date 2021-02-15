@@ -10,7 +10,7 @@ else
 endif
 
 %.run: %.o runtime.o
-	gcc runtime.o $< -o $@ $(libs)
+	gcc runtime.o $< -o $@ $(libs) -lm
 
 runtime.o: main.o char.o io.o symbol.o str.o
 	ld -r main.o char.o io.o symbol.o str.o -o runtime.o
