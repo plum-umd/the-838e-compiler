@@ -25,6 +25,53 @@
                           (if (zero? 1) 1 2)
                           7))
                 7)
+  
+  ;; String examples 
+  (check-equal? (run "Racket") "Racket")
+  (check-equal? (run "Rack") "Rack")
+  (check-equal? (run "Ra") "Ra")
+  (check-equal? (run "R") "R")
+  (check-equal? (run "") "")
+  (check-equal? (run '(string-length "Rack")) 4)
+  (check-equal? (run '(string-length "")) 0)
+  (check-equal? (run '(string-ref "Racket" 0)) #\R)
+  (check-equal? (run '(string-ref "Racket" 5)) #\t)
+  (check-equal? (run '(string-ref "Racket" 3)) #\k)
+  (check-equal? (run '(string-ref "Racket" 6)) 'err)
+  (check-equal? (run '(string-ref "Racket" -1)) 'err)
+  (check-equal? (run '(string? "Racket")) #t)
+  (check-equal? (run '(string? "")) #t)
+  (check-equal? (run '(string? 5)) #f)
+  (check-equal? (run '(string? #\a)) #f)
+  (check-equal? (run '(string? '())) #f)
+  (check-equal? (run '(string? #t)) #f)
+  (check-equal? (run '(make-string 5 #\y)) "yyyyy")
+  (check-equal? (run '(make-string 3 #\y)) "yyy")
+  (check-equal? (run '(make-string 1 #\y)) "y")
+  (check-equal? (run '(make-string 0 #\y)) "")
+  (check-equal? (run '(make-string -1 #\y)) 'err)
+  (check-equal? (run '(string-set! (make-string 5 #\y) 2 #\n)) (void))
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 2 #\n) str))) "yynyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 1 #\n) str))) "ynyyy")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 3 #\n) str))) "yyyny")
+  (check-equal? (run '(let ((str (make-string 5 #\y)))
+                        (begin (string-set! str 4 #\n) str))) "yyyyn")
+  (check-equal? (run '(let ((str (make-string 4 #\y)))
+                        (begin (string-set! str 3 #\n) str))) "yyyn")
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str 2 #\n) str))) "yyn")
+  (check-equal? (run '(let ((str (make-string 2 #\y)))
+                        (begin (string-set! str 0 #\n) str))) "ny")  
+  
+  ;; if r8 is not pushed backed on stack before jump to 'raise error, these two
+  ;; tests cause invalid memory reference and loss of some debugging context
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str 3 #\n) str))) 'err) 
+  (check-equal? (run '(let ((str (make-string 3 #\y)))
+                        (begin (string-set! str -1 #\n) str))) 'err)
 
   ;; Dupe examples
   (check-equal? (run #t) #t)
@@ -106,6 +153,126 @@
                                (+ x (tri (sub1 x)))))
                          (tri 9)))
                 45)
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (if (empty? lst)
+                          0
+                          (+ 1 (len (cdr lst)))))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                3)
+
+  ;; Pattern Matching Tests
+  (check-equal? (run
+                 '(match 2 [1 1] [2 2]))
+                2)
+  (check-equal? (run
+                 '(match #t [#t #t] [#f #f]))
+                #t)
+  (check-equal? (run
+                 '(match #\a [#\b #\b] [#\a #\a] [#\c #\c]))
+                #\a)
+  (check-equal? (run
+                 '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
+                #t)
+  (check-equal? (run
+                 '(match (let ((x (cons 5 (cons 6 (cons #\a '()))))) (car x))
+                    [5 #t]
+                    [1 #f]
+                    [2 (let ((y #\c)) (char->integer y))]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) a]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) b]
+                    [5 2]))
+                #f)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (char? a)]
+                    [5 2]))
+                #f)
+
+  (check-equal? (run
+                 '(match (cons 1 2)
+                    [(cons a b) (+ a b)]
+                    [5 2]))
+                3)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (eq? a #t)]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (eq? b #f)]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (begin (eq? a #t) (eq? b #f))]
+                    [5 2]))
+                #t)
+  (check-equal? (run
+                 '(match (box 5)
+                    [5 #f]
+                    [(box v) (let ((y v)) (+ y v))]))
+                10)
+
+  (check-equal? (run
+                 '(let ((x (cons #\a (cons 2 (cons #\c '())))))
+                    (match x
+                      [(cons h t) (car t)]
+                      [(cons h v) h])))
+                2)
+
+  (check-equal? (run
+                 '(match 5
+                    [1 #f]
+                    [2 #f]))
+                'err)
+
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (match lst
+                        [(cons h t) (+ 1 (len t))]
+                        ['() 0]))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                 3)
+    (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (match lst
+                        [(cons h t) (+ 1 (len t))]))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                 'err)
+
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri 9 6)))
+                'err) 
+  
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri )))
+                'err)
 
   (check-equal? (run '(integer-length   0)) 0)
   (check-equal? (run '(integer-length  -1)) 0)

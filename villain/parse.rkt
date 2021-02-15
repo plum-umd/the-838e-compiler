@@ -23,21 +23,45 @@
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Float s)]
+    [(? string?)                   (String s)] 
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
+    [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
     [(list 'if e1 e2 e3)
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
+    [(list 'match e0 cs ...)
+     (Match (parse-e e0) (map parse-c cs))]
     [(cons (? symbol? f) es)
      (App f (map parse-e es))]
     [_ (error "Parse error" s)]))
+
+(define (parse-c s)
+  (match s
+    [(list p e) (Clause (parse-p p) (parse-e e))]
+    [_ (error "bad match clause")]))
+
+(define (parse-p s)
+  (match s
+    ['_           (Wild)]
+    [(? symbol?)  (Var s)]
+    [(? boolean?) (Lit s)]
+    [(? integer?) (Lit s)]
+    [(? char?)    (Lit s)]
+    [(list 'quote (list))
+     (Lit '())]
+    [(list 'cons (? symbol? x1) (? symbol? x2))
+     (Cons x1 x2)]
+    [(list 'box (? symbol? x1))
+     (Box x1)]
+    [_ (error "bad match pattern" s)]))
 
 (define op0
   '(read-byte peek-byte void))
@@ -45,9 +69,12 @@
   '(add1 sub1 zero? char? write-byte eof-object?
          integer->char char->integer box unbox empty? car cdr
          integer-length
-         char-whitespace? char-alphabetic? char-upcase char-downcase char-titlecase))
+         char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
+         string-length string?))   
 (define op2
-  '(+ - eq? cons))
+  '(+ - eq? cons string-ref make-string))  
+(define op3
+  '(string-set!))  
 
 (define (op? ops)
   (λ (x)
