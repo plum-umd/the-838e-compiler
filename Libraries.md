@@ -13,6 +13,7 @@ Standard library ids similar to primitive ids. The important difference, of cour
 
 ### `a86/ast.rkt`
 
+- `label-decls`. External (via instruction `Extern`) labels count as declared.
 - `label-uses`. Provided (via instruction `Global`) labels count as used.
 
 ### `villain/std.rkt`
@@ -30,5 +31,5 @@ Standard library ids similar to primitive ids. The important difference, of cour
 
 ### `villain/externs.rkt`
 
-- `externs-f`. include `Extern` for function call if it is a std library function
-
+- `externs-f`. include `Extern` for function call (with `symbol->label`, so that calling this function looks just like calling any other function) if it is a std library function
+- `symbol->label`. moved here from `compile.rkt`.

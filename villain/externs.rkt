@@ -1,5 +1,5 @@
 #lang racket
-(provide externs char-op->uc)
+(provide externs char-op->uc symbol->label)
 (require "ast.rkt" "std.rkt" a86/ast)
 
 (define (externs p)
@@ -7,8 +7,11 @@
     [(Prog ds e)
      (remove-duplicates (append (externs-ds ds)
                                 (externs-e e)))]
-    [(Lib xs ds)
-     (remove-duplicates (externs-ds ds))]))
+    [(Lib ps ds)
+     ; provided ids aren't external
+     (let ((exts (apply set (externs-ds ds)))
+           (prvs (apply set ps)))
+       (set->list (set-subtract exts prvs)))]))
 
 (define (externs-ds ds)
   (match ds
@@ -24,8 +27,8 @@
 (define (externs-e e)
   (match e
     [(App f es)
-     (append ((externs-f f)
-              (externs-es es)))]
+     (append (externs-f f)
+             (externs-es es))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
@@ -55,7 +58,7 @@
              (externs-es es))]))
 
 (define (externs-f f)
-  (if (std-provided? f) (list (Extern f)) '())) ; if it is a call to std library function
+  (if (std-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
 
 (define (externs-p p)
   (let ((r (op->extern p)))
@@ -76,3 +79,22 @@
     ['char-downcase 'uc_tolower]
     ['char-titlecase 'uc_totitle]
     [_ #f]))
+
+;; Symbol -> Label
+;; Produce a symbol that is a valid Nasm label
+(define (symbol->label s)
+  (string->symbol
+   (string-append
+    "label_"
+    (list->string
+     (map (λ (c)
+            (if (or (char<=? #\a c #\z)
+                    (char<=? #\A c #\Z)
+                    (char<=? #\0 c #\9)
+                    (memq c '(#\_ #\$ #\# #\@ #\~ #\. #\?)))
+                c
+                #\_))
+         (string->list (symbol->string s))))
+    "_"
+    (number->string (eq-hash-code s) 16))))
+

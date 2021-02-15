@@ -288,6 +288,7 @@
 (define (check-label-targets-declared asm)
   (let ((ds (apply set (label-decls asm)))
         (us (apply set (label-uses asm))))
+    ; (error ds) ; DEBUG
 
     (let ((undeclared (set-subtract us ds)))
       (unless (set-empty? undeclared)
