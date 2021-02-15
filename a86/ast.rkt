@@ -277,7 +277,9 @@
     [(cons (Call (? label-symbol? s)) asm)
      (cons s (label-uses asm))]
     [(cons (Lea _ (? label-symbol? s)) asm)
-     (cons s (label-uses asm))]    
+     (cons s (label-uses asm))]
+    [(cons (Global s) asm)
+     (cons s (label-uses asm))] ; provided labels count as used
     [(cons _ asm)
      (label-uses asm)]))
 
