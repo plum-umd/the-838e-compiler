@@ -7,6 +7,8 @@
   (check-equal? (run 7) 7)
   (check-equal? (run -8) -8)
 
+  
+
   ;; Blackmail examples
   (check-equal? (run '(add1 (add1 7))) 9)
   (check-equal? (run '(add1 (sub1 7))) 7)
@@ -151,6 +153,126 @@
                                (+ x (tri (sub1 x)))))
                          (tri 9)))
                 45)
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (if (empty? lst)
+                          0
+                          (+ 1 (len (cdr lst)))))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                3)
+
+  ;; Pattern Matching Tests
+  (check-equal? (run
+                 '(match 2 [1 1] [2 2]))
+                2)
+  (check-equal? (run
+                 '(match #t [#t #t] [#f #f]))
+                #t)
+  (check-equal? (run
+                 '(match #\a [#\b #\b] [#\a #\a] [#\c #\c]))
+                #\a)
+  (check-equal? (run
+                 '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
+                #t)
+  (check-equal? (run
+                 '(match (let ((x (cons 5 (cons 6 (cons #\a '()))))) (car x))
+                    [5 #t]
+                    [1 #f]
+                    [2 (let ((y #\c)) (char->integer y))]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) a]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) b]
+                    [5 2]))
+                #f)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (char? a)]
+                    [5 2]))
+                #f)
+
+  (check-equal? (run
+                 '(match (cons 1 2)
+                    [(cons a b) (+ a b)]
+                    [5 2]))
+                3)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (eq? a #t)]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (eq? b #f)]
+                    [5 2]))
+                #t)
+
+  (check-equal? (run
+                 '(match (cons #t #f)
+                    [(cons a b) (begin (eq? a #t) (eq? b #f))]
+                    [5 2]))
+                #t)
+  (check-equal? (run
+                 '(match (box 5)
+                    [5 #f]
+                    [(box v) (let ((y v)) (+ y v))]))
+                10)
+
+  (check-equal? (run
+                 '(let ((x (cons #\a (cons 2 (cons #\c '())))))
+                    (match x
+                      [(cons h t) (car t)]
+                      [(cons h v) h])))
+                2)
+
+  (check-equal? (run
+                 '(match 5
+                    [1 #f]
+                    [2 #f]))
+                'err)
+
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (match lst
+                        [(cons h t) (+ 1 (len t))]
+                        ['() 0]))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                 3)
+    (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (match lst
+                        [(cons h t) (+ 1 (len t))]))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                 'err)
+
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri 9 6)))
+                'err) 
+  
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri )))
+                'err)
 
   (check-equal? (run '(integer-length   0)) 0)
   (check-equal? (run '(integer-length  -1)) 0)
@@ -184,7 +306,6 @@
   (check-equal? (run '(char-whitespace? #\a)) #f)
   (check-equal? (run '(char-whitespace? #\ )) #t)
 
-
   ;; symbols
   (check-equal? (run ''foo) 'foo)
   (check-equal? (run '(string->symbol "foo"))
@@ -214,6 +335,62 @@
                 #f)
   (check-equal? (run '(let ([x (gensym)]) (eq? x x)))
                 #t))
+  
+    ;; Testing floats
+  (check-equal? (run 4.2) 4.2)
+  (check-equal? (run -4.2) -4.2)
+  
+  (check-equal? (run 3.3333) 3.3333)
+  (check-equal? (run 790.321) 790.321)
+  (check-equal? (run -8990.32) -8990.32)
+  (check-equal? (run -9999999) -9999999)
+  (check-equal? (run .9999999) .9999999)
+
+  ;; Errors and stack alignment
+  (define (check-err e)
+    ;; check error in both aligned and unaligned config
+    (check-equal? (run e) 'err)
+    (check-equal? (run `(let ((x 0)) ,e)) 'err))
+
+  (check-err '(add1 #f))
+  (check-err '(sub1 #f))
+  (check-err '(zero? #f))
+  (check-err '(integer-length #f))
+  (check-err '(integer->char #f))
+  (check-err '(integer->char 1114112))
+  (check-err '(integer->char 55296))
+  (check-err '(+ #f 0))
+  (check-err '(+ 0 #f))
+  (check-err '(- #f 0))
+  (check-err '(- 0 #f))
+  (check-err '(string-ref "a" #f))
+  (check-err '(make-string #f #\a))
+  (check-err '(string-set! "a" #f #\b))
+  (check-err '(write-byte #f))
+  (check-err '(write-byte -1))
+  (check-err '(write-byte 256))
+  (check-err '(char->integer #f))
+  (check-err '(char-whitespace? #f))
+  (check-err '(char-alphabetic? #f))
+  (check-err '(char-upcase #f))
+  (check-err '(char-downcase #f))
+  (check-err '(char-titlecase #f))
+  (check-err '(make-string 1 #f))
+  (check-err '(string-set! "a" 0 #f))
+  (check-err '(unbox #f))
+  (check-err '(car #f))
+  (check-err '(cdr #f))
+  (check-err '(string-length #f))
+  (check-err '(string-ref #f 0))
+  (check-err '(string-set! #f 0 #\b))
+  (check-err '(string-ref "a" -1))
+  (check-err '(string-ref "a" 1))
+  (check-err '(make-string -1 #\a))
+  (check-err '(string-set! "a" -1 #\b))
+  (check-err '(string-set! "a" 1 #\b))
+  (check-err '(match '() [#f #f]))
+  )
+
 
 (define (test-runner-io run)
   ;; Evildoer examples
@@ -272,4 +449,9 @@
                                           (print-alphabet (sub1 i)))))
                              (print-alphabet 26))
                      "")
-                (cons (void) "abcdefghijklmnopqrstuvwxyz")))
+                (cons (void) "abcdefghijklmnopqrstuvwxyz"))
+
+
+ 
+
+  )

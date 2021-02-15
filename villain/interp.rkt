@@ -33,6 +33,7 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
+    [(Float f) f]
     [(String s) s]
     [(Symbol s) s]
     [(Eof)    eof]
@@ -83,8 +84,34 @@
            ; check arity matches
            (if (= (length xs) (length vs))
                (interp-env e (zip xs vs) ds)
-               'err)])]
-       [_ 'err])]))
+               'err)])])]
+    [(Match e0 cs)
+     (match (interp-env e0 r ds)
+       ['err 'err]
+       [v (interp-match v cs r ds)])]))
+
+;; Value (Listof Clause) Env Defs -> Answer
+(define (interp-match v cs r ds)
+  (match cs
+    ['() 'err]
+    [(cons c cs)
+     (match c
+       [(Clause p e)
+        (match p
+          [(Wild)  (interp-env e r ds)]
+          [(Var x) (interp-env e (ext r x v) ds)]
+          [(Lit l)
+           (if (eq? l v)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
+          [(Box x)
+           (if (box? v)
+               (interp-env e (ext r x (unbox v)) ds)
+               (interp-match v cs r ds))]
+          [(Cons x1 x2)
+           (if (cons? v)
+               (interp-env e (ext (ext r x2 (cdr v)) x1 (car v)) ds)
+               (interp-match v cs r ds))])])]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | 'err
 (define (interp-env* es r ds)
