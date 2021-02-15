@@ -31,7 +31,7 @@ int64_t *str_to_symbol(const int64_t *str)
 
   // wasn't found, so insert it
   // TODO: clean up memory
-  *curr = malloc(sizeof(struct Node));
+  *curr = calloc(1, sizeof(struct Node));
   struct Node* t = *curr;
   t->elem = str_dup(str);
 
