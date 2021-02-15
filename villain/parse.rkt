@@ -38,11 +38,31 @@
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
-    [(list 'match e0 (list ps es)...)
-     (Match (parse-e e0) (map parse-e ps) (map parse-e es))]
+    [(list 'match e0 cs ...)
+     (Match (parse-e e0) (map parse-c cs))]
     [(cons (? symbol? f) es)
-     (App f (map parse-e es))] ;;This pattern seems to match more agressively. It was handling the match clause when it was placed below this pattern.
+     (App f (map parse-e es))]
     [_ (error "Parse error" s)]))
+
+(define (parse-c s)
+  (match s
+    [(list p e) (Clause (parse-p p) (parse-e e))]
+    [_ (error "bad match clause")]))
+
+(define (parse-p s)
+  (match s
+    ['_           (Wild)]
+    [(? symbol?)  (Var s)]
+    [(? boolean?) (Lit s)]
+    [(? integer?) (Lit s)]
+    [(? char?)    (Lit s)]
+    [(list 'quote (list))
+     (Lit '())]
+    [(list 'cons (? symbol? x1) (? symbol? x2))
+     (Cons x1 x2)]
+    [(list 'box (? symbol? x1))
+     (Box x1)]
+    [_ (error "bad match pattern" s)]))
 
 (define op0
   '(read-byte peek-byte void))
