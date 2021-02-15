@@ -348,7 +348,8 @@
                  (Mov (Offset rbx -8) rax)
                  (Label l3)                  
                  (Mov rax r10)            ; pointer to word 0 of the str
-                 (Or rax type-string)))]    
+                 (Or rax type-string)))]
+
          ['cons
           (seq (Mov (Offset rbx 0) rax)
                (Pop rax)

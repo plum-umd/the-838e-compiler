@@ -55,7 +55,6 @@
   
 (define op3
   '(string-set!))  
->>>>>>> symbol
 
 (define (op? ops)
   (λ (x)
