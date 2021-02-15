@@ -32,7 +32,30 @@
            (compile-e e '(#f))
            (Mov rdx rbx) ; return heap pointer in second return register           
            (Ret)
-           (compile-defines ds))]))
+           (compile-defines ds))]
+    [(Lib xs ds)
+     (error "a library must be compiled with `compile-library` instead of `compile`")]))
+
+;; Expr -> Asm
+(define (compile-library p)
+  (match p
+    [(Lib xs ds)
+     (prog (compile-provides xs)
+           (Default 'rel)
+           (Section '.text)
+           (Extern 'raise_error)
+           (compile-defines ds))]
+    [(Prog ds e)
+     (error "an executable must be compiled with `compile` instead of `compile-library`")]))
+
+;; [Listof Id] -> Asm
+(define (compile-provides xs)
+  (match xs
+    ['()
+     (seq)]
+    [(cons x xs)
+     (seq (Global x)
+          (compile-provides xs))]))
 
 ;; [Listof Defn] -> Asm
 (define (compile-defines ds)
