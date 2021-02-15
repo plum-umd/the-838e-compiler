@@ -21,7 +21,7 @@
 ;; Expr -> Asm
 (define (compile p)
   (match p
-    [(Prog ds e)  
+    [(Prog ds e)
      (prog (Global 'entry)
            (Default 'rel)
            (Section '.text)
