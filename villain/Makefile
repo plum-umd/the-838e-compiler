@@ -12,7 +12,7 @@ endif
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs)
 
-runtime.o: main.o char.o io.o
+runtime.o: main.o char.o io.o std
 	ld -r main.o char.o io.o std/list.o -o runtime.o
 
 std: 
