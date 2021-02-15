@@ -85,7 +85,8 @@
            (if (>= (length vs) (length xs)) 
                (interp-env e 
                   (append (zip xs (take vs (length xs))) 
-                          (list xs* (list-tail vs (length xs))))))])])]
+                          (list xs* (list-tail vs (length xs)))))
+               'err)])])]
     [(Match e0 cs)
      (match (interp-env e0 r ds)
        ['err 'err]
