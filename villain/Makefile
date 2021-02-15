@@ -1,5 +1,5 @@
 UNAME := $(shell uname)
-.PHONY: test stdlib
+.PHONY: test std
 
 ifeq ($(UNAME), Darwin)
   format=macho64
@@ -13,10 +13,10 @@ endif
 	gcc runtime.o $< -o $@ $(libs)
 
 runtime.o: main.o char.o io.o
-	ld -r main.o char.o io.o stdlib/*.o -o runtime.o
+	ld -r main.o char.o io.o std/*.o -o runtime.o
 
-stdlib: 
-	make stdlib/list.o
+std: 
+	make std/list.o
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o

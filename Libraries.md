@@ -8,8 +8,8 @@ Standard library ids similar to primitive ids. The important difference, of cour
 
 ### `Makefile`
 
-- command `stdlib`. libraries are only compiled to object files, rather than to executables.
-- command `runtime.o`. links to all `*.o` files in `stdlib/`.
+- command `std`. libraries are only compiled to object files, rather than to executables.
+- command `runtime.o`. links to all `*.o` files in `std/`.
 
 ### `a86/ast.rkt`
 

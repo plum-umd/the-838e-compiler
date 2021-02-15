@@ -24,7 +24,8 @@
 (define (externs-e e)
   (match e
     [(App f es)
-     (externs-es es)]
+     (append ((externs-f f)
+              (externs-es es)))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
@@ -52,7 +53,7 @@
     [(cons e es)
      (append (externs-e e)
              (externs-es es))]))
-  
+
 (define (externs-p p)
   (let ((r (op->extern p)))
     (if r (list (Extern r)) '())))
