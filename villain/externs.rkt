@@ -54,6 +54,12 @@
      (append (externs-e e)
              (externs-es es))]))
 
+;; may be call to std library function
+(define (externs-f f)
+  (
+  
+  
+
 (define (externs-p p)
   (let ((r (op->extern p)))
     (if r (list (Extern r)) '())))
