@@ -56,6 +56,9 @@
     [(? boolean?) (Lit s)]
     [(? integer?) (Lit s)]
     [(? char?)    (Lit s)]
+    [(? string?) (Lit s)]
+    [(? flonum?) (Lit s)]
+    [(cons 'quote (list (? symbol? x))) (Lit x)]
     [(list 'quote (list))
      (Lit '())]
     [(list 'cons (? symbol? x1) (? symbol? x2))

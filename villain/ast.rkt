@@ -23,7 +23,7 @@
 ;;           | (Let Id Expr Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
-;;           | (Match Expr (Listof Pat))
+;;           | (Match Expr (Listof Clause))
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero?
@@ -34,13 +34,15 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons | 'string-ref
-;; type Op3  = 'string-set!                    
+;; type Op3  = 'string-set!
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
-;; type Litral = Boolean | '() | Char | Integer
+;; type Litral = Boolean | '() | Char | Integer | Symbol | String | Float
+;; type Clause = (Pairof Pat Expr)
+
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)

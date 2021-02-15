@@ -183,6 +183,28 @@
                 #t)
 
   (check-equal? (run
+                 '(match "abcd"
+                    ['abcd #f]
+                    ["abcd" #t]))
+                #t)
+  (check-equal? (run
+                 '(match 'abcd
+                    ['abcd #f]
+                    ["abcd" #t]))
+                #f)
+  (check-equal? (run
+                 '(match -2.5678
+                    [2.5678 #f]
+                    [-2.5678 #t]))
+                #t)
+  
+  (check-equal? (run
+                 '(match 'abc
+                    [abc abc]
+                    ['abc #t]))
+                'abc)
+  
+  (check-equal? (run
                  '(match (cons #t #f)
                     [(cons a b) a]
                     [5 2]))
@@ -249,14 +271,17 @@
                         [(cons h t) (+ 1 (len t))]
                         ['() 0]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
-                 3)
-    (check-equal? (run
+                3)
+  (check-equal? (run
                  '(begin
                     (define (len lst)
                       (match lst
                         [(cons h t) (+ 1 (len t))]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
-                 'err)
+                'err)
+
+  ;;End of pattern matching tests
+  
 
   (check-equal? (run
                  '(begin (define (tri x)
