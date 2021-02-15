@@ -1,6 +1,6 @@
 #lang racket
 (provide externs char-op->uc symbol->label)
-(require "ast.rkt" "std.rkt" a86/ast)
+(require "ast.rkt" a86/ast)
 
 (define (externs p)
   (match p
@@ -79,6 +79,13 @@
     ['char-downcase 'uc_tolower]
     ['char-titlecase 'uc_totitle]
     [_ #f]))
+
+;; Symbol -> Boolean
+(define (std-provided? x)
+  (memq x std-ids))
+
+(define std-ids
+  '(length)) ; TODO: add more
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label

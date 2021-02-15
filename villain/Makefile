@@ -12,11 +12,11 @@ endif
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs)
 
-runtime.o: main.o char.o io.o std
-	ld -r main.o char.o io.o std/list.o -o runtime.o
+runtime.o: main.o char.o io.o stdlib
+	ld -r main.o char.o io.o list.o -o runtime.o
 
-std: 
-	make std/list.o
+stdlib:
+	make list.o
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o
