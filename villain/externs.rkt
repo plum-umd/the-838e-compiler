@@ -44,6 +44,19 @@
     [(Let x e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
+    [(Match e cs)
+     (append (externs-e e)
+             (foldl (λ (c acc) (append (externs-clause c) acc)) '() cs))]
+    [_ '()]))
+
+(define (externs-clause c)
+  (match c
+    [(Clause p e) (append (externs-pat p)
+                          (externs-e e))]))
+
+(define (externs-pat p)
+  (match p
+    [(Symbol _) (list (Extern 'str_to_symbol))]
     [_ '()]))
 
 (define (externs-es es)

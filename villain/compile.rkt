@@ -513,6 +513,46 @@
              (Jne next)
              (compile-e e c)
              (Jmp return))]
+       [(String s)
+        (let ((true (gensym "true"))
+              (false (gensym "false")))
+          (seq
+           (Mov r8 rax)
+           (And r8 ptr-mask)
+           (Cmp r8 type-string)
+           (Push rax)
+           (compile-string s)
+           (Push rax)
+           (compile-string-eq true false (cons #f (cons #f c)))
+           (Label true)
+           (Pop r8)
+           (Pop r8)
+           (compile-e e c)
+           (Jmp return)
+           (Label false)
+           (Pop r8)
+           (Pop r8)
+           (Jmp next)))]
+       [(Symbol s)
+        (let ((true (gensym "true"))
+              (false (gensym "false")))
+          (seq
+           (Mov r8 rax)
+           (And r8 ptr-mask)
+           (Cmp r8 type-symbol)
+           (Push rax)
+           (compile-symbol s (cons #f c))
+           (Push rax)
+           (compile-string-eq true false (cons #f (cons #f c)))
+           (Label true)
+           (Pop r8)
+           (Pop r8)
+           (compile-e e c)
+           (Jmp return)
+           (Label false)
+           (Pop r8)
+           (Pop r8)
+           (Jmp next)))]
        [(Box x)
         (seq (Mov r8 rax)
              (And r8 ptr-mask)
@@ -538,6 +578,38 @@
              (Add rsp 16)
              (Jmp return))])]))
 
+;;Symbol Symbol CEnv -> ASM
+;;This function determines if the two strings on top of the stack are structurally equal
+(define (compile-string-eq true false c)
+  (let ((loop (gensym "loop")))
+    (seq
+     (Mov rax (Offset rsp 0)) ;;First string
+     (Mov r8 (Offset rsp 8))  ;;Second string
+
+     ;;Untag the strings
+     (Xor rax type-string)
+     (Xor r8 type-string)
+     (Mov r9 (Offset r8 0))
+
+     ;;If they don't have the same length, they cannot be equal
+     (Cmp r9 (Offset rax 0))
+     (Jne false)
+
+     (Mov r10 0) ;;Keep track of how many characters have been compared
+
+     ;;Compare each word for equality
+     (Label loop)
+     (Cmp r10 r9) ;;Check if the length has been exhausted
+     (Je true)
+     (Jg true)
+     
+     (Add r8 8)
+     (Add rax 8)
+     (Mov rcx (Offset r8 0))
+     (Cmp (Offset rax 0) rcx)
+     (Jne false)
+     (Add r10 3) ;;3 chars have been checked
+     (Jmp loop))))
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
 (define (pad-stack-call c i)
