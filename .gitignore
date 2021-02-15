@@ -3,3 +3,4 @@
 *.dep
 *.run
 *~
+.DS_Store
