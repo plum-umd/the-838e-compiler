@@ -84,6 +84,11 @@
 (define check:none
   (λ (n) (values)))
 
+; always passes
+(define check:pass
+  (λ (x n)
+    x))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Comments
 
@@ -114,6 +119,9 @@
            #:transparent
            #:guard guard)))
 
+(instruct Global  (x)      check:pass)
+(instruct Default (x)      check:pass)
+(instruct Section (x)      check:pass)
 (instruct Label  (x)       check:label-symbol)
 (instruct Call   (x)       check:target)
 (instruct Ret    ()        check:none)
@@ -153,7 +161,10 @@
        (not (register? x))))
 
 (define (instruction? x)
-  (or (Label? x)
+  (or (Global? x)
+      (Default? x)
+      (Section? x)
+      (Label? x)
       (Extern? x)
       (Call? x)
       (Ret? x)
