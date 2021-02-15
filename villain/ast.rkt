@@ -44,12 +44,12 @@
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
 
-
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
 (struct Int   (i)          #:prefab)
 (struct Bool  (b)          #:prefab)
 (struct Char  (c)          #:prefab)
+(struct Float (f)          #:prefab)
 (struct String (s)         #:prefab)   
 (struct Prim0 (p)          #:prefab)
 (struct Prim1 (p e)        #:prefab)
