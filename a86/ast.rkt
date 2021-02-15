@@ -20,10 +20,10 @@
       (error n "expects global symbol; given ~v" x))
     x))
 
-(define check:section
+(define check:section-symbol
   (λ (x n)
-    (unless (string? x)
-      (error n "expects section; given ~v" x))
+    (unless (symbol? x)
+      (error n "expects section symbol; given ~v" x))
     x))
 
 (define check:default-symbol
@@ -139,7 +139,7 @@
 
 (instruct Global  (x)      check:label-symbol)
 (instruct Default (x)      check:default-symbol)
-(instruct Section (x)      check:section)
+(instruct Section (x)      check:section-symbol)
 (instruct Label  (x)       check:label-symbol)
 (instruct Call   (x)       check:target)
 (instruct Ret    ()        check:none)

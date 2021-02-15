@@ -22,7 +22,10 @@
 (define (compile p)
   (match p
     [(Prog ds e)  
-     (prog (externs p)
+     (prog (Global 'entry)
+           (Default 'rel)
+           (Section '.text)
+           (externs p)
            (Extern 'raise_error)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
