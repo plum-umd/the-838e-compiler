@@ -57,7 +57,7 @@
           (Jl 'raise_error) 
           (Mov r8 rcx) 
           (Sub r8 (imm->bits (length xs))) ; r8 holds # things to get from stack 
-          (compile-value '()) ; rax now holds the empty list 
+          (Mov rax val-empty) ; rax now holds the empty list 
           (Mov r9 0) ; r9 is our looping variable 
           (Label loop) 
           (Cmp r9 r8) 
