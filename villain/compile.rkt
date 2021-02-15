@@ -8,12 +8,13 @@
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
-                  ; make-string, compile-prim3, string-ref!, integer-length, match
+                  ; make-string, compile-prim3, string-ref!, integer-length, match, 
+                  ; compile-define
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, 
+                  ; string-set!, make-string, compile-define
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define
 (define rcx 'rcx) ; arity indicator
 
 ;; type CEnv = [Listof Variable]
@@ -58,15 +59,17 @@
           (Ret))] 
     [(Defn* f xs xs* e) 
      (let ((loop (gensym 'loop)) 
-           (end (gensym 'end))) 
-          ;; following code makes use of scratch registers r8 and r9
+           (loop2 (gensym 'loop2)) 
+           (end (gensym 'end)) 
+           (end2 (gensym 'end2))) 
           (seq (Label (symbol->label f)) 
           (Cmp rcx (imm->bits (length xs))) 
           (Jl 'raise_error) 
           (Mov r8 rcx) 
-          (Sub r8 (imm->bits (length xs))) ; r8 holds # things to get from stack 
-          (Mov rax val-empty) ; rax now holds the empty list 
-          (Mov r9 0) ; r9 is our looping variable 
+          (Sub r8 (imm->bits (length xs)))  ; # of things to pop off of stack
+          (Mov rax val-empty) 
+          (Mov r9 0)                        ; looping var
+          (Pop r10)                         ; store return address
           (Label loop) 
           (Cmp r9 r8) 
           (Je end)
@@ -78,8 +81,22 @@
           (Add rbx 16)
           (Add r9 (imm->bits 1)) 
           (Jmp loop)
-          (Label end) ; at this point, rax holds the list we want 
-          (Push rax)
+          (Label end)             
+          ;; At this point, if the number of extra 
+          ;; args is x, then we've now popped x things 
+          ;; off and intend to push 1 thing on, so 
+          ;; the stack pointer is x-1 places off 
+          ;; so we need an additional loop to correct it
+          (Mov r9 (imm->bits 1)) 
+          (Label loop2)
+          (Cmp r9 r8) 
+          (Jge end2)
+          (Sub rsp 8) 
+          (Add r9 (imm->bits 1))
+          (Jmp loop2)
+          (Label end2) 
+          (Push rax)                        ; list containing arguments
+          (Push r10)                        ; return address
           (compile-e e (parity (cons #f (cons xs* (reverse xs))))) 
           (Ret)))]))
 
