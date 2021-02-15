@@ -1,6 +1,6 @@
 #lang racket
 (provide externs char-op->uc)
-(require "ast.rkt" a86/ast)
+(require "ast.rkt" "std.rkt" a86/ast)
 
 (define (externs p)
   (match p
@@ -54,11 +54,8 @@
      (append (externs-e e)
              (externs-es es))]))
 
-;; may be call to std library function
 (define (externs-f f)
-  (
-  
-  
+  (if (std-provided? f) (list (Extern f)) '())) ; if it is a call to std library function
 
 (define (externs-p p)
   (let ((r (op->extern p)))

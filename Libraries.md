@@ -13,18 +13,22 @@ Standard library ids similar to primitive ids. The important difference, of cour
 
 ### `a86/ast.rkt`
 
-- `label-uses`. Provided labels count as used.
+- `label-uses`. Provided (via instruction `Global`) labels count as used.
+
+### `villain/std.rkt`
+
+- `std-provided?`. checks whether a symbol is provided by the std library.
 
 ### `villain/interp.rkt`
 
-- `interp` cannot interpret library
+- `interp`. cannot interpret library
 - `interp-env`. `'err` on library (unrecognized) function calls
 
 ### `villain/compile.rkt`
 
-- TODO
+- TODO: arity checking for std library functions
 
 ### `villain/externs.rkt`
 
-### `villain/parse.rkt`
+- `externs-f`. include `Extern` for function call if it is a std library function
 
