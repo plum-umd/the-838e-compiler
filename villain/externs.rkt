@@ -6,7 +6,9 @@
   (match p
     [(Prog ds e)
      (remove-duplicates (append (externs-ds ds)
-                                (externs-e e)))]))
+                                (externs-e e)))]
+    [(Lib xs ds)
+     (remove-duplicates (externs-ds ds))]))
 
 (define (externs-ds ds)
   (match ds
