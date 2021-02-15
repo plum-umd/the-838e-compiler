@@ -11,7 +11,25 @@
     (when (register? x)
       (error n "cannot use register as label name; given ~v" x))
     (unless (symbol? x)
-      (error n "expects symbol; given ~v" x))
+      (error n "expects label symbol; given ~v" x))
+    x))
+
+(define check:global-symbol
+  (λ (x n)
+    (unless (symbol? x)
+      (error n "expects global symbol; given ~v" x))
+    x))
+
+(define check:section
+  (λ (x n)
+    (unless (string? x)
+      (error n "expects section; given ~v" x))
+    x))
+
+(define check:default-symbol
+  (λ (x n)
+    (unless (symbol? x)
+      (error n "expects default symbol; given ~v" x))
     x))
 
 (define check:target
@@ -119,9 +137,9 @@
            #:transparent
            #:guard guard)))
 
-(instruct Global  (x)      check:pass)
-(instruct Default (x)      check:pass)
-(instruct Section (x)      check:pass)
+(instruct Global  (x)      check:label-symbol)
+(instruct Default (x)      check:default-symbol)
+(instruct Section (x)      check:section)
 (instruct Label  (x)       check:label-symbol)
 (instruct Call   (x)       check:target)
 (instruct Ret    ()        check:none)
