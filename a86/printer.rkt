@@ -58,9 +58,9 @@
   (define (instr->string i)
     (match i
       [(Ret)       (string-append tab "ret")]
-      [(Global x)  (string-append tab "global "  (label-symbol->string x)]
-      [(Default x) (string-append tab "default " (symbol->string x)]
-      [(Section x) (string-append tab "section "  x]
+      [(Global x)  (string-append tab "global "  (label-symbol->string x))]
+      [(Default x) (string-append tab "default " (symbol->string x))]
+      [(Section x) (string-append tab "section "  x)]
       [(Label l)   (string-append (label-symbol->string l) ":")]
       [(Extern l)  (begin0 (string-append tab "extern " (label-symbol->string l))
                            (set! external-labels (cons l external-labels)))]
