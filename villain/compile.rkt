@@ -28,6 +28,7 @@
            (Section '.text)
            (externs p)
            (Extern 'raise_error)
+           (Global 'raise_error_align)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e e '(#f))
@@ -47,6 +48,7 @@
            (Section '.text)
            (externs p)
            (Extern 'raise_error)
+           (Extern 'raise_error_align)
            (compile-defines ds))]))
 
 ;; [Listof Id] -> Asm
