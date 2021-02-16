@@ -5,6 +5,8 @@
 ;; S-Expr -> Prog
 (define (parse s)
   (match s
+    [(list 'begin (list 'provide xs ...) (and ds (list 'define _ _)) ...)
+     (Lib xs (map parse-d ds))]
     [(list 'begin (and ds (list 'define _ _)) ... e)
      (Prog (map parse-d ds) (parse-e e))]
     [e (Prog '() (parse-e e))]))

@@ -1,5 +1,7 @@
 *.o
+*.s
 *.zo
 *.dep
 *.run
 *~
+.DS_Store

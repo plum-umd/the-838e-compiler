@@ -24,7 +24,9 @@
 (define (interp p)
   (match p
     [(Prog ds e)
-     (interp-env e '() ds)]))
+     (interp-env e '() ds)]
+    [(Lib xs ds)
+     (error "cannot interpret library")]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -93,7 +95,8 @@
     [(Match e0 cs)
      (match (interp-env e0 r ds)
        ['err 'err]
-       [v (interp-match v cs r ds)])]))
+       [v (interp-match v cs r ds)])]
+    [_ 'err]))
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)

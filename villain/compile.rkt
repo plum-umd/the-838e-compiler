@@ -22,8 +22,11 @@
 ;; Expr -> Asm
 (define (compile p)
   (match p
-    [(Prog ds e)  
-     (prog (externs p)
+    [(Prog ds e)
+     (prog (Global 'entry)
+           (Default 'rel)
+           (Section '.text)
+           (externs p)
            (Extern 'raise_error)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
@@ -34,6 +37,26 @@
            (Label 'raise_error_align)
            (Sub rsp 8)
            (Jmp 'raise_error))]))
+
+;; Expr -> Asm
+(define (compile-library p)
+  (match p
+    [(Lib xs ds)
+     (prog (compile-provides xs)
+           (Default 'rel)
+           (Section '.text)
+           (externs p)
+           (Extern 'raise_error)
+           (compile-defines ds))]))
+
+;; [Listof Id] -> Asm
+(define (compile-provides xs)
+  (match xs
+    ['()
+     (seq)]
+    [(cons x xs)
+     (seq (Global (symbol->label x))
+          (compile-provides xs))]))
 
 (define (error-label c)
   (if (odd? (length c))
@@ -674,4 +697,3 @@
          (string->list (symbol->string s))))
     "_"
     (number->string (eq-hash-code s) 16))))
-

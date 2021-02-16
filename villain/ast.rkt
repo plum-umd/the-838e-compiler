@@ -2,7 +2,9 @@
 (provide (all-defined-out))
 
 ;; type Prog = (Prog (Listof Defn) Expr)
-(struct Prog (ds e) #:prefab)
+;;           | (Lib  (Listof Id) (Listof Defn))
+(struct Prog (ds e)  #:prefab)
+(struct Lib  (xs ds) #:prefab)
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
 (struct Defn (f xs e) #:prefab) 
