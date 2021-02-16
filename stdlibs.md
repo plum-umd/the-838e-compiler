@@ -80,9 +80,10 @@ disabled, since the standard libraries may depend on each other).
 
 ## To-Do List
 
-- [ ] "string" stdlib (common string operations build up from the primitives)
-- [ ] "list" stdlib (flush out)
-- [ ] "arithmetic" (or "math") stdlib
+- [ ] "bool" stdlib (according to https://docs.racket-lang.org/reference/booleans.html)
+- [ ] "string" stdlib (according to https://docs.racket-lang.org/reference/strings.html)
+- [ ] "list" stdlib (according to https://docs.racket-lang.org/reference/pairs.html)
+- [ ] "math" stdlib (according to https://docs.racket-lang.org/reference/generic-numbers.html)
 - [ ] arity checking for stdlib functions
 - [ ] recognizing stdlib functions passed as higher-order arguments (in the
       `Var` struct somehow)

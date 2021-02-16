@@ -100,15 +100,12 @@
 ;; List of each Id provided by a stdlib
 (define stdlib-ids
   (append ; math
-          '(*
-            ^)
+          '(*)
           ; list
           '(length
             append
-            reverse
-            sum
-            product)
-          ; NOTE: add new stdlib Ids here
+            reverse)
+          ; NOTE: add new stdlib-provided Ids here
           ))
 
 ;; Symbol -> Label

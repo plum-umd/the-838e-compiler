@@ -2,9 +2,7 @@
 (begin
   (provide length
            append
-           reverse
-           sum
-           product)
+           reverse)
 
   (define (length xs)
     (match xs
@@ -21,14 +19,4 @@
       ['() '()]
       [(cons x xs) (append (reverse xs) (cons x '()))]))
 
-  (define (sum xs)
-    (match xs
-      ['() 0]
-      [(cons x xs) (+ x (sum xs))]))
-  
-  (define (product xs)
-    (match xs
-      ['() 1]
-      [(cons x xs) (* x (product xs))]))
-  
   )
