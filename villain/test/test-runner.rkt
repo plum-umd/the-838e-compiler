@@ -7,6 +7,8 @@
   (check-equal? (run 7) 7)
   (check-equal? (run -8) -8)
 
+  
+
   ;; Blackmail examples
   (check-equal? (run '(add1 (add1 7))) 9)
   (check-equal? (run '(add1 (sub1 7))) 7)
@@ -303,7 +305,131 @@
 
   (check-equal? (run '(char-whitespace? #\a)) #f)
   (check-equal? (run '(char-whitespace? #\ )) #t)
+
+  ;; symbols
+  (check-equal? (run ''foo) 'foo)
+  (check-equal? (run '(string->symbol "foo"))
+                'foo)
+  (check-equal? (run '(symbol? "foo"))
+                #f)
+  (check-equal? (run '(symbol? 'foo))
+                 #t)
+  (check-equal? (run '(symbol? (string->symbol "foo")))
+                 #t)
+  (check-equal? (run '(symbol? (gensym)))
+                 #t)
+  (check-equal? (run '(symbol->string 'foo))
+                 "foo")
+  (check-equal? (run '(eq? 'foo
+                            (string->symbol "foo")))
+                #t)
+  (check-equal? (run '(eq? (string->symbol "foo")
+                           (string->symbol "foo")))
+                #t)
+  (check-equal? (run '(eq? (string->symbol "foo")
+                           (string->symbol "bar")))
+                #f)
+  (check-equal? (run '(symbol->string 'foo))
+                "foo")
+  (check-equal? (run '(eq? (gensym) (gensym)))
+                #f)
+  (check-equal? (run '(let ([x (gensym)]) (eq? x x)))
+                #t)
+  
+    ;; Testing floats
+  (check-equal? (run 4.2) 4.2)
+  (check-equal? (run -4.2) -4.2)
+  
+  (check-equal? (run 3.3333) 3.3333)
+  (check-equal? (run 790.321) 790.321)
+  (check-equal? (run -8990.32) -8990.32)
+  (check-equal? (run -9999999) -9999999)
+  (check-equal? (run .9999999) .9999999)
+
+  ;; Errors and stack alignment
+  (define (check-err e)
+    ;; check error in both aligned and unaligned config
+    (check-equal? (run e) 'err)
+    (check-equal? (run `(let ((x 0)) ,e)) 'err)) 
+
+  ;; Variable arity functions tests 
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2 3)))
+                '(1 2 3)) 
+  
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2)))
+                '(1 2)) 
+  
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) xs) 
+                    (at-least-two-lst 1)))
+                'err)
+
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2 (cons 4 '()))))
+                '(1 2 (4))) 
+
+  (check-equal? (run
+                 '(begin  
+                    (define (ret-two . xs) 2) 
+                    (ret-two 1 2 (cons 4 '()))))
+                  2) 
+
+  (check-equal? (run
+                 '(begin  
+                    (define (ret-two . xs) 2) 
+                    (ret-two 1 2 (cons 4 '()) #\a)))
+                  2)
+
+  
+
+  (check-err '(add1 #f))
+  (check-err '(sub1 #f))
+  (check-err '(zero? #f))
+  (check-err '(integer-length #f))
+  (check-err '(integer->char #f))
+  (check-err '(integer->char 1114112))
+  (check-err '(integer->char 55296))
+  (check-err '(+ #f 0))
+  (check-err '(+ 0 #f))
+  (check-err '(- #f 0))
+  (check-err '(- 0 #f))
+  (check-err '(string-ref "a" #f))
+  (check-err '(make-string #f #\a))
+  (check-err '(string-set! "a" #f #\b))
+  (check-err '(write-byte #f))
+  (check-err '(write-byte -1))
+  (check-err '(write-byte 256))
+  (check-err '(char->integer #f))
+  (check-err '(char-whitespace? #f))
+  (check-err '(char-alphabetic? #f))
+  (check-err '(char-upcase #f))
+  (check-err '(char-downcase #f))
+  (check-err '(char-titlecase #f))
+  (check-err '(make-string 1 #f))
+  (check-err '(string-set! "a" 0 #f))
+  (check-err '(unbox #f))
+  (check-err '(car #f))
+  (check-err '(cdr #f))
+  (check-err '(string-length #f))
+  (check-err '(string-ref #f 0))
+  (check-err '(string-set! #f 0 #\b))
+  (check-err '(string-ref "a" -1))
+  (check-err '(string-ref "a" 1))
+  (check-err '(make-string -1 #\a))
+  (check-err '(string-set! "a" -1 #\b))
+  (check-err '(string-set! "a" 1 #\b))
+  (check-err '(match '() [#f #f]))
   )
+
 
 (define (test-runner-io run)
   ;; Evildoer examples
@@ -362,4 +488,9 @@
                                           (print-alphabet (sub1 i)))))
                              (print-alphabet 26))
                      "")
-                (cons (void) "abcdefghijklmnopqrstuvwxyz")))
+                (cons (void) "abcdefghijklmnopqrstuvwxyz"))
+
+
+ 
+
+  )

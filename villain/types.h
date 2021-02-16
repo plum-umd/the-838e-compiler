@@ -16,6 +16,7 @@
   - Eof:            #b10 11 000
   - Void:           #b11 11 000
   - Empty:         #b100 11 000
+  - Float:         #b111 11 000
 */
 #define imm_shift        3
 #define ptr_type_mask    ((1 << imm_shift) - 1)
@@ -23,6 +24,7 @@
 #define box_type_tag     1
 #define cons_type_tag    2
 #define str_type_tag     3 
+#define symbol_type_tag  4
 #define int_shift        (1 + imm_shift)
 #define int_type_mask    ((1 << int_shift) - 1)
 #define int_type_tag     (0 << (int_shift - 1))
@@ -36,5 +38,8 @@
 #define val_eof   ((2 << char_shift) | nonchar_type_tag)
 #define val_void  ((3 << char_shift) | nonchar_type_tag)
 #define val_empty ((4 << char_shift) | nonchar_type_tag)
+#define float_type_tag ((7 << char_shift) | nonchar_type_tag)
+#define float_shift         (5 + imm_shift)
+#define float_type_mask       ((1 << 8 )-1)
 
 #endif

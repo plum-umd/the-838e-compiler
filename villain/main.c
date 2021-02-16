@@ -3,6 +3,12 @@
 #include <stdlib.h>
 #include "types.h"
 #include "runtime.h"
+#include <math.h>
+
+FILE* in;
+FILE* out;
+void (*error_handler)();
+int64_t *heap;
 
 FILE* in;
 FILE* out;
@@ -10,7 +16,7 @@ void (*error_handler)();
 int64_t *heap;
 
 void print_result(int64_t);
-void print_str(int64_t);
+void print_str(int64_t *);
 
 void error_exit() {
   printf("err\n");
@@ -37,6 +43,7 @@ void print_char(int64_t);
 void print_cons(int64_t);
 
 void print_result(int64_t result) {
+
   if (cons_type_tag == (ptr_type_mask & result)) {
     printf("'(");
     print_cons(result);
@@ -48,10 +55,28 @@ void print_result(int64_t result) {
     printf("%" PRId64, result >> int_shift);
   } else if (char_type_tag == (char_type_mask & result)) {
     print_char(result);
+  } else if (float_type_tag == (float_type_mask & result)) {        
+    int sig = (int)(result >> (float_shift +32));
+    int sign= (int)(1 &  (result >> (float_shift + 31)));
+    int exp = (int)(( (1 <<  8) - 1) &  (result >> (float_shift + 23)));
+    int mantissa = (int)(( (1 <<  23) - 1 )&  (result >> (float_shift)));
+    float dec_man= 0;
+    for (int i = -23; i<0; i++) {
+        if (1 == (1 & mantissa)) {
+          dec_man+=pow(2, i);
+        }
+        mantissa=mantissa>>1;
+    }
+    float resultFloat=  pow(-1, sign) * pow(2,exp - 127) * (1 + dec_man);
+    float roundedResult = (round(resultFloat * (pow(10, sig)))/(pow(10,sig)));
+    printf("%f", resultFloat);  
   } else if (str_type_tag == (ptr_type_mask & result)) { 
     printf("\"");
-    print_str(result);
+    print_str((int64_t *)(result ^ str_type_tag));
     printf("\"");
+  } else if (symbol_type_tag == (ptr_type_mask & result)) {
+    printf("'");
+    print_str((int64_t *)(result ^ symbol_type_tag));
   } else {
     switch (result) {
     case val_true:

@@ -118,6 +118,9 @@
       [(Jg l)
        (string-append tab "jg "
                       (jump-target->string l))]
+      [(Jge l)
+       (string-append tab "jge "
+                      (jump-target->string l))]
       [(Call l)
        (string-append tab "call "
                       (jump-target->string l))]

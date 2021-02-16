@@ -10,10 +10,10 @@ else
 endif
 
 %.run: %.o runtime.o
-	gcc runtime.o $< -o $@ $(libs)
+	gcc runtime.o $< -o $@ $(libs) -lm
 
-runtime.o: main.o char.o io.o stdlibs
-	ld -r main.o char.o io.o list.o math.o -o runtime.o
+runtime.o: main.o char.o io.o symbol.o str.o stdlibs
+	ld -r main.o char.o io.o symbol.o str.o list.o math.o -o runtime.o
 	# NOTE: append new stdlib object files to `-r` arguments above
 
 stdlibs:
@@ -29,6 +29,12 @@ char.o: char.c types.h
 
 io.o: io.c runtime.h
 	gcc -fPIC -c io.c -o io.o
+
+symbol.o: symbol.c str.h
+	gcc -fPIC -c symbol.c -o symbol.o
+
+str.o: str.c
+	gcc -fPIC -c str.c -o str.o
 
 %.o: %.s
 	nasm -f $(format) -o $@ $<

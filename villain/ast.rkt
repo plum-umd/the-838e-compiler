@@ -7,7 +7,10 @@
 (struct Lib  (xs ds) #:prefab)
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
-(struct Defn (f xs e) #:prefab)
+(struct Defn (f xs e) #:prefab) 
+
+;; type Defn* = (Defn* Id (Listof Id) Id Expr)
+(struct Defn* (f xs xs* e) #:prefab)
 
 ;; type Expr = (Eof)
 ;;           | (Empty)
@@ -15,6 +18,7 @@
 ;;           | (Bool Boolean)
 ;;           | (Char Character)
 ;;           | (String)         
+;;           | (Symbol Symbol)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
 ;;           | (Prim2 Op2 Expr Expr)      
@@ -43,13 +47,14 @@
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
 
-
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
 (struct Int   (i)          #:prefab)
 (struct Bool  (b)          #:prefab)
 (struct Char  (c)          #:prefab)
+(struct Float (f)          #:prefab)
 (struct String (s)         #:prefab)   
+(struct Symbol (s)         #:prefab)
 (struct Prim0 (p)          #:prefab)
 (struct Prim1 (p e)        #:prefab)
 (struct Prim2 (p e1 e2)    #:prefab)
