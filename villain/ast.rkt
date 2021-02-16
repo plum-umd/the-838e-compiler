@@ -31,7 +31,7 @@
 ;;           | (Match Expr (Listof Pat))
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
-;; type Op1  = 'add1 | 'sub1 | 'zero?
+;; type Op1  = 'add1 | 'sub1 | 'zero? | 'integer?
 ;;           | 'char? | 'integer->char | 'char->integer
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox

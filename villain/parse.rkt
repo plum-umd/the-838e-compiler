@@ -77,7 +77,7 @@
          integer->char char->integer box unbox empty? car cdr
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string?
+         string-length string? integer?
          symbol->string string->symbol symbol?))
 (define op2
   '(+ - eq? cons string-ref make-string <=))

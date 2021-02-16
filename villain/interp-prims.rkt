@@ -8,6 +8,7 @@
     [(list 'add1 (? integer?))            (add1 v)]
     [(list 'sub1 (? integer?))            (sub1 v)]
     [(list 'zero? (? integer?))           (zero? v)]
+    [(list 'integer? v)                   (integer? v)]
     [(list 'integer-length (? integer?))  (integer-length v)]
     [(list 'char? v)                      (char? v)]
     [(list 'char->integer (? char?))      (char->integer v)]

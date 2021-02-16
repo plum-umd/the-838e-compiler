@@ -231,6 +231,15 @@
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
+         ['integer?
+          (let ((l1 (gensym)))
+            (seq (And rax mask-int)
+                 (Xor rax type-int)
+                 (Cmp rax 0)
+                 (Mov rax val-true)
+                 (Je l1)
+                 (Mov rax val-false)
+                 (Label l1)))]
          ['integer-length
           (seq (assert-integer rax c)
                (Sar rax imm-shift)
