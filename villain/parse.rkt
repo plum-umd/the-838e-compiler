@@ -62,6 +62,8 @@
     [(? char?)    (Lit s)]
     [(list 'quote (list))
      (Lit '())]
+    [(list 'quote (? symbol? s))
+     (Sym s)]
     [(list 'cons (? symbol? x1) (? symbol? x2))
      (Cons x1 x2)]
     [(list 'box (? symbol? x1))

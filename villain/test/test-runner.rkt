@@ -174,6 +174,9 @@
   (check-equal? (run
                  '(match #\a [#\b #\b] [#\a #\a] [#\c #\c]))
                 #\a)
+  (check-equal? (run '(match 'x ['x #t] [_ #f])) #t)
+  (check-equal? (run '(match 'x ['y #t] [_ #f])) #f)
+  (check-equal? (run '(match #f ['y #t] [_ #f])) #f)
   (check-equal? (run
                  '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
                 #t)

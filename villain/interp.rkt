@@ -111,6 +111,10 @@
            (if (eq? l v)
                (interp-env e r ds)
                (interp-match v cs r ds))]
+          [(Sym s)
+           (if (eq? s v)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
           [(Box x)
            (if (box? v)
                (interp-env e (ext r x (unbox v)) ds)

@@ -29,6 +29,7 @@
            (externs p)
            (Extern 'raise_error)
            (Global 'raise_error_align)
+           (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e e '(#f))
@@ -49,6 +50,7 @@
            (externs p)
            (Extern 'raise_error)
            (Extern 'raise_error_align)
+           (Extern 'str_to_symbol)           
            (compile-defines ds))]))
 
 ;; [Listof Id] -> Asm
@@ -587,6 +589,14 @@
              (Jne next)
              (compile-e e c)
              (Jmp return))]
+       [(Sym s)
+        (seq (Push rax)
+             (compile-symbol s (cons #f c))
+             (Pop r8)
+             (Cmp rax r8)
+             (Jne next)
+             (compile-e e c)
+             (Jmp return))]       
        [(Box x)
         (seq (Mov r8 rax)
              (And r8 ptr-mask)

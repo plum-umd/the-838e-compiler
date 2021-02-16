@@ -30,8 +30,6 @@
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
-    [(Symbol _)
-     (list (Extern 'str_to_symbol))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
@@ -84,7 +82,7 @@
     ['read-byte 'read_byte]
     ['write-byte 'write_byte]
     ['gensym 'gensym]
-    ['string->symbol 'str_to_symbol]
+    #;['string->symbol 'str_to_symbol]  ;; always included now
     [_ (char-op->uc o)]))
 
 (define (char-op->uc o)

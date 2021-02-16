@@ -43,6 +43,7 @@
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
+;;           | (Sym Symbol)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
@@ -71,6 +72,7 @@
 ;; Pattern constructors
 (struct Wild ()            #:prefab)
 (struct Lit (l)            #:prefab)
+(struct Sym (s)            #:prefab)
 (struct Cons (p1 p2)       #:prefab)
 (struct Box (p)            #:prefab)
 
