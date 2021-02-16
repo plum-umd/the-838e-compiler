@@ -1,6 +1,7 @@
 #lang racket
 (provide main)
-(require "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt" a86/printer)
+(require "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt"
+         a86/printer (submod a86/printer private))
 
 ;; String -> Void
 ;; Compile contents of given file name,
@@ -9,7 +10,9 @@
   (let ((p (open-input-file fn)))
     (begin
       (read-line p) ; ignore #lang racket line
-      (displayln (asm-string (match (parse (read p))
-                               [(Prog ds e) (compile (Prog ds e))]
-                               [(Lib xs ds) (compile-library (Lib xs ds))])))
+      (displayln  (match (parse (read p))
+                    [(Prog ds e) (asm-string (compile (Prog ds e)))]
+                    [(Lib xs ds)
+                     (parameterize ((current-shared? #t))
+                       (asm-string (compile-library (Lib xs ds))))]))
       (close-input-port p))))
