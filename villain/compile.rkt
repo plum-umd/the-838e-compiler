@@ -55,6 +55,10 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
+          ; return
+          (Pop r8) ; save rp
+          (Add rsp (* 8 (length xs))) ; pop args
+          (Push r8) ; replace rp
           (Ret))]))
 
 (define (parity c)
@@ -430,13 +434,12 @@
   (if (even? (+ (length es) (length c))) 
       (seq (compile-es es c) 
            (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f))
-           (Add rsp (* 8 (length es))))            ; pop args
-      (seq (Sub rsp 8)                             ; adjust stack
-           (compile-es es (cons #f c)) 
+           (Call (symbol->label f)))            ; pop args
+      (seq (Sub rsp 8)                          ; adjust stack
+           (compile-es es (cons #f c))
            (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
-           (Add rsp (* 8 (add1 (length es)))))))   ; pop args and pad
+           (Add rsp 8))))
 
 ;; [Listof Expr] CEnv -> Asm
 (define (compile-es es c)
