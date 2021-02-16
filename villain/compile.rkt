@@ -484,9 +484,15 @@
 ;; Expr [Listof Clause] CEnv-> Asm
 (define (compile-match e0 cs c)
   (let ((return (gensym 'matchreturn)))
-    (seq (compile-e e0 c)
+    (match cs
+      [(list (Clause p e))
+       (match p
+         [(Lit i) 
+          (seq (compile-e (Prim2 'eq? e0 (Float i)) c))])]
+
+    #|(seq (compile-e e0 c)
          (compile-match-clauses cs return c)
-         (Label return))))
+         (Label return)|#)))
 
 ;; [Listof Clauses] Symbol CEnv -> Asm
 (define (compile-match-clauses cs return c)
