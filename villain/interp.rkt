@@ -2,7 +2,8 @@
 (provide interp interp-env interp-prim1)
 (require "ast.rkt"
          "env.rkt"
-         "interp-prims.rkt")
+         "interp-prims.rkt"
+         "interp-stdlib.rkt")
 
 ;; type Answer = Value | 'err
 
@@ -24,9 +25,7 @@
 (define (interp p)
   (match p
     [(Prog ds e)
-     (interp-env e '() ds)]
-    [(Lib xs ds)
-     (error "cannot interpret library")]))
+     (interp-env e '() (append ds stdlib))]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
