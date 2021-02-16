@@ -72,7 +72,8 @@
          [(Eof)              (compile-value eof)]
          [(Empty)            (compile-value '())]
          [(String s)         (compile-string s)]      
-         [(Symbol s)         (compile-symbol s c)]
+         [(Symbol s)         (compile-symbol s c)]    
+         [(Bignum i)         (compile-bignum i c)]
          [(Var x)            (compile-variable x c)]
          [(App f es)         (compile-app f es c)]    
          [(Prim0 p)          (compile-prim0 p c)]
@@ -87,6 +88,48 @@
 ;; Value -> Asm
 (define (compile-value v)
   (seq (Mov rax (imm->bits v))))
+
+;; String -> Asm
+(define (compile-bignum i c)
+  (let ((length (ceiling (/ (integer-length i) 64))))
+    (seq (Mov r9 length)
+         (Mov (Offset rbx 0) r9)          ;; write length in word 0
+         (Mov r9 0)
+         (compile-bignum-words (reverse (bignum->list i)) 1)
+         (Mov rax rbx)                    ;; temporary bignum is on heap
+         (Mov rdi rbx)                    ;; to pass in address to heap pointer
+         (Add rbx (* 8 (add1 length)))
+         (pad-stack c)
+         (Call 'generate_bignum)          
+         ;; call external function, places mpz_t on heap, returns length of object in rax
+         (unpad-stack c)
+         (Mov r9 rbx)                     ;; keep address to mpz_t
+         (Add rbx rax)                    ;; adjust heap pointer
+         (Mov rax r9)                     ;; put tagged mpz_t addy in rax
+         (Or rax type-bignum))))   
+
+;; Integer -> (Listof Integers)
+;; Breaks an integer down into 64 bit chunks, returned in reverse order
+(define (bignum->list i)
+  (if (>= i 0)
+    (if (< i (arithmetic-shift 1 63)) ;; 63 because signed (TODO: check correct bounds)
+        (list i) 
+        (cons (bitwise-and i (sub1 (arithmetic-shift 1 64))) 
+              (bignum->list (arithmetic-shift i -64))))
+    (if (>= i (arithmetic-shift -1 63)) ;; 63 because signed
+        (list i) 
+        (cons (bitwise-and i (sub1 (arithmetic-shift 1 64))) 
+              (bignum->list (arithmetic-shift i -64))))))
+
+;; (Listof Integers) Integer -> Asm
+;; Takes list of 64-bit integers and places them on the heap
+(define (compile-bignum-words ws n)
+  (match ws
+    ['()  (seq)]
+    [(cons w ws)
+     (seq (Mov r9 w)
+          (Mov (Offset rbx (* 8 n)) r9)
+          (compile-bignum-words ws (add1 n)))]))
 
 ;; String -> Asm
 (define (compile-string s)

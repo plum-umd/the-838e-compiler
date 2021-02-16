@@ -1,6 +1,6 @@
 #lang racket
 (provide parse parse-e)
-(require "ast.rkt")
+(require "ast.rkt" "types.rkt")
 
 ;; S-Expr -> Prog
 (define (parse s)
@@ -19,7 +19,7 @@
 ;; S-Expr -> Expr
 (define (parse-e s)
   (match s
-    [(? integer?)                  (Int s)]
+    [(? integer?)                  (if (bignum? s) (Bignum s) (Int s))]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Float s)]

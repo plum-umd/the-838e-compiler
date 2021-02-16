@@ -4,6 +4,7 @@
 #include "types.h"
 #include "runtime.h"
 #include <math.h>
+#include <gmp.h>
 
 FILE* in;
 FILE* out;
@@ -17,6 +18,7 @@ int64_t *heap;
 
 void print_result(int64_t);
 void print_str(int64_t *);
+void print_bignum(mpz_srcptr);
 
 void error_exit() {
   printf("err\n");
@@ -77,6 +79,9 @@ void print_result(int64_t result) {
   } else if (symbol_type_tag == (ptr_type_mask & result)) {
     printf("'");
     print_str((int64_t *)(result ^ symbol_type_tag));
+  }else if ( bignum_type_tag == (ptr_type_mask & result)) {
+    printf("(For debug) Bignum: ");
+    print_bignum(*(mpz_srcptr *)(result ^ bignum_type_tag));
   } else {
     switch (result) {
     case val_true:

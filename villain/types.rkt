@@ -8,6 +8,7 @@
 (define type-cons       #b010)
 (define type-string     #b011)  
 (define type-symbol     #b100)
+(define type-bignum     #b110)
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
 (define type-int       #b0000)
@@ -179,3 +180,10 @@
 
 (define (symbol-bits? v)
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-symbol)))
+
+(define (bignum? v) 
+  (or (>= v (arithmetic-shift 1 (- 63 int-shift)))
+      (<  v (- (arithmetic-shift 1 (- 63 int-shift))))))
+
+(define (bignum-bits? v)
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-bignum)))

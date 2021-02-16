@@ -10,10 +10,10 @@ else
 endif
 
 %.run: %.o runtime.o
-	gcc runtime.o $< -o $@ $(libs) -lm
+	gcc runtime.o $< -o $@ $(libs) -lm -lgmp
 
-runtime.o: main.o char.o io.o symbol.o str.o
-	ld -r main.o char.o io.o symbol.o str.o -o runtime.o
+runtime.o: main.o char.o io.o symbol.o str.o bignums.o
+	ld -r main.o char.o io.o symbol.o str.o bignums.o -o runtime.o
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o
@@ -29,6 +29,9 @@ symbol.o: symbol.c str.h
 
 str.o: str.c
 	gcc -fPIC -c str.c -o str.o
+
+bignums.o: bignums.c
+	gcc -fPIC -c bignums.c -o bignums.o
 
 %.o: %.s
 	nasm -f $(format) -o $@ $<

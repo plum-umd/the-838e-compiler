@@ -25,6 +25,8 @@
      (externs-es es)]
     [(Symbol _)
      (list (Extern 'str_to_symbol))]
+    [(Bignum _)
+      (list (Extern 'generate_bignum))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
