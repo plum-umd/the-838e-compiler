@@ -62,49 +62,37 @@
           (Push r8) ; replace rp
           (Ret))]
     [(Defn* f xs xs* e) 
-     (let ((loop (gensym 'loop)) 
-           (loop2 (gensym 'loop2)) 
-           (end (gensym 'end)) 
-           (end2 (gensym 'end2))) 
-          (seq (Label (symbol->label f)) 
-          (Cmp rcx (imm->bits (length xs))) 
-          (Jl 'raise_error) 
-          (Mov r8 rcx) 
-          (Sub r8 (imm->bits (length xs)))  ; # of things to pop off of stack
-          (Mov rax val-empty) 
-          (Mov r9 0)                        ; looping var
-          (Pop r10)                         ; store return address
-          (Label loop) 
-          (Cmp r9 r8) 
-          (Je end)
-          (Mov (Offset rbx 0) rax)
-          (Pop rax) 
-          (Mov (Offset rbx 8) rax) 
-          (Mov rax rbx) 
-          (Or rax type-cons) 
-          (Add rbx 16)
-          (Add r9 (imm->bits 1)) 
-          (Jmp loop)
-          (Label end)             
-          ;; At this point, if the number of extra 
-          ;; args is x, then we've now popped x things 
-          ;; off and intend to push 1 thing on, so 
-          ;; the stack pointer is x-1 places off 
-          ;; so we need an additional loop to correct it
-          (Mov r9 (imm->bits 1)) 
-          (Label loop2)
-          (Cmp r9 r8) 
-          (Jge end2)
-          (Sub rsp 8) 
-          (Add r9 (imm->bits 1))
-          (Jmp loop2)
-          (Label end2) 
-          (Push rax)                        ; list containing arguments
-          (Push r10)                        ; return address
-          (compile-e e (parity (cons #f (cons xs* (reverse xs))))) 
-          (Ret)))]))
-=======
->>>>>>> callee-pops-args
+     (let ((loop (gensym 'loop))
+           (end (gensym 'end)))
+
+       (seq (Label (symbol->label f))
+            (Cmp rcx (imm->bits (length xs)))
+            (Jl 'raise_error)
+            (Pop r10)                         ; store return address
+            (Mov rax (imm->bits '()))         ; initialize rest arg
+            (Sub rcx (imm->bits (length xs))) ; # of things to pop off of stack
+
+            (Label loop) ; at each step, rax <- cons pop rax
+            (Cmp rcx 0)
+            (Je end)
+            (Mov (Offset rbx 0) rax)
+            (Pop rax)
+            (Mov (Offset rbx 8) rax)
+            (Mov rax rbx)
+            (Add rbx 16)
+            (Or rax type-cons)
+            (Sub rcx (imm->bits 1))
+            (Jmp loop)
+            (Label end)
+
+            (Push rax) ; push the rest list
+            (Push r10) ; reinstall return address
+            (compile-e e (parity (cons #f (cons xs* (reverse xs)))))
+            ; return
+            (Pop r10)  ; save rp
+            (Add rsp (* 8 (add1 (length xs)))) ; pop args
+            (Push r10) ; replace rp
+            (Ret)))]))
 
 (define (parity c)
   (if (even? (length c))
