@@ -562,6 +562,9 @@
   (match cl
     [(Clause p e)
      (match p
+       [(Wild)
+        (seq (compile-e e c)
+             (Jmp return))]
        [(Var x)
         (seq (Push rax)
              (compile-e e (cons x c))
