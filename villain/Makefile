@@ -14,9 +14,11 @@ endif
 
 runtime.o: main.o char.o io.o stdlib
 	ld -r main.o char.o io.o list.o -o runtime.o
+	# NOTE: append new stdlib object files to `-r` arguments above
 
 stdlib:
 	make list.o
+	# NOTE: add new stdlib make commands here
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o
