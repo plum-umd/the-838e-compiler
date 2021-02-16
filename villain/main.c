@@ -18,7 +18,7 @@ int64_t *heap;
 
 void print_result(int64_t);
 void print_str(int64_t *);
-void print_bignum(mpz_srcptr);
+void print_bignum(int64_t *);
 
 void error_exit() {
   printf("err\n");
@@ -80,8 +80,7 @@ void print_result(int64_t result) {
     printf("'");
     print_str((int64_t *)(result ^ symbol_type_tag));
   }else if ( bignum_type_tag == (ptr_type_mask & result)) {
-    printf("(For debug) Bignum: ");
-    print_bignum(*(mpz_srcptr *)(result ^ bignum_type_tag));
+    print_bignum((int64_t *)(result ^ bignum_type_tag));
   } else {
     switch (result) {
     case val_true:

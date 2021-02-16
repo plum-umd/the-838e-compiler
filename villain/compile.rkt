@@ -96,16 +96,8 @@
          (Mov (Offset rbx 0) r9)          ;; write length in word 0
          (Mov r9 0)
          (compile-bignum-words (reverse (bignum->list i)) 1)
-         (Mov rax rbx)                    ;; temporary bignum is on heap
-         (Mov rdi rbx)                    ;; to pass in address to heap pointer
+         (Mov rax rbx)                    ;; bignum is on heap
          (Add rbx (* 8 (add1 length)))
-         (pad-stack c)
-         (Call 'generate_bignum)          
-         ;; call external function, places mpz_t on heap, returns length of object in rax
-         (unpad-stack c)
-         (Mov r9 rbx)                     ;; keep address to mpz_t
-         (Add rbx rax)                    ;; adjust heap pointer
-         (Mov rax r9)                     ;; put tagged mpz_t addy in rax
          (Or rax type-bignum))))   
 
 ;; Integer -> (Listof Integers)

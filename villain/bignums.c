@@ -7,8 +7,28 @@
 // Top of heap pointer
 int64_t *heappointer = NULL;
 
-void print_bignum(mpz_srcptr a) {
-  mpz_out_str(stdout,10,a);
+void print_bignum(int64_t *h) {
+  int64_t len = h[0];
+  int i;
+  mpz_t integ;
+
+  mpz_init(integ); // initialize with value 0
+
+  for(i = 1; i <= len ; i++) {
+    unsigned long shifter = 64;
+    int j;
+    long int t_raw = (long int) h[i];
+    mpz_t t;
+    mpz_init_set_si(t, t_raw);
+
+    for(j = 0; j < len - i; j++) {
+      mpz_mul_2exp(t,t,(mp_bitcnt_t) shifter);
+    }
+
+    mpz_add(integ,integ,t);
+  }
+  
+  mpz_out_str(stdout,10,integ);
 }
 
 // Used to trick GMP into placing its values on the top of the heap
@@ -50,7 +70,7 @@ int64_t generate_bignum(int64_t *h) {
     mpz_add(integ,integ,t);
   }
   
-  print_bignum(integ);
+  // print_bignum(integ);
   printf("\n");
   
   mp_set_memory_functions(allocate_function, NULL, NULL); // tell GMP to store on the top of the heap

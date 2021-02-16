@@ -25,7 +25,7 @@
 #define cons_type_tag    2
 #define str_type_tag     3 
 #define symbol_type_tag  4
-#define bignum_type_tag  5
+#define bignum_type_tag  6
 #define int_shift        (1 + imm_shift)
 #define int_type_mask    ((1 << int_shift) - 1)
 #define int_type_tag     (0 << (int_shift - 1))
