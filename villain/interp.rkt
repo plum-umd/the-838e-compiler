@@ -103,6 +103,14 @@
            (if (eq? l v)
                (interp-env e r ds)
                (interp-match v cs r ds))]
+          [(String s)
+           (if (eq? v s)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
+          [(Symbol s)
+           (if (eq? v s)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
           [(Box x)
            (if (box? v)
                (interp-env e (ext r x (unbox v)) ds)

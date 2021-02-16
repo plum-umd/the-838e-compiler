@@ -13,8 +13,8 @@
                   ; string-set!, make-string, 
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
-(define rcx 'rcx) ; arity indicator
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, match
+(define rcx 'rcx) ; arity indicator, match
 
 ;; type CEnv = [Listof Variable]
 
@@ -509,7 +509,9 @@
              (Add rsp 8)
              (Jmp return))]
        [(Lit l)
-        (seq (Cmp rax (imm->bits l))
+        (seq
+             (Mov r8 (imm->bits l))
+             (Cmp rax r8)
              (Jne next)
              (compile-e e c)
              (Jmp return))]
@@ -520,10 +522,11 @@
            (Mov r8 rax)
            (And r8 ptr-mask)
            (Cmp r8 type-string)
+           (Jne next)
            (Push rax)
            (compile-string s)
            (Push rax)
-           (compile-string-eq true false (cons #f (cons #f c)))
+           (compile-string/symbol-eq type-string true false (cons #f (cons #f c)))
            (Label true)
            (Pop r8)
            (Pop r8)
@@ -540,10 +543,11 @@
            (Mov r8 rax)
            (And r8 ptr-mask)
            (Cmp r8 type-symbol)
+           (Jne next)
            (Push rax)
            (compile-symbol s (cons #f c))
            (Push rax)
-           (compile-string-eq true false (cons #f (cons #f c)))
+           (compile-string/symbol-eq type-symbol true false (cons #f (cons #f c)))
            (Label true)
            (Pop r8)
            (Pop r8)
@@ -580,15 +584,15 @@
 
 ;;Symbol Symbol CEnv -> ASM
 ;;This function determines if the two strings on top of the stack are structurally equal
-(define (compile-string-eq true false c)
+(define (compile-string/symbol-eq tag true false c)
   (let ((loop (gensym "loop")))
     (seq
      (Mov rax (Offset rsp 0)) ;;First string
      (Mov r8 (Offset rsp 8))  ;;Second string
 
      ;;Untag the strings
-     (Xor rax type-string)
-     (Xor r8 type-string)
+     (Xor rax tag)
+     (Xor r8 tag)
      (Mov r9 (Offset r8 0))
 
      ;;If they don't have the same length, they cannot be equal
@@ -596,7 +600,8 @@
      (Jne false)
 
      (Mov r10 0) ;;Keep track of how many characters have been compared
-
+     (Sar r9 int-shift) ;;Get the integer value of the length
+     
      ;;Compare each word for equality
      (Label loop)
      (Cmp r10 r9) ;;Check if the length has been exhausted
@@ -606,10 +611,11 @@
      (Add r8 8)
      (Add rax 8)
      (Mov rcx (Offset r8 0))
-     (Cmp (Offset rax 0) rcx)
+     (Cmp rcx (Offset rax 0))
      (Jne false)
      (Add r10 3) ;;3 chars have been checked
      (Jmp loop))))
+
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
 (define (pad-stack-call c i)
