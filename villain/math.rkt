@@ -1,6 +1,16 @@
 #lang racket
 (begin
-  (provide *)
+  (provide * byte?)
+
+  ;; not exactly the right place, but fine for now
+  (define (byte? b)
+    (if (integer? b)
+        (if (<= 0 b)
+            (if (<= b 255)
+                #t
+                #f)
+            #f)
+        #f))
 
   ; multiplication
   (define (* x y)

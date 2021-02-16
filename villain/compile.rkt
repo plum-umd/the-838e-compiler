@@ -28,6 +28,8 @@
            (Section '.text)
            (externs p)
            (Extern 'raise_error)
+           (Global 'raise_error_align)
+           (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e e '(#f))
@@ -47,6 +49,8 @@
            (Section '.text)
            (externs p)
            (Extern 'raise_error)
+           (Extern 'raise_error_align)
+           (Extern 'str_to_symbol)           
            (compile-defines ds))]))
 
 ;; [Listof Id] -> Asm
@@ -233,6 +237,15 @@
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
+         ['integer?
+          (let ((l1 (gensym)))
+            (seq (And rax mask-int)
+                 (Xor rax type-int)
+                 (Cmp rax 0)
+                 (Mov rax val-true)
+                 (Je l1)
+                 (Mov rax val-false)
+                 (Label l1)))]
          ['integer-length
           (seq (assert-integer rax c)
                (Sar rax imm-shift)
@@ -353,6 +366,16 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
+         ['<=
+          (let ((leq-true (gensym 'leq)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jle leq-true)
+                 (Mov rax (imm->bits #f))
+                 (Label leq-true)))]
          ['eq?
           (let ((l (gensym)))
             (seq (Pop r8)
@@ -575,6 +598,9 @@
   (match cl
     [(Clause p e)
      (match p
+       [(Wild)
+        (seq (compile-e e c)
+             (Jmp return))]
        [(Var x)
         (seq (Push rax)
              (compile-e e (cons x c))
@@ -585,6 +611,15 @@
              (Jne next)
              (compile-e e c)
              (Jmp return))]
+       [(Sym s)
+        (seq (Push rax)
+             (compile-symbol s (cons #f c))
+             (Pop r8)
+             (Cmp rax r8)
+             (Mov rax r8)
+             (Jne next)
+             (compile-e e c)
+             (Jmp return))]       
        [(Box x)
         (seq (Mov r8 rax)
              (And r8 ptr-mask)

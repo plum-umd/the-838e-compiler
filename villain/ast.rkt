@@ -31,18 +31,19 @@
 ;;           | (Match Expr (Listof Pat))
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
-;; type Op1  = 'add1 | 'sub1 | 'zero?
+;; type Op1  = 'add1 | 'sub1 | 'zero? | 'integer?
 ;;           | 'char? | 'integer->char | 'char->integer
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
 ;;           | 'string-length | 'string? | make-string     
 ;;           | 'empty?
-;; type Op2  = '+ | '- | 'eq?
+;; type Op2  = '+ | '- | 'eq? | '<=
 ;;           | 'cons | 'string-ref
 ;; type Op3  = 'string-set!                    
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
+;;           | (Sym Symbol)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
@@ -71,6 +72,7 @@
 ;; Pattern constructors
 (struct Wild ()            #:prefab)
 (struct Lit (l)            #:prefab)
+(struct Sym (s)            #:prefab)
 (struct Cons (p1 p2)       #:prefab)
 (struct Box (p)            #:prefab)
 

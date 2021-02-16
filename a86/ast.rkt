@@ -152,6 +152,7 @@
 (instruct Je     (x)       check:target)
 (instruct Jne    (x)       check:target)
 (instruct Jl     (x)       check:target)
+(instruct Jle    (x)       check:target)
 (instruct Jg     (x)       check:target)
 (instruct Jge    (x)       check:target)
 (instruct And    (dst src) check:src-dest)
@@ -196,6 +197,7 @@
       (Je? x)
       (Jne? x)
       (Jl? x)
+      (Jle? x)      
       (Jg? x)
       (Jge? x)
       (And? x)
@@ -275,6 +277,8 @@
     [(cons (Jg (? label-symbol? s)) asm)
      (cons s (label-uses asm))]
     [(cons (Jl (? label-symbol? s)) asm)
+     (cons s (label-uses asm))]
+    [(cons (Jle (? label-symbol? s)) asm)
      (cons s (label-uses asm))]
     [(cons (Call (? label-symbol? s)) asm)
      (cons s (label-uses asm))]

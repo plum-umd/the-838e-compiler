@@ -30,8 +30,6 @@
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
-    [(Symbol _)
-     (list (Extern 'str_to_symbol))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
@@ -44,7 +42,7 @@
     [(If e1 e2 e3)
      (append (externs-e e1)
              (externs-e e2)
-             (externs-e e3))]     
+             (externs-e e3))]
     [(Begin e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
@@ -84,7 +82,7 @@
     ['read-byte 'read_byte]
     ['write-byte 'write_byte]
     ['gensym 'gensym]
-    ['string->symbol 'str_to_symbol]
+    #;['string->symbol 'str_to_symbol]  ;; always included now
     [_ (char-op->uc o)]))
 
 (define (char-op->uc o)
@@ -104,12 +102,34 @@
 ;; [Listof Id]
 ;; List of each Id provided by a stdlib
 (define stdlib-ids
-  (append ; math
-          '(*)
+  (append '(byte? ; math
+            *)
           ; list
-          '(length
-            append
-            reverse)
+          '(append
+            assq
+            eighth
+            first
+            fifth
+            fourth
+            last
+            length
+            list
+            list?
+            list-ref
+            list-tail
+            memq
+            ninth
+            null?
+            pair?
+            remq
+            remq*
+            rest
+            reverse
+            second
+            seventh
+            sixth
+            tenth
+            third)
           ; NOTE: add new stdlib-provided Ids here
           ))
 
@@ -130,4 +150,3 @@
          (string->list (symbol->string s))))
     "_"
     (number->string (eq-hash-code s) 16))))
-
