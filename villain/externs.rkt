@@ -10,7 +10,7 @@
     [(Lib ps ds)
      ; provided ids aren't external
      (let ((exts (apply set (externs-ds ds)))
-           (prvs (apply set ps)))
+           (prvs (apply set (map Extern (map symbol->label ps)))))
        (set->list (set-subtract exts prvs)))]))
 
 (define (externs-ds ds)
@@ -48,7 +48,18 @@
     [(Let x e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
+    [(Match e cs)
+     (append (externs-e e)
+             (externs-cs cs))]
     [_ '()]))
+
+;; [Listof Clause] -> [Listof Id]
+(define (externs-cs cs)
+  (match cs
+    ['() '()]
+    [(cons (Clause p e) cs)
+     (append (externs-e e)
+             (externs-cs cs))]))
 
 (define (externs-es es)
   (match es
@@ -88,7 +99,15 @@
 ;; [Listof Id]
 ;; List of each Id provided by a stdlib
 (define stdlib-ids
-  (append '(length append sum reverse) ; list
+  (append ; math
+          '(*
+            ^)
+          ; list
+          '(length
+            append
+            reverse
+            sum
+            product)
           ; NOTE: add new stdlib Ids here
           ))
 
