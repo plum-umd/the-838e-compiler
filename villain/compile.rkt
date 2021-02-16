@@ -508,9 +508,13 @@
              (compile-e e (cons x c))
              (Add rsp 8)
              (Jmp return))]
-       [(Lit l)
+       [(Lit i)
         (seq
-             (Mov r8 (imm->bits l))
+             (Push rax)
+             (compile-e (Float i) (cons #f c))
+             (Push rax)
+             (Pop r8)
+             (Pop rax)
              (Cmp rax r8)
              (Jne next)
              (compile-e e c)
