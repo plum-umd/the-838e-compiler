@@ -12,14 +12,8 @@ endif
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs) -lm
 
-runtime.o: main.o char.o io.o symbol.o str.o stdlibs
+runtime.o: main.o char.o io.o symbol.o str.o math.o list.o
 	ld -r main.o char.o io.o symbol.o str.o list.o math.o -o runtime.o
-	# NOTE: append new stdlib object files to `-r` arguments above
-
-stdlibs:
-	make math.o
-	make list.o
-	# NOTE: add new stdlib make commands here
 
 main.o: main.c types.h runtime.h
 	gcc -fPIC -c main.c -o main.o

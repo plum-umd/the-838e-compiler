@@ -44,7 +44,7 @@
     [(If e1 e2 e3)
      (append (externs-e e1)
              (externs-e e2)
-             (externs-e e3))]     
+             (externs-e e3))]
     [(Begin e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
@@ -107,9 +107,31 @@
   (append ; math
           '(*)
           ; list
-          '(length
-            append
-            reverse)
+          '(append
+            assq
+            eighth
+            first
+            fifth
+            fourth
+            last
+            length
+            list
+            list?
+            list-ref
+            list-tail
+            memq
+            ninth
+            null?
+            pair?
+            remq
+            remq*
+            rest
+            reverse
+            second
+            seventh
+            sixth
+            tenth
+            third)
           ; NOTE: add new stdlib-provided Ids here
           ))
 
@@ -130,4 +152,3 @@
          (string->list (symbol->string s))))
     "_"
     (number->string (eq-hash-code s) 16))))
-
