@@ -37,7 +37,7 @@
 ;;           | 'box | 'car | 'cdr | 'unbox
 ;;           | 'string-length | 'string? | make-string     
 ;;           | 'empty?
-;; type Op2  = '+ | '- | 'eq?
+;; type Op2  = '+ | '- | 'eq? | '<=
 ;;           | 'cons | 'string-ref
 ;; type Op3  = 'string-set!                    
 ;; type Pat  = (Wild)

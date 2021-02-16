@@ -78,7 +78,7 @@
          string-length string?
          symbol->string string->symbol symbol?))
 (define op2
-  '(+ - eq? cons string-ref make-string))  
+  '(+ - eq? cons string-ref make-string <=))
 (define op3
   '(string-set!))  
 

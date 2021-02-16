@@ -342,6 +342,16 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
+         ['<=
+          (let ((leq-true (gensym 'leq)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jle leq-true)
+                 (Mov rax (imm->bits #f))
+                 (Label leq-true)))]
          ['eq?
           (let ((l (gensym)))
             (seq (Pop r8)

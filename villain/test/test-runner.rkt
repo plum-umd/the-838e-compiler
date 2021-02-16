@@ -160,6 +160,10 @@
                     (len (cons 1 (cons 2 (cons 3 '()))))))
                 3)
 
+  (check-equal? (run '(<= 0 0)) #t)
+  (check-equal? (run '(<= 0 1)) #t)
+  (check-equal? (run '(<= 1 0)) #f)
+
   ;; Pattern Matching Tests
   (check-equal? (run
                  '(match 2 [1 1] [2 2]))
