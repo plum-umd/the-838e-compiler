@@ -22,6 +22,9 @@
     [(list 'string? v)                    (string? v)]       
     [(list 'empty? v)                     (empty? v)]
     [(list 'char-whitespace? (? char?))   (char-whitespace? v)]
+    [(list 'string->symbol (? string?))   (string->symbol v)]
+    [(list 'symbol->string (? symbol?))   (symbol->string v)]
+    [(list 'symbol? v)                    (symbol? v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer

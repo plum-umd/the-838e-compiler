@@ -56,7 +56,11 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
-          (Ret))] 
+          ; return
+          (Pop r8) ; save rp
+          (Add rsp (* 8 (length xs))) ; pop args
+          (Push r8) ; replace rp
+          (Ret))]
     [(Defn* f xs xs* e) 
      (let ((loop (gensym 'loop)) 
            (loop2 (gensym 'loop2)) 
@@ -99,6 +103,8 @@
           (Push r10)                        ; return address
           (compile-e e (parity (cons #f (cons xs* (reverse xs))))) 
           (Ret)))]))
+=======
+>>>>>>> callee-pops-args
 
 (define (parity c)
   (if (even? (length c))
@@ -115,6 +121,7 @@
          [(Eof)              (compile-value eof)]
          [(Empty)            (compile-value '())]
          [(String s)         (compile-string s)]      
+         [(Symbol s)         (compile-symbol s c)]
          [(Var x)            (compile-variable x c)]
          [(App f es)         (compile-app f es c)]    
          [(Prim0 p)          (compile-prim0 p c)]
@@ -159,6 +166,17 @@
               (seq))
           (let ((m (add1 n)))
             (compile-str-chars cs m (remainder m 3) (quotient m 3))))]))
+
+;; String CEnv -> Asm
+;; Transform
+;;   'foo
+;; into
+;;   (string->symbol "foo")
+;; then compile it
+(define (compile-symbol s c)
+  (seq (compile-e (Prim1 'string->symbol
+                         (String (symbol->string s)))
+        c)))
   
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
@@ -174,7 +192,11 @@
                      (unpad-stack c))]
     ['peek-byte (seq (pad-stack c)
                      (Call 'peek_byte)
-                     (unpad-stack c))]))
+                     (unpad-stack c))]
+    ['gensym    (seq (pad-stack c)
+                     (Call 'gensym)
+                     (unpad-stack c)
+                     (Or rax type-symbol))]))
 
 ;; Op1 Expr CEnv -> Asm
 (define (compile-prim1 p e c)
@@ -274,6 +296,20 @@
                (Mov rax (Offset rax 0)))]   
          ['string?
           (type-pred ptr-mask type-string)]  
+         ['string->symbol
+          (seq (assert-string rax c)
+               (Xor rax type-string)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Call 'str_to_symbol)
+               (unpad-stack c)
+               (Or rax type-symbol))]
+         ['symbol->string
+          (seq (assert-symbol rax c)
+               (Xor rax type-symbol)     ; replace symbol tag with str
+               (Or rax type-string))]
+         ['symbol?
+          (type-pred ptr-mask type-symbol)]  
          ['empty? (eq-imm val-empty)])))
 
 ;; Op2 Expr Expr CEnv -> Asm
@@ -443,13 +479,12 @@
   (if (even? (+ (length es) (length c))) 
       (seq (compile-es es c) 
            (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f))
-           (Add rsp (* 8 (length es))))            ; pop args
-      (seq (Sub rsp 8)                             ; adjust stack
-           (compile-es es (cons #f c)) 
+           (Call (symbol->label f)))            ; pop args
+      (seq (Sub rsp 8)                          ; adjust stack
+           (compile-es es (cons #f c))
            (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
-           (Add rsp (* 8 (add1 (length es)))))))   ; pop args and pad
+           (Add rsp 8))))
 
 ;; [Listof Expr] CEnv -> Asm
 (define (compile-es es c)
@@ -610,6 +645,8 @@
   (assert-type ptr-mask type-cons))
 (define assert-string
   (assert-type ptr-mask type-string))
+(define assert-symbol
+  (assert-type ptr-mask type-symbol))
 
 (define (assert-codepoint c)
   (let ((ok (gensym)))

@@ -16,7 +16,7 @@ void (*error_handler)();
 int64_t *heap;
 
 void print_result(int64_t);
-void print_str(int64_t);
+void print_str(int64_t *);
 
 void error_exit() {
   printf("err\n");
@@ -72,8 +72,11 @@ void print_result(int64_t result) {
     printf("%f", resultFloat);  
   } else if (str_type_tag == (ptr_type_mask & result)) { 
     printf("\"");
-    print_str(result);
+    print_str((int64_t *)(result ^ str_type_tag));
     printf("\"");
+  } else if (symbol_type_tag == (ptr_type_mask & result)) {
+    printf("'");
+    print_str((int64_t *)(result ^ symbol_type_tag));
   } else {
     switch (result) {
     case val_true:

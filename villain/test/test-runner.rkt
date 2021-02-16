@@ -306,10 +306,39 @@
   (check-equal? (run '(char-whitespace? #\a)) #f)
   (check-equal? (run '(char-whitespace? #\ )) #t)
 
-
+  ;; symbols
+  (check-equal? (run ''foo) 'foo)
+  (check-equal? (run '(string->symbol "foo"))
+                'foo)
+  (check-equal? (run '(symbol? "foo"))
+                #f)
+  (check-equal? (run '(symbol? 'foo))
+                 #t)
+  (check-equal? (run '(symbol? (string->symbol "foo")))
+                 #t)
+  (check-equal? (run '(symbol? (gensym)))
+                 #t)
+  (check-equal? (run '(symbol->string 'foo))
+                 "foo")
+  (check-equal? (run '(eq? 'foo
+                            (string->symbol "foo")))
+                #t)
+  (check-equal? (run '(eq? (string->symbol "foo")
+                           (string->symbol "foo")))
+                #t)
+  (check-equal? (run '(eq? (string->symbol "foo")
+                           (string->symbol "bar")))
+                #f)
+  (check-equal? (run '(symbol->string 'foo))
+                "foo")
+  (check-equal? (run '(eq? (gensym) (gensym)))
+                #f)
+  (check-equal? (run '(let ([x (gensym)]) (eq? x x)))
+                #t)
+  
     ;; Testing floats
   (check-equal? (run 4.2) 4.2)
-   (check-equal? (run -4.2) -4.2)
+  (check-equal? (run -4.2) -4.2)
   
   (check-equal? (run 3.3333) 3.3333)
   (check-equal? (run 790.321) 790.321)
@@ -400,6 +429,7 @@
   (check-err '(string-set! "a" 1 #\b))
   (check-err '(match '() [#f #f]))
   )
+
 
 (define (test-runner-io run)
   ;; Evildoer examples

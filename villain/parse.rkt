@@ -39,6 +39,7 @@
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
+    [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(list 'match e0 cs ...)
      (Match (parse-e e0) (map parse-c cs))]
     [(cons (? symbol? f) es)
@@ -66,13 +67,14 @@
     [_ (error "bad match pattern" s)]))
 
 (define op0
-  '(read-byte peek-byte void))
+  '(read-byte peek-byte void gensym))
 (define op1
   '(add1 sub1 zero? char? write-byte eof-object?
          integer->char char->integer box unbox empty? car cdr
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string?))   
+         string-length string?
+         symbol->string string->symbol symbol?))
 (define op2
   '(+ - eq? cons string-ref make-string))  
 (define op3
