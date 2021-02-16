@@ -204,6 +204,12 @@
     ['peek-byte (seq (pad-stack c)
                      (Call 'peek_byte)
                      (unpad-stack c))]
+    ['read-char (seq (pad-stack c)
+                     (Call 'read_char)
+                     (unpad-stack c))]
+    ['peek-char (seq (pad-stack c)
+                     (Call 'peek_char)
+                     (unpad-stack c))]
     ['gensym    (seq (pad-stack c)
                      (Call 'gensym)
                      (unpad-stack c)
@@ -282,6 +288,13 @@
                (pad-stack c)
                (Mov rdi rax)
                (Call 'write_byte)
+               (unpad-stack c)
+               (Mov rax val-void))]
+         ['write-char
+          (seq (assert-byte c)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Call 'write_char)
                (unpad-stack c)
                (Mov rax val-void))]
          ['box
