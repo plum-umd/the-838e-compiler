@@ -83,6 +83,12 @@
            ; check arity matches
            (if (= (length xs) (length vs))
                (interp-env e (zip xs vs) ds)
+               'err)] 
+          [(Defn* f xs xs* e) 
+           (if (>= (length vs) (length xs)) 
+               (interp-env e 
+                  (append (zip xs (take vs (length xs))) 
+                          (list (list xs* (list-tail vs (length xs))))) ds)
                'err)])])]
     [(Match e0 cs)
      (match (interp-env e0 r ds)
@@ -123,7 +129,7 @@
 
 ;; Defns Symbol -> Defn
 (define (defns-lookup ds f)
-  (findf (match-lambda [(Defn g _ _) (eq? f g)])
+  (findf (match-lambda [(Defn g _ _) (eq? f g)] [(Defn* g _ _ _) (eq? f g)])
          ds))
 
 (define (zip xs ys)

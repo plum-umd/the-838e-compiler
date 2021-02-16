@@ -8,12 +8,13 @@
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
-                  ; make-string, compile-prim3, string-ref!, integer-length, match
+                  ; make-string, compile-prim3, string-ref!, integer-length, match, 
+                  ; compile-define
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, 
+                  ; string-set!, make-string, compile-define
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define
 (define rcx 'rcx) ; arity indicator
 
 ;; type CEnv = [Listof Variable]
@@ -55,7 +56,43 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
-          (Ret))]))
+          ; return
+          (Pop r8) ; save rp
+          (Add rsp (* 8 (length xs))) ; pop args
+          (Push r8) ; replace rp
+          (Ret))]
+    [(Defn* f xs xs* e) 
+     (let ((loop (gensym 'loop))
+           (end (gensym 'end)))
+
+       (seq (Label (symbol->label f))
+            (Cmp rcx (imm->bits (length xs)))
+            (Jl 'raise_error)
+            (Pop r10)                         ; store return address
+            (Mov rax (imm->bits '()))         ; initialize rest arg
+            (Sub rcx (imm->bits (length xs))) ; # of things to pop off of stack
+
+            (Label loop) ; at each step, rax <- cons pop rax
+            (Cmp rcx 0)
+            (Je end)
+            (Mov (Offset rbx 0) rax)
+            (Pop rax)
+            (Mov (Offset rbx 8) rax)
+            (Mov rax rbx)
+            (Add rbx 16)
+            (Or rax type-cons)
+            (Sub rcx (imm->bits 1))
+            (Jmp loop)
+            (Label end)
+
+            (Push rax) ; push the rest list
+            (Push r10) ; reinstall return address
+            (compile-e e (parity (cons #f (cons xs* (reverse xs)))))
+            ; return
+            (Pop r10)  ; save rp
+            (Add rsp (* 8 (add1 (length xs)))) ; pop args
+            (Push r10) ; replace rp
+            (Ret)))]))
 
 (define (parity c)
   (if (even? (length c))
@@ -430,13 +467,12 @@
   (if (even? (+ (length es) (length c))) 
       (seq (compile-es es c) 
            (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f))
-           (Add rsp (* 8 (length es))))            ; pop args
-      (seq (Sub rsp 8)                             ; adjust stack
-           (compile-es es (cons #f c)) 
+           (Call (symbol->label f)))            ; pop args
+      (seq (Sub rsp 8)                          ; adjust stack
+           (compile-es es (cons #f c))
            (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
-           (Add rsp (* 8 (add1 (length es)))))))   ; pop args and pad
+           (Add rsp 8))))
 
 ;; [Listof Expr] CEnv -> Asm
 (define (compile-es es c)

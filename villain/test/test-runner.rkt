@@ -350,7 +350,46 @@
   (define (check-err e)
     ;; check error in both aligned and unaligned config
     (check-equal? (run e) 'err)
-    (check-equal? (run `(let ((x 0)) ,e)) 'err))
+    (check-equal? (run `(let ((x 0)) ,e)) 'err)) 
+
+  ;; Variable arity functions tests 
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2 3)))
+                '(1 2 3)) 
+  
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2)))
+                '(1 2)) 
+  
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) xs) 
+                    (at-least-two-lst 1)))
+                'err)
+
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2 (cons 4 '()))))
+                '(1 2 (4))) 
+
+  (check-equal? (run
+                 '(begin  
+                    (define (ret-two . xs) 2) 
+                    (ret-two 1 2 (cons 4 '()))))
+                  2) 
+
+  (check-equal? (run
+                 '(begin  
+                    (define (ret-two . xs) 2) 
+                    (ret-two 1 2 (cons 4 '()) #\a)))
+                  2)
+
+  
 
   (check-err '(add1 #f))
   (check-err '(sub1 #f))
