@@ -3,7 +3,8 @@
   (provide length
            append
            reverse
-           sum)
+           sum
+           product)
 
   (define (length xs)
     (match xs
@@ -24,5 +25,10 @@
     (match xs
       ['() 0]
       [(cons x xs) (+ x (sum xs))]))
+  
+  (define (product xs)
+    (match xs
+      ['() 1]
+      [(cons x xs) (* x (product xs))]))
   
   )

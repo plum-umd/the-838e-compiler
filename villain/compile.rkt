@@ -43,6 +43,7 @@
      (prog (compile-provides xs)
            (Default 'rel)
            (Section '.text)
+           (externs p)
            (Extern 'raise_error)
            (compile-defines ds))]
     [(Prog ds e)
