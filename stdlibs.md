@@ -12,7 +12,7 @@ To add a new standard library, "mystdlib":
 	1. In the `stdlib` label, append the command `make mystdlib.o`.
 	2. In the `runtime.o` label, add `stdlib.o` to the list of object files passed to `ld`'s `-r` option (right before the `-o` option)
 
-After doing these steps, the ids provided by "mystdlib" should be available to all programs. Making an executable via `%.run` will automatically make all stdlibs as well, but you can also separately make all stdlibs via `make stdlib`.
+After doing these steps, the ids provided by "mystdlib" should be available to all programs. Making an executable via `%.run` will automatically make all stdlibs as well, but you can also separately make all stdlibs via `make stdlibs`.
 
 As an example stdlib, the "list" stdlib is incorporated as follows:
 - `villain/list.rkt` contains the source code, for example providing the `length` function.
@@ -27,17 +27,13 @@ Standard library ids similar to primitive ids. The important difference, of cour
 
 ### `Makefile`
 
-- command `std`. libraries are only compiled to object files, rather than to executables.
-- command `runtime.o`. links to all `*.o` files in `std/`.
+- command `stdlibs`. libraries are only compiled to object files, rather than to executables.
+- command `runtime.o`. links to all stdlib `*.o` files.
 
 ### `a86/ast.rkt`
 
 - `label-decls`. External (via instruction `Extern`) labels count as declared.
 - `label-uses`. Provided (via instruction `Global`) labels count as used.
-
-### `villain/std.rkt`
-
-- `std-provided?`. checks whether a symbol is provided by the std library.
 
 ### `villain/interp.rkt`
 
@@ -52,3 +48,13 @@ Standard library ids similar to primitive ids. The important difference, of cour
 
 - `externs-f`. include `Extern` for function call (with `symbol->label`, so that calling this function looks just like calling any other function) if it is a std library function
 - `symbol->label`. moved here from `compile.rkt`.
+- `stdlib-provided?`. checks whether a symbol is provided by the std library.
+- `stdlib-ids`. list of each id provided by a stdlib
+
+## To-Do List
+
+- [ ] "string" stdlib (common string operations build up from the primitives)
+- [ ] "list" stdlib (flush out)
+- [ ] "arithmetic" (or "math") stdlib
+- [ ] arity checking for stdlib functions
+- [ ] recognizing stdlib functions passed as higher-order arguments (in the `Var` struct somehow)

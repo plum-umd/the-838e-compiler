@@ -85,11 +85,11 @@
 (define (stdlib-provided? x)
   (memq x stdlib-ids))
 
-;; [Listof Symbol]
-;; List of all symbols provided by a stdlib
+;; [Listof Id]
+;; List of each Id provided by a stdlib
 (define stdlib-ids
   (append '(length append sum reverse) ; list
-          ; NOTE: add new stdlib ids here
+          ; NOTE: add new stdlib Ids here
           ))
 
 ;; Symbol -> Label
