@@ -193,14 +193,14 @@
                     ["abcd" #t]))
                 #f)
   
-  (check-equal? (run
+  #|(check-equal? (run
                  '(match -2.5678
-                    ;;[2.5678 #f]
+                    [2.5678 #f]
                     [-2.5678 #t]))
                  #|'(if (eq? -2.5678 -2.5678)
                      #t
                      #f))|#
-                #t)
+                #t)|#
   
   (check-equal? (run
                  '(match 'abc
@@ -374,6 +374,11 @@
   (check-equal? (run -8990.32) -8990.32)
   (check-equal? (run -9999999) -9999999)
   (check-equal? (run .9999999) .9999999)
+  (check-equal? (run
+                '(if (eq? -2.5678 -2.5678)
+                     #t
+                     #f))
+                #t)
 
   ;; Errors and stack alignment
   (define (check-err e)
