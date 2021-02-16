@@ -102,8 +102,8 @@
 ;; [Listof Id]
 ;; List of each Id provided by a stdlib
 (define stdlib-ids
-  (append ; math
-          '(*)
+  (append '(byte? ; math
+            *)
           ; list
           '(append
             assq

@@ -281,6 +281,10 @@
 
   (check-equal? (run '(integer? 0)) #t)
   (check-equal? (run '(integer? #f)) #f)
+  (check-equal? (run '(byte? 0)) #t)
+  (check-equal? (run '(byte? 255)) #t)
+  (check-equal? (run '(byte? 256)) #f)
+  (check-equal? (run '(byte? -1)) #f)
   (check-equal? (run '(integer-length   0)) 0)
   (check-equal? (run '(integer-length  -1)) 0)
   (check-equal? (run '(integer-length   1)) 1)
