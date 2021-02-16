@@ -115,6 +115,9 @@
       [(Jl l)
        (string-append tab "jl "
                       (jump-target->string l))]
+      [(Jle l)
+       (string-append tab "jle "
+                      (jump-target->string l))]
       [(Jg l)
        (string-append tab "jg "
                       (jump-target->string l))]
