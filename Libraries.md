@@ -7,12 +7,21 @@ Standard libraries are programs that are specially pre-compiled to object files,
 ## Adding Standard Libraries
 
 To add a new standard library, "mystdlib":
-1. Create a new file in `villain/` called "mystdlib.rkt".
-2. Implement `mystdlib.rkt` in the form `(begin (provide f1 f2 ... fn) (define f1 ...) (define f2 ...) ... (define fn ...))`, where `f1`, `f2`, ... `fn` are the functions provided by "mystdlib".
-3. In `externs.rkt", append the ids provide by "mystdlib" to the list of symbols defined by `stdlib-ids`.
+1. Create a new file in `villain/` called `mystdlib.rkt`.
+2. Implement `villain/mystdlib.rkt` in the form `(begin (provide f1 f2 ... fn) (define f1 ...) (define f2 ...) ... (define fn ...))`, where `f1`, `f2`, ... `fn` are the functions provided by "mystdlib".
+3. In `villain/externs.rkt", append the ids provide by "mystdlib" to the list of symbols defined by `stdlib-ids`.
 4. In `villain/Makefile`:
-	1. In the `stdlib` label, append the command `make stdlib.o`.
+	1. In the `stdlib` label, append the command `make mystdlib.o`.
 	2. In the `runtime.o` label, add `stdlib.o` to the list of object files passed to `ld`'s `-r` option (right before the `-o` option)
+
+After doing these steps, the ids provided by "mystdlib" should be available to all programs. Making an executable via `%.run` will automatically make all stdlibs as well, but you can also separately make all stdlibs via `make stdlib`.
+
+As an example stdlib, the "list" stdlib is incorporated as follows:
+- `villain/list.rkt` contains the source code, for example providing the `length` function.
+- In `villain/externs.rkt`, the `stdlib-ids` list is extended with the "list" stdlib's provided functions.
+- In `villain/Makefile`, the `stdlib` label is appended with `make list.o`.
+- In `villain/Makefile`, in the `runtime.o` label, `ld`'s `-r` option's arguments is appended with `list.o`.
+With all this done, the test `test/test-programs/villain/length.rkt` uses the "list" stdlib function `length`, and the executable can be successfully made with `make test/test-programs/villain/length.run`.
 
 ## Organization
 
