@@ -38,4 +38,4 @@ str.o: str.c
 
 clean:
 	rm -f *.o *.s
-	find . -name *.run -delete
+	find . -name "*.run" -delete
