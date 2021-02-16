@@ -177,6 +177,7 @@
   (check-equal? (run '(match 'x ['x #t] [_ #f])) #t)
   (check-equal? (run '(match 'x ['y #t] [_ #f])) #f)
   (check-equal? (run '(match #f ['y #t] [_ #f])) #f)
+  (check-equal? (run '(match 'x ['y #f] ['x #t] [_ #f])) #t)
   (check-equal? (run
                  '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
                 #t)

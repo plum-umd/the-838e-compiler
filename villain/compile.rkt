@@ -603,6 +603,7 @@
              (compile-symbol s (cons #f c))
              (Pop r8)
              (Cmp rax r8)
+             (Mov rax r8)
              (Jne next)
              (compile-e e c)
              (Jmp return))]       
