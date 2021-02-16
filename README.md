@@ -58,3 +58,15 @@ Code emitted by the compiler depends upon the following libraries:
   $ echo "options=('staticlibs')" >> PKGBUILD
   $ makepkg -si
   ```
+
+* [`GMP`](https://gmplib.org/)
+
+  To install this library, you can download and compile the source code from this [`website`](https://gmplib.org/). Following unzipping, below are the instructions to install GMP in a Unix-like environment.
+
+  ```console
+  $ cd gmp-6.2.1 (or whatever release)
+  $ ./configure
+  $ make
+  $ make check
+  $ make install
+  ```
