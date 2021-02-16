@@ -58,7 +58,7 @@
              (externs-es es))]))
 
 (define (externs-f f)
-  (if (std-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
+  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
 
 (define (externs-p p)
   (let ((r (op->extern p)))
@@ -81,11 +81,16 @@
     [_ #f]))
 
 ;; Symbol -> Boolean
-(define (std-provided? x)
-  (memq x std-ids))
+;; Is x provided by a stdlib?
+(define (stdlib-provided? x)
+  (memq x stdlib-ids))
 
-(define std-ids
-  '(length)) ; TODO: add more
+;; [Listof Symbol]
+;; List of all symbols provided by a stdlib
+(define stdlib-ids
+  (append '(length append sum reverse) ; list
+          ; NOTE: add new stdlib ids here
+          ))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label

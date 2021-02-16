@@ -1,6 +1,18 @@
 # Libraries
 
-Really, this should be called "standard libraries," becasue this extension does not allow for implementing and exporting arbitrary libraries.
+(Really, this should be called "standard libraries," becasue this extension does not allow for implementing and exporting arbitrary libraries.)
+
+Standard libraries are programs that are specially pre-compiled to object files, and then linked to executable programs (during the executable's compilation). 
+
+## Adding Standard Libraries
+
+To add a new standard library, "mystdlib":
+1. Create a new file in `villain/` called "mystdlib.rkt".
+2. Implement `mystdlib.rkt` in the form `(begin (provide f1 f2 ... fn) (define f1 ...) (define f2 ...) ... (define fn ...))`, where `f1`, `f2`, ... `fn` are the functions provided by "mystdlib".
+3. In `externs.rkt", append the ids provide by "mystdlib" to the list of symbols defined by `stdlib-ids`.
+4. In `villain/Makefile`:
+	1. In the `stdlib` label, append the command `make stdlib.o`.
+	2. In the `runtime.o` label, add `stdlib.o` to the list of object files passed to `ld`'s `-r` option (right before the `-o` option)
 
 ## Organization
 
