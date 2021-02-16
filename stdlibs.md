@@ -1,6 +1,4 @@
-# Libraries
-
-(Really, this should be called "standard libraries," becasue this extension does not allow for implementing and exporting arbitrary libraries.)
+# Standard Libraries (stdlibs)
 
 Standard libraries are programs that are specially pre-compiled to object files, and then linked to executable programs (during the executable's compilation). 
 
