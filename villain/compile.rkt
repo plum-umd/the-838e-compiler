@@ -9,11 +9,12 @@
                                ; and string-set!
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match, 
-                  ; compile-define
+                  ; compile-define, open-input-file
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, compile-define
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
+(define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define
 (define rcx 'rcx) ; arity indicator
 
@@ -320,6 +321,7 @@
                (Mov rax (Offset rax 0)))]   
          ['string?
           (type-pred ptr-mask type-string)]  
+
          ['string->symbol
           (seq (assert-string rax c)
                (Xor rax type-string)
@@ -334,7 +336,83 @@
                (Or rax type-string))]
          ['symbol?
           (type-pred ptr-mask type-symbol)]  
-         ['empty? (eq-imm val-empty)])))
+         ['empty? (eq-imm val-empty)]
+         ['port?
+           (type-pred ptr-mask type-port)]
+         ['open-input-file
+           (seq
+             (assert-string rax c)
+
+             ;; Save the heap pointer as second argument for c function call
+             (Mov rsi rbx)
+             ;; TODO: this could be stack allocated
+             ;; Allocate a buffer on the heap for the c-string
+             (Xor rax type-string)
+             ;; r8 <- chars in input string
+             (Mov r8 (Offset rax 0))
+             ;; (r8 * 4) + 1 is upper bound on bytes
+             (Sar r8 int-shift)
+             (Sal r8 2)
+             (Add r8 1)
+             ;; Align heap
+             (Or r8 7)
+             (Add r8 1)
+             (Add rbx r8)
+
+             ;; Call to C function that opens file
+             (pad-stack c)
+             (Mov rdi rax)
+             (Call 'open_input_file)
+             (unpad-stack c)
+             ;; rax now contains a FILE *
+
+             ;; struct Port {
+             ;;   FILE *file;
+             ;;   int64_t buffer_len;
+             ;;   int64_t buffer_offset;
+             ;;   int64_t buffer_closed;
+             ;;   int8_t buffer[port-buffer-bytes];
+             ;; };
+             ;; TODO: offset, length, and closed flag all stored in 64 bits. Pack
+             ;;     these some other way. Offset and length only need to hold
+             ;;     sizeof(buffer). Make them uint8_t and we can have up to 512
+             ;;     buffered bytes. Make the flag another uint8_t for simplicity.
+             ;;     After accounting for the buffer, this whole structure needs to
+             ;;     align to an 8 byte boundary, so size buffer appropriately.
+             (Mov r8 rbx) ;; Save heap ptr
+             (Mov (Offset rbx 0) rax) ;; Store file pointer on heap
+             (Xor rax rax)
+             (Mov (Offset rbx 8) rax)  ;; Store offset into buffer
+             (Mov (Offset rbx 16) rax) ;; Store number of buffered bytes
+             (Mov (Offset rbx 24) rax) ;; Store "closed" flag
+             (Add rbx (+ 32 port-buffer-bytes))
+             (Mov rax r8)
+             (Or rax type-port)
+             )]
+         ['close-input-port
+           (seq
+             (assert-port rax c)
+             (pad-stack c)
+             (Mov rdi rax)
+             (Call 'close_input_port)
+             (unpad-stack c)
+             (Mov rax val-void))]
+         ['read-byte
+          (seq
+            (assert-port rax c)
+            (pad-stack c)
+            (Mov rdi rax)
+            (Call 'read_byte_port)
+            (unpad-stack c)
+            )]
+         ['peek-byte
+         (seq
+           (assert-port rax c)
+           (pad-stack c)
+           (Mov rdi rax)
+           (Call 'peek_byte_port)
+           (unpad-stack c)
+           )])))
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
@@ -692,6 +770,8 @@
   (assert-type ptr-mask type-string))
 (define assert-symbol
   (assert-type ptr-mask type-symbol))
+(define assert-port
+  (assert-type ptr-mask type-port))
 
 (define (assert-codepoint c)
   (let ((ok (gensym)))

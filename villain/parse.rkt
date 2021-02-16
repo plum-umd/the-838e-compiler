@@ -78,7 +78,9 @@
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string? integer?
-         symbol->string string->symbol symbol?))
+         symbol->string string->symbol symbol?
+         close-input-port open-input-file port? read-byte peek-byte))
+
 (define op2
   '(+ - eq? cons string-ref make-string <=))
 (define op3

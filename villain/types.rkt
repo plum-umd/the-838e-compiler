@@ -8,6 +8,7 @@
 (define type-cons       #b010)
 (define type-string     #b011)  
 (define type-symbol     #b100)
+(define type-port       #b101)
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
 (define type-int       #b0000)
@@ -22,6 +23,10 @@
 (define type-float #b11111000)
 (define float-shift  (+ 5 imm-shift))
 (define mask-float #b11111111)
+
+;; Should be a multiple of 8 for heap alignment
+;; Kept low intentionally to test buffering code
+(define port-buffer-bytes 8)
 
 (define (bits->imm b)
   (cond [(= type-int (bitwise-and b mask-int))
@@ -179,3 +184,6 @@
 
 (define (symbol-bits? v)
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-symbol)))
+
+(define (port-bits? v)
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-port)))

@@ -77,6 +77,8 @@ void print_result(int64_t result) {
   } else if (symbol_type_tag == (ptr_type_mask & result)) {
     printf("'");
     print_str((int64_t *)(result ^ symbol_type_tag));
+  } else if (port_type_tag == (ptr_type_mask & result)) {
+    printf("#<input-port>");
   } else {
     switch (result) {
     case val_true:
