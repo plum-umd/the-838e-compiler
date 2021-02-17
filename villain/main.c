@@ -24,7 +24,7 @@ void error_exit() {
 }
 
 void raise_error() {
-  return error_handler();
+   return error_handler();
 }
 
 int main(int argc, char** argv) {
