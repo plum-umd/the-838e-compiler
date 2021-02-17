@@ -67,6 +67,22 @@
       'raise_error
       'raise_error_align))
 
+;; provies an instruction sequence which increments heap pointer rbx by
+;; words * 8 bytes, and raises an error if heap is full.
+;; integer -> Asm
+;;(define (safe-increment-heap words)
+;;  (seq (Add rbx (* 8 words))
+;;       (Cmp (Offset rbx 0) 1) ;; the last heap_buffer words in the heap are set to 1
+;;       (Je 'raise_error)))   ;; while the rest is initialized to 0
+(define (safe-increment-heap words)
+  (seq (Add rbx (* 8 words))
+       (Mov 'r11 (Offset rbx 0))
+       (Cmp 'r11 0)
+       (Jne 'raise_error)))
+
+;; I believe that a86 hasn't properly implemented Cmp with Offset on left.
+;; I would need to specify size as 8 bytes.
+
 ;; [Listof Defn] -> Asm
 (define (compile-defines ds)
   (match ds
@@ -106,7 +122,8 @@
             (Pop rax)
             (Mov (Offset rbx 8) rax)
             (Mov rax rbx)
-            (Add rbx 16)
+            ;; (Add rbx 16)
+            (safe-increment-heap 2)
             (Or rax type-cons)
             (Sub rcx (imm->bits 1))
             (Jmp loop)
@@ -301,7 +318,7 @@
           (seq (Mov (Offset rbx 0) rax)
                (Mov rax rbx)
                (Or rax type-box)
-               (Add rbx 8))]
+               (safe-increment-heap 1))]
          ['unbox
           (seq (assert-box rax c)
                (Xor rax type-box)
@@ -408,7 +425,7 @@
                  (Jl (error-label c))
                  (Mov r10 rbx)                ; save heap pointer
                  (Mov (Offset rbx 0) r8)      ; write length in word 0
-                 (Add rbx 8)                  ; advance heap pointer
+                 (safe-increment-heap 1)                  ; advance heap pointer
                  (Cmp r8 (imm->bits 1))
                  (Jl l3)
                  (Mov r9 rax)                ; r9 = char arg
@@ -426,14 +443,14 @@
                  (Cmp rax 0)
                  (Je l4)
                  (Mov (Offset rbx 0) r8)
-                 (Add rbx 8)                 ; advance the heap pointer
+                 (safe-increment-heap 1)                 ; advance the heap pointer
                  (Sub rax 1)
                  (Jmp l1)
                  (Label l4)
                  (Cmp rdx 0)          ; if remainder = 0, then done       
                  (Je l3)                                   
                  (Mov rax r9)            ; if remainder = 1 or 2
-                 (Add rbx 8)
+                 (safe-increment-heap 1)
                  (Cmp rdx (imm->bits 1))
                  (Je l2)
                  (Sal rax 21)             ; case that remainder = 2
@@ -451,7 +468,7 @@
                (Mov (Offset rbx 8) rax)
                (Mov rax rbx)
                (Or rax type-cons)
-               (Add rbx 16))])))
+               (safe-increment-heap 2))])))
 
 ;; Op3 Expr Expr Expr CEnv -> Asm
 

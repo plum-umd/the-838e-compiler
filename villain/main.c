@@ -8,7 +8,6 @@
 FILE* in;
 FILE* out;
 void (*error_handler)();
-int64_t *heap;
 
 FILE* in;
 FILE* out;
@@ -27,11 +26,19 @@ void raise_error() {
   return error_handler();
 }
 
+int64_t* setup_heap() {
+  int64_t* heap = calloc(heap_size + heap_buffer , 8);
+  for (int i = 0; i < heap_buffer; ++i){
+    heap[heap_size + i] = 1;
+  }
+  return heap;
+}
+
 int main(int argc, char** argv) {
   in = stdin;
   out = stdout;
   error_handler = &error_exit;
-  heap = malloc(8 * heap_size);
+  int64_t* heap = setup_heap();
   int64_t result = entry(heap);
   print_result(result);
   if (result != val_void) printf("\n");
