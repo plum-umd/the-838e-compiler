@@ -16,6 +16,7 @@ void (*error_handler)();
 int64_t *heap;
 
 void print_result(int64_t);
+void print_vector(int64_t);
 void print_str(int64_t *);
 
 void error_exit() {
@@ -43,7 +44,6 @@ void print_char(int64_t);
 void print_cons(int64_t);
 
 void print_result(int64_t result) {
-
   if (cons_type_tag == (ptr_type_mask & result)) {
     printf("'(");
     print_cons(result);
@@ -51,7 +51,10 @@ void print_result(int64_t result) {
   } else if (box_type_tag == (ptr_type_mask & result)) {
     printf("#&");
     print_result (*((int64_t *)(result ^ box_type_tag)));
-  } else if (int_type_tag == (int_type_mask & result)) {
+  } else if(vector_type_tag == (ptr_type_mask & result)) {
+    print_vector(result);
+                                                          
+  }  else if (int_type_tag == (int_type_mask & result)) {
     printf("%" PRId64, result >> int_shift);
   } else if (char_type_tag == (char_type_mask & result)) {
     print_char(result);
@@ -91,6 +94,24 @@ void print_result(int64_t result) {
       /* nothing */ break;
     }
   }
+}
+
+void print_vector(int64_t result) {
+  int64_t len = *((int64_t *)(result ^ vector_type_tag));
+  int64_t  curr = result+8;
+  int64_t i = 0;
+  printf("'#(");
+  while(i < len){ //should be len
+     print_result(*((int64_t *)((curr) ^ vector_type_tag)));
+     
+     curr= curr + 8;
+     i+=16;
+     if(i < len){
+        printf(" ");
+              };
+  }
+  printf(")");
+
 }
 
 void print_cons(int64_t a) {
