@@ -515,15 +515,6 @@
              (Jne next)
              (compile-e e c)
              (Jmp return))]
-       [(Float f)
-        (seq
-         (Push rax)
-         (compile-e (Prim2 'eq? e0 (Float f)) (cons #f c))
-         (Cmp rax val-true)
-         (Pop rax)
-         (Jne return)
-         (compile-e e c)
-         (Jmp return))]
        [(String s)
         (let ((true (gensym "true"))
               (false (gensym "false")))

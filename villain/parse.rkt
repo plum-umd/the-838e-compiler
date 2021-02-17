@@ -56,7 +56,7 @@
     [(? boolean?) (Lit s)]
     [(? integer?) (Lit s)]
     [(? char?)    (Lit s)]
-    [(? flonum?) (Float s)]
+    [(? flonum?) (Lit s)]
     [(? string?) (String s)]
     [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(list 'quote (list))
