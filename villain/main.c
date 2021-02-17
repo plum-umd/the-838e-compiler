@@ -100,7 +100,7 @@ void print_vector(int64_t result) {
   int64_t len = *((int64_t *)(result ^ vector_type_tag));
   int64_t  curr = result+8;
   int64_t i = 0;
-  printf("'#(");
+  printf("#(");
   while(i < len){ //should be len
      print_result(*((int64_t *)((curr) ^ vector_type_tag)));
      

@@ -13,7 +13,7 @@
                   ; string-set!, make-string, compile-vector
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector
 (define rcx 'rcx) ; arity indicator
 
 ;; type CEnv = [Listof Variable]
@@ -93,23 +93,44 @@
 (define (compile-string s)
   (let ((length (string-length s)))
     (seq (Mov r9 (imm->bits length))
-         (Mov (Offset rbx 0) r9)         ;; write length in word 0
+         (Mov (Offset rbx 0) r9)         ;; write length in word 0 
          (Mov r9 0)
          (compile-str-chars (string->list s) 3 0 1)
          (Mov rax rbx)
          (Or rax type-string)
          (Add rbx (* 8 (add1 (ceiling (/ length 3))))))))
 
-(define (compile-vector v)
+(define (compile-vector v c)
   (let ((length (vector-length v))) ;; are we allowed to do this?
     (seq
         (Mov r9 (imm->bits length))
-        (Mov (Offset rbx 0) r9) ;;write length in first word
-        (Mov r9 0)
+        (Mov (Offset rbx 0) r9) ;;write length in first word, will also store rbx location
+        (Mov r10 rbx)
+        (Add rbx 8)
+        (Mov r9 rbx)    ;;r9 will be used in compile-vec-elems as a temporary heap pointer
+        (Add rbx (* 8 length)) ;; rbx now points to next open space on heap for future calls
+        (compile-vec-elems (vector->list v) c)
+        (Mov rax r10)
+        (Or rax type-vector)
      )
 
   ))
 
+;; Recursively adds each element in the list vs  
+(define (compile-vec-elems vs c)
+  (match vs
+    ['() (seq)]
+    [(cons e vs)  (seq
+                   (Push r10)
+                   (Push r9)
+                   (compile-e e c)
+                   (Pop r9)
+                   (Pop r10)
+                   (Mov (Offset r9 0) rax)
+                   (Add r9 8)
+                   (compile-vec-elems vs c))  ]
+    )
+ )
 ;; (Listof Chars) Integer Integer Integer -> Asm
 ;; Three 21-bit chars in each word, so with 1-indexing for chars:
 ;; word 1: char3 char2 char1 ;  word 2: char6 char5 char3;  etc.
