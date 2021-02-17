@@ -7,6 +7,7 @@
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
+                               ; Also used in mul in vector functions
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
@@ -376,7 +377,7 @@
            ))
           ]
          ['vector-ref
-            (let ((l1 (gensym 'front_loop )) (l2 (gensym 'end_loop))) (seq (Pop r8)
+             (seq (Pop r8)
                  (assert-vector r8 c)         ; r8 = vector pointer
                  (assert-integer rax c)       ; rax = index
                  (Cmp rax 0)
@@ -387,18 +388,14 @@
                  (Sub r9 (imm->bits 1))       ; 0-indexing
                  (Cmp rax r9)
                  (Jg (error-label c))
-                 (Mov r9 rax)                 ; r9 will be decremented to 0
-                 (Mov rax (Offset r8 0))      
-                 (Label l1)
-                 (Cmp r9 0)
-                 (Je l2)
-                 (Add r8 8)
-                 (Mov rax (Offset r8 0))
-                 (Sub r9 (imm->bits 1))
-                 (Jmp l1)
-                 (Label l2)
+                 (Mov r9 (imm->bits 8))       ;r9 is just 8
+                 (Mul r9)                     ;stores result in rax of index * 8?
+                 (Mov rax rdx)                ;lower portion in rax
+                 (Add r8 rax)                 
+                 (Mov rax (Offset r8 8))      ;Accounting for 0-indexing, we need to shift one more spot over
+
                  
-          ))]
+          )]
          ['make-string
           (let ((l1 (gensym 'words_loop)) (l2 (gensym 'rem1_))
                     (l3 (gensym 'done)) (l4 (gensym 'exit_loop)))
@@ -504,7 +501,7 @@
                  (Mov (Offset r8 8) rax)
                  (Mov rax val-void)))]
         ['vector-set!
-         (let ((l1 (gensym 'front_loop )) (l2 (gensym 'end_loop))) (seq
+         (seq
                  (Pop r10)                    ; r10 = index
                  (Pop r8)
                  (assert-vector r8 c)         ; r8 = vector pointer
@@ -517,17 +514,15 @@
                  (Sub r9 (imm->bits 1))       ; 0-indexing
                  (Cmp r10 r9)
                  (Jg (error-label c))
-                 (Mov r9 r10)                 ; r9 will be decremented to 0
-                 (Label l1)
-                 (Cmp r9 0)
-                 (Je l2)
-                 (Add r8 8)
-                 (Sub r9 (imm->bits 1))
-                 (Jmp l1)
-                 (Label l2)
-                 (Mov (Offset r8 0) rax)
+                 (Mov r9 (imm->bits 8))       ;r9 is just 8
+                 (Push rax)                    ; saving the value
+                 (Mov rax r10)                ;rax is the index
+                 (Mul r9)                     ;stores result in rdx:rax of index * 8?
+                 (Pop rax)                    ;We (probably) aren't using rax anyway, so we overwrite it with value
+                 (Add r8 rdx)                 
+                 (Mov (Offset r8 0) rax)      ;Accounting for 0-indexing, we need to shift one more spot over
                  (Mov rax val-void)
-          ))
+          )
          ]
 )))                   
 

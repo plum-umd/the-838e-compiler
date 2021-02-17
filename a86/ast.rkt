@@ -34,6 +34,11 @@
       (error n "expects register; given ~v" a1))
     (values a1)))
 
+(define check:arith-mult  
+  (λ (a1 n)
+    (unless (register? a1)
+      (error n "expects register; given ~v" a1))
+    (values a1)))
 
 (define check:register
   (λ (a1 n)
@@ -121,6 +126,7 @@
 (instruct Add    (dst src) check:arith)
 (instruct Sub    (dst src) check:arith)
 (instruct Div    (dst)     check:arith-div)
+(instruct Mul    (dst)     check:arith-mult)
 (instruct Cmp    (a1 a2)   check:src-dest)
 (instruct Jmp    (x)       check:target)
 (instruct Je     (x)       check:target)
@@ -161,6 +167,7 @@
       (Add? x)
       (Sub? x)
       (Div? x)
+      (Mul? x)
       (Cmp? x)
       (Jmp? x)
       (Je? x)
