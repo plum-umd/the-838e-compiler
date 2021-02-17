@@ -299,6 +299,23 @@
          ['vector-length (seq (assert-vector rax c)
                               (Xor rax type-vector)
                               (Mov rax (Offset rax 0)))]
+         ['list? (let ((l1 (gensym)) (l2 (gensym)) (l3 (gensym))) (seq
+                  (Label l1)
+                  (Mov r9 rax)
+
+                  (type-pred ptr-mask type-cons)
+                  (Cmp rax (imm->bits #f))
+                  (Je l2)
+                  (Xor rax type-cons)
+                  (Mov rax (Offset r9 8))     ;cdr into rax
+                  (Jmp l1)
+                  (Label l2)
+                  (Cmp r9 val-empty)
+                  (Jne l3)
+                  (Mov rax (imm->bits #t))
+
+                  (Label l3)
+                      ))]
          )))
 
 ;; Op2 Expr Expr CEnv -> Asm

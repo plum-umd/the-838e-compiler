@@ -26,6 +26,7 @@
     [(list 'symbol->string (? symbol?))   (symbol->string v)]
     [(list 'symbol? v)                    (symbol? v)]
     [(list 'vector? v)                    (vector? v)]
+    [(list 'list? v)                      (list? v)]
     [(list 'vector-length v)              (vector-length v)]
     [_                                    'err]))
 

@@ -24,7 +24,7 @@
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Float s)]
     [(? string?)                   (String s)] 
-    [(? vector?)                   (Vector s)] 
+    [(? vector?)                   (Vector s)]
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
@@ -74,7 +74,7 @@
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string?
-         symbol->string string->symbol symbol? vector? vector-length))
+         symbol->string string->symbol symbol? vector? vector-length list?))
 (define op2
   '(+ - eq? cons string-ref make-string make-vector vector-ref))  
 (define op3
