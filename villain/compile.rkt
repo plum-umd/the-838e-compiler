@@ -11,7 +11,7 @@
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref
+                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref, list?
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
@@ -306,8 +306,8 @@
                   (type-pred ptr-mask type-cons)
                   (Cmp rax (imm->bits #f))
                   (Je l2)
-                  (Xor rax type-cons)
-                  (Mov rax (Offset r9 8))     ;cdr into rax
+                  (Xor r9 type-cons)
+                  (Mov rax (Offset r9 0))     ;cdr into rax
                   (Jmp l1)
                   (Label l2)
                   (Cmp r9 val-empty)
