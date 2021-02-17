@@ -10,7 +10,7 @@
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, 
+                  ; string-set!, make-string, compile-vector
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
@@ -73,6 +73,7 @@
          [(Empty)            (compile-value '())]
          [(String s)         (compile-string s)]      
          [(Symbol s)         (compile-symbol s c)]
+         [(Vector v)         (compile-vector v c)]
          [(Var x)            (compile-variable x c)]
          [(App f es)         (compile-app f es c)]    
          [(Prim0 p)          (compile-prim0 p c)]
@@ -97,7 +98,17 @@
          (compile-str-chars (string->list s) 3 0 1)
          (Mov rax rbx)
          (Or rax type-string)
-         (Add rbx (* 8 (add1 (ceiling (/ length 3))))))))         
+         (Add rbx (* 8 (add1 (ceiling (/ length 3))))))))
+
+(define (compile-vector v)
+  (let ((length (vector-length v))) ;; are we allowed to do this?
+    (seq
+        (Mov r9 (imm->bits length))
+        (Mov (Offset rbx 0) r9) ;;write length in first word
+        (Mov r9 0)
+     )
+
+  ))
 
 ;; (Listof Chars) Integer Integer Integer -> Asm
 ;; Three 21-bit chars in each word, so with 1-indexing for chars:
@@ -261,7 +272,8 @@
                (Or rax type-string))]
          ['symbol?
           (type-pred ptr-mask type-symbol)]  
-         ['empty? (eq-imm val-empty)])))
+         ['empty? (eq-imm val-empty)]
+         ['vector? (type-pred ptr-mask type-vector)])))
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
@@ -314,7 +326,30 @@
                  (Sar rax 21)
                  (Jmp l1)                     ; loop until rdx = 0
                  (Label l2)
-                 (And rax r9)))]         
+                 (And rax r9)))]
+         ['make-vector                        ;with inspiration from make-string
+          (let ( (l1 (gensym 'loop_start)) (l2 (gensym 'loop_end) ))
+          (seq 
+           (Pop r8)
+           (assert-integer r8 c)              ; r8 = int arg = length
+           (Cmp r8 0)
+           (Jl (error-label c))
+           (Mov r10 rbx)                      ; saves heap pointer in r10
+           (Mov (Offset rbx 0) r8) ;should r8
+           ;(Mov (Offset rbx 8) rax)
+           (Add rbx 8)                        ;advances heap pointer
+           (Label l1)
+           (Cmp r8 0)
+           (Je l2)                           ;(While r8 > 0){
+           (Mov (Offset rbx 0) rax) ;;should rax         ;Copies the value into the spot on the heap
+           (Add rbx 8) 
+           (Sub r8 (imm->bits 1))                         ;r8--;
+           (Jmp l1)                           ;}
+           (Label l2)                         ;done writing
+           (Mov rax r10)
+           (Or rax type-vector)
+           ))
+          ]
          ['make-string
           (let ((l1 (gensym 'words_loop)) (l2 (gensym 'rem1_))
                     (l3 (gensym 'done)) (l4 (gensym 'exit_loop)))

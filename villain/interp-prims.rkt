@@ -25,6 +25,7 @@
     [(list 'string->symbol (? string?))   (string->symbol v)]
     [(list 'symbol->string (? symbol?))   (symbol->string v)]
     [(list 'symbol? v)                    (symbol? v)]
+    [(list 'vector? v)                    (vector? v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer
@@ -39,7 +40,9 @@
                                               (string-ref v1 v2)
                                               'err)]   
     [(list 'make-string
-           (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]                         
+           (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]       
+    [(list 'make-vector
+           (? integer?) v2 )        (if (< v1 0) 'err (make-vector v1 v2))]                     
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
