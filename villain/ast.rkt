@@ -38,6 +38,7 @@
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
+;;           | (Float f)
 ;;           | (String s)
 ;;           | (Symbol s)
 ;;           | (Cons Id Id)

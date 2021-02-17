@@ -485,21 +485,21 @@
 (define (compile-match e0 cs c)
   (let ((return (gensym 'matchreturn)))
     (seq (compile-e e0 c)
-         (compile-match-clauses cs return c)
+         (compile-match-clauses e0 cs return c)
          (Label return))))
 
-;; [Listof Clauses] Symbol CEnv -> Asm
-(define (compile-match-clauses cs return c)
+;; Expr [Listof Clauses] Symbol CEnv -> Asm
+(define (compile-match-clauses e0 cs return c)
   (match cs
     ['() (seq (Jmp (error-label c)))]
     [(cons cl cs)
      (let ((next (gensym 'matchclause)))
-       (seq (compile-match-clause cl next return c)
+       (seq (compile-match-clause e0 cl next return c)
             (Label next)
-            (compile-match-clauses cs return c)))]))
+            (compile-match-clauses e0 cs return c)))]))
 
-;; Clause Symbol Symbol CEnv -> Asm
-(define (compile-match-clause cl next return c)
+;; Expr Clause Symbol Symbol CEnv -> Asm
+(define (compile-match-clause e0 cl next return c)
   (match cl
     [(Clause p e)
      (match p
@@ -510,13 +510,18 @@
              (Jmp return))]
        [(Lit i)
         (seq
-             (Mov r8 rax)
-             (Mov rax (imm->bits i))
+             (Mov r8 (imm->bits i))
              (Cmp rax r8)
-             (Mov rax r8)
              (Jne next)
              (compile-e e c)
              (Jmp return))]
+       [(Float f)
+        (seq
+         (compile-e (Prim2 'eq? e0 (Float f)) c)
+         (Cmp rax val-true)
+         (Jne return)
+         (compile-e e c)
+         (Jmp return))]
        [(String s)
         (let ((true (gensym "true"))
               (false (gensym "false")))

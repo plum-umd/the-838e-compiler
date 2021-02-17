@@ -103,6 +103,10 @@
            (if (eq? l v)
                (interp-env e r ds)
                (interp-match v cs r ds))]
+          [(Float l)
+           (if (eq? l v)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
           [(String s)
            (if (eq? v s)
                (interp-env e r ds)
