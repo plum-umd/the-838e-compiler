@@ -518,9 +518,9 @@
                  (Push rax)                    ; saving the value
                  (Mov rax r10)                ;rax is the index
                  (Mul r9)                     ;stores result in rdx:rax of index * 8?
-                 (Pop rax)                    ;We (probably) aren't using rax anyway, so we overwrite it with value
+                 (Pop rax)                    
                  (Add r8 rdx)                 
-                 (Mov (Offset r8 0) rax)      ;Accounting for 0-indexing, we need to shift one more spot over
+                 (Mov (Offset r8 0) rax)      
                  (Mov rax val-void)
           )
          ]

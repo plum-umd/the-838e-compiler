@@ -27,7 +27,12 @@
      (string->symbol
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
-            (list->string (reverse str-chars)))))]))
+            (list->string (reverse str-chars)))))]
+    [(? vector-bits? i)
+        (let ((length (unload-value (heap-ref i))))
+          (let ((elems (vector-loop length i)))
+            (list->vector (reverse elems))))]
+    ))
                      
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))
@@ -45,5 +50,13 @@
                     (+ 1 (* 21 (- 2 (remainder (- n 1) 3))))))))
            (let ((v2 (arithmetic-shift v1 -43)))
              (cons (unload-value v2) (string-loop (- n 1) i))))])))
+
+(define vector-loop
+  (λ (n i)
+    (match n
+      [0 '()]
+      [n (cons (unload-value (heap-ref (+ i (arithmetic-shift n imm-shift)))) (vector-loop (- n 1) i))]
+      )
+  ))
        
                       

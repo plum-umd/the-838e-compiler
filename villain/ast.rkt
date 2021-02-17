@@ -37,7 +37,8 @@
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons | 'string-ref | 'make-vector | make-string
 ;;           | 'vector-ref |'vector-set!
-;; type Op3  = 'string-set!                    
+;; type Op3  = 'string-set!
+;; type Op4  = 'vector-cas!
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
