@@ -128,25 +128,25 @@
 
 ;; Expr CEnv -> Asm
 (define (compile-e e c)
-  (seq (match e
-         [(Int i)            (compile-value i)]
-         [(Bool b)           (compile-value b)]
-         [(Char c)           (compile-value c)]
-         [(Float f)          (compile-value f)]
-         [(Eof)              (compile-value eof)]
-         [(Empty)            (compile-value '())]
-         [(String s)         (compile-string s)]      
-         [(Symbol s)         (compile-symbol s c)]
-         [(Var x)            (compile-variable x c)]
-         [(App f es)         (compile-app f es c)]    
-         [(Prim0 p)          (compile-prim0 p c)]
-         [(Prim1 p e)        (compile-prim1 p e c)]
-         [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-         [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
-         [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
-         [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let x e1 e2)      (compile-let x e1 e2 c)]
-         [(Match e0 cs)      (compile-match e0 cs c)])))
+  (match e
+    [(Int i)            (compile-value i)]
+    [(Bool b)           (compile-value b)]
+    [(Char c)           (compile-value c)]
+    [(Float f)          (compile-value f)]
+    [(Eof)              (compile-value eof)]
+    [(Empty)            (compile-value '())]
+    [(String s)         (compile-string s)]      
+    [(Symbol s)         (compile-symbol s c)]
+    [(Var x)            (compile-variable x c)]
+    [(App f es)         (compile-app f es c)]    
+    [(Prim0 p)          (compile-prim0 p c)]
+    [(Prim1 p e)        (compile-prim1 p e c)]
+    [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
+    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
+    [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
+    [(Begin e1 e2)      (compile-begin e1 e2 c)]
+    [(Let x e1 e2)      (compile-let x e1 e2 c)]
+    [(Match e0 cs)      (compile-match e0 cs c)]))
 
 ;; Value -> Asm
 (define (compile-value v)
