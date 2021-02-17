@@ -10,7 +10,8 @@
 ;; | Integer
 ;; | Boolean
 ;; | Character
-;; | String        
+;; | String
+;; | Vector
 ;; | Eof
 ;; | Void
 ;; | '()
@@ -35,6 +36,7 @@
     [(Float f) f]
     [(String s) s]
     [(Symbol s) s]
+    [(Vector v) v]
     [(Eof)    eof]
     [(Empty)  '()]
     [(Var x)  (lookup r x)]
