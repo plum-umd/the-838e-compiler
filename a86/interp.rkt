@@ -4,9 +4,8 @@
  [asm-interp    (-> (listof instruction?) any/c)]
  [asm-interp/io (-> (listof instruction?) string? any/c)])
 
-(require "printer.rkt" "ast.rkt"
-         (rename-in ffi/unsafe [-> _->])
-         racket/draw/unsafe/callback)
+(require "printer.rkt" "ast.rkt" "callback.rkt"
+         (rename-in ffi/unsafe [-> _->]))
 (require (submod "printer.rkt" private))
 
 ;; Assembly code is linked with object files in this parameter
