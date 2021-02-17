@@ -409,7 +409,7 @@
                  (Mul r9)                     ;stores result in rax of index * 8?
                  (Mov rax rdx)                ;lower portion in rax
                  (Add r8 rax)                 
-                 (Mov rax (Offset r8 8))      ;Accounting for 0-indexing, we need to shift one more spot over
+                 (Mov rax (Offset r8 0))      ;Accounting for 0-indexing, we need to shift one more spot over
 
                  
           )]
