@@ -10,10 +10,10 @@
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-vector
+                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
 (define rcx 'rcx) ; arity indicator
 
 ;; type CEnv = [Listof Variable]
@@ -294,7 +294,11 @@
          ['symbol?
           (type-pred ptr-mask type-symbol)]  
          ['empty? (eq-imm val-empty)]
-         ['vector? (type-pred ptr-mask type-vector)])))
+         ['vector? (type-pred ptr-mask type-vector)]
+         ['vector-length (seq (assert-vector rax c)
+                              (Xor rax type-vector)
+                              (Mov rax (Offset rax 0)))]
+         )))
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
@@ -348,7 +352,7 @@
                  (Jmp l1)                     ; loop until rdx = 0
                  (Label l2)
                  (And rax r9)))]
-         ['make-vector                        ;with inspiration from make-string
+         ['make-vector                        
           (let ( (l1 (gensym 'loop_start)) (l2 (gensym 'loop_end) ))
           (seq 
            (Pop r8)
@@ -371,6 +375,30 @@
            (Or rax type-vector)
            ))
           ]
+         ['vector-ref
+            (let ((l1 (gensym 'front_loop )) (l2 (gensym 'end_loop))) (seq (Pop r8)
+                 (assert-vector r8 c)         ; r8 = vector pointer
+                 (assert-integer rax c)       ; rax = index
+                 (Cmp rax 0)
+                 (Jl (error-label c))
+                 (Xor r8 type-vector)
+                 (Mov r9 (Offset r8 0))       ; r9 = length
+                 (Add r8 8)                   ; r8 will now be pointing to the first element
+                 (Sub r9 (imm->bits 1))       ; 0-indexing
+                 (Cmp rax r9)
+                 (Jg (error-label c))
+                 (Mov r9 rax)                 ; r9 will be decremented to 0
+                 (Mov rax (Offset r8 0))      
+                 (Label l1)
+                 (Cmp r9 0)
+                 (Je l2)
+                 (Add r8 8)
+                 (Mov rax (Offset r8 0))
+                 (Sub r9 (imm->bits 1))
+                 (Jmp l1)
+                 (Label l2)
+                 
+          ))]
          ['make-string
           (let ((l1 (gensym 'words_loop)) (l2 (gensym 'rem1_))
                     (l3 (gensym 'done)) (l4 (gensym 'exit_loop)))
@@ -474,7 +502,34 @@
                  (And rax rdx)                 ; set to zero char at index
                  (Or rax r9)                   ; write char arg at index                   
                  (Mov (Offset r8 8) rax)
-                 (Mov rax val-void)))])))                   
+                 (Mov rax val-void)))]
+        ['vector-set!
+         (let ((l1 (gensym 'front_loop )) (l2 (gensym 'end_loop))) (seq
+                 (Pop r10)                    ; r10 = index
+                 (Pop r8)
+                 (assert-vector r8 c)         ; r8 = vector pointer
+                 (assert-integer r10 c)       ; rax = some value
+                 (Cmp r10 0)
+                 (Jl (error-label c))
+                 (Xor r8 type-vector)
+                 (Mov r9 (Offset r8 0))       ; r9 = length
+                 (Add r8 8)                   ; r8 will now be pointing to the first element
+                 (Sub r9 (imm->bits 1))       ; 0-indexing
+                 (Cmp r10 r9)
+                 (Jg (error-label c))
+                 (Mov r9 r10)                 ; r9 will be decremented to 0
+                 (Label l1)
+                 (Cmp r9 0)
+                 (Je l2)
+                 (Add r8 8)
+                 (Sub r9 (imm->bits 1))
+                 (Jmp l1)
+                 (Label l2)
+                 (Mov (Offset r8 0) rax)
+                 (Mov rax val-void)
+          ))
+         ]
+)))                   
 
 ;; Id [Listof Expr] CEnv -> Asm
 ;; Here's why this code is so gross: you have to align the stack for the call
@@ -655,6 +710,8 @@
   (assert-type ptr-mask type-string))
 (define assert-symbol
   (assert-type ptr-mask type-symbol))
+(define assert-vector
+  (assert-type ptr-mask type-vector))
 
 (define (assert-codepoint c)
   (let ((ok (gensym)))

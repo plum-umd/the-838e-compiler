@@ -12,7 +12,8 @@
 ;;           | (Int Integer)
 ;;           | (Bool Boolean)
 ;;           | (Char Character)
-;;           | (String)         
+;;           | (String String)
+;;           | (Vector Vector)
 ;;           | (Symbol Symbol)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
@@ -24,23 +25,25 @@
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
+
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero?
 ;;           | 'char? | 'integer->char | 'char->integer
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
-;;           | 'string-length | 'string? | make-string     
-;;           | 'empty?
+;;           | 'string-length | 'string?    
+;;           | 'empty?  |'vector? |'vector-length
 ;; type Op2  = '+ | '- | 'eq?
-;;           | 'cons | 'string-ref
+;;           | 'cons | 'string-ref | 'make-vector | make-string
+;;           | 'vector-ref |'vector-set!
 ;; type Op3  = 'string-set!                    
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
-;; type Litral = Boolean | '() | Char | Integer
+;; type Literal = Boolean | '() | Char | Integer
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
@@ -60,6 +63,7 @@
 (struct Var   (x)          #:prefab)
 (struct App   (f es)       #:prefab)
 (struct Match (e0 cs)      #:prefab)
+(struct Vector (v)         #:prefab)
 
 ;; Match clause
 (struct Clause (p e)       #:prefab)

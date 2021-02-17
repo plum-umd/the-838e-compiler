@@ -26,6 +26,7 @@
     [(list 'symbol->string (? symbol?))   (symbol->string v)]
     [(list 'symbol? v)                    (symbol? v)]
     [(list 'vector? v)                    (vector? v)]
+    [(list 'vector-length v)              (vector-length v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer
@@ -42,7 +43,12 @@
     [(list 'make-string
            (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]       
     [(list 'make-vector
-           (? integer?) v2 )        (if (< v1 0) 'err (make-vector v1 v2))]                     
+           (? integer?) v2 )        (if (< v1 0) 'err (make-vector v1 v2))]
+    [(list 'vector-ref
+           (? vector?) (? integer?)) (if (<= 0 v2 (sub1 (vector-length v1)))
+                                              (vector-ref v1 v2)
+                                              'err)]
+           
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
@@ -51,6 +57,10 @@
     [(list 'string-set! (? string?)
            (? integer?) (? char?))        (if (<= 0 v2 (sub1 (string-length v1)))
                                               (string-set! v1 v2 v3)
+                                              'err)]
+     [(list 'vector-set! (? vector?)
+           (? integer?) v3)        (if (<= 0 v2 (sub1 (vector-length v1)))
+                                              (vector-set! v1 v2 v3)
                                               'err)]  
     [_                                    'err]))
 

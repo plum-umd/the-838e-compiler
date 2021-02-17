@@ -24,7 +24,7 @@
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Float s)]
     [(? string?)                   (String s)] 
-    [(? vector?)                   (Vector s)]
+    [(? vector?)                   (Vector s)] 
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
@@ -39,6 +39,7 @@
     [(list 'let (list (list (? symbol? x) e1)) e2)
      (Let x (parse-e e1) (parse-e e2))]
     [(cons 'quote (list (? symbol? x))) (Symbol x)]
+    [(cons 'vector es) (Vector (list->vector (map parse-e es)))]
     [(list 'match e0 cs ...)
      (Match (parse-e e0) (map parse-c cs))]
     [(cons (? symbol? f) es)
@@ -73,11 +74,11 @@
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string?
-         symbol->string string->symbol symbol? vector?))
+         symbol->string string->symbol symbol? vector? vector-length))
 (define op2
-  '(+ - eq? cons string-ref make-string make-vector))  
+  '(+ - eq? cons string-ref make-string make-vector vector-ref))  
 (define op3
-  '(string-set!))  
+  '(string-set!  vector-set!))  
 
 (define (op? ops)
   (λ (x)
