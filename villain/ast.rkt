@@ -33,7 +33,7 @@
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
 ;;           | 'string-length | 'string?    
-;;           | 'empty?  |'vector? |'vector-length
+;;           | 'empty?  |'vector? |'vector-length |list?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons | 'string-ref | 'make-vector | make-string
 ;;           | 'vector-ref |'vector-set!
