@@ -4,7 +4,9 @@
  [asm-interp    (-> (listof instruction?) any/c)]
  [asm-interp/io (-> (listof instruction?) string? any/c)])
 
-(require "printer.rkt" "ast.rkt" (rename-in ffi/unsafe [-> _->]))
+(require "printer.rkt" "ast.rkt"
+         (rename-in ffi/unsafe [-> _->])
+         racket/draw/unsafe/callback)
 (require (submod "printer.rkt" private))
 
 ;; Assembly code is linked with object files in this parameter
@@ -97,9 +99,10 @@
         (define result
           (begin0           
             (with-handlers ((symbol? identity))
-              (if current-heap
-                  (cons (current-heap) (entry (current-heap)))
-                  (entry #f)))
+              (guard-foreign-escape
+               (if current-heap
+                   (cons (current-heap) (entry (current-heap)))
+                   (entry #f))))
             #;
             (when current-heap
               (free (current-heap)))))
@@ -115,9 +118,10 @@
       
       (begin0
         (with-handlers ((symbol? identity))
-          (if current-heap
-              (cons (current-heap) (entry (current-heap)))
-              (entry #f)))
+          (guard-foreign-escape
+           (if current-heap
+               (cons (current-heap) (entry (current-heap)))
+               (entry #f))))
         #;
         (when current-heap
           (free (current-heap))))))
