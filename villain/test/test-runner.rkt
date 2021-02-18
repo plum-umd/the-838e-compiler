@@ -594,7 +594,7 @@
                 (cons (void) "abcdefghijklmnopqrstuvwxyz"))
 
   ;; Villain examples
-  (check-equal? (run '(read-char) "a") #\a)
+  (check-equal? (run '(read-char) "a") (cons #\a ""))
  
 
   )

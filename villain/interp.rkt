@@ -41,7 +41,9 @@
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
+    [(Prim0 'read-char) (read-char)]
     [(Prim0 'peek-byte) (peek-byte)]
+    [(Prim0 'peek-char) (peek-char)]
     [(Prim0 'gensym)    (gensym)]
     [(Prim1 p e)
      (match (interp-env e r ds)
