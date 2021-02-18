@@ -145,7 +145,7 @@
          [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let x e1 e2)      (compile-let x e1 e2 c)]
+         [(Let xs es e)      (compile-let xs es e c)]
          [(Match e0 cs)      (compile-match e0 cs c)])))
 
 ;; Value -> Asm
@@ -569,12 +569,11 @@
   (seq (compile-e e1 c)
        (compile-e e2 c)))
 
-;; Id Expr Expr CEnv -> Asm
-(define (compile-let x e1 e2 c)
-  (seq (compile-e e1 c)
-       (Push rax)
-       (compile-e e2 (cons x c))
-       (Add rsp 8)))
+;; (Listof Id) (Listof Expr) Expr CEnv -> Asm
+(define (compile-let xs es e c)
+  (seq (compile-es es c)
+       (compile-e e (append (reverse xs) c))
+       (Add rsp (* 8 (length xs)))))
 
 ;; Expr [Listof Clause] CEnv-> Asm
 (define (compile-match e0 cs c)

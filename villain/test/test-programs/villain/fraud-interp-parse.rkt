@@ -1,5 +1,48 @@
 #lang racket
 (begin
+  ; parse.rkt
+  ;; S-Expr -> Expr
+  (define (parse s)
+    (cond
+      [(integer? s) (Int s)]
+      [(boolean? s) (Bool s)]
+      [(char? s)    (Char s)]
+      [(symbol? s)  (match s
+                      ['eof (Eof)]
+                      [_ (Var s)])]
+      [(list? s)
+       (match (length s)
+         [1 (let ()
+              (match (car s)
+                ['read-byte       (Prim0 'read-byte)]
+                ['peek-byte       (Prim0 'peek-byte)]
+                ['void            (Prim0 'void)]))]
+         [2 (let ((e (second s)))
+              (match (car s)
+                ['add1          (Prim1 'add1  (parse e))]
+                ['sub1          (Prim1 'sub1  (parse e))]
+                ['zero?         (Prim1 'zero? (parse e))]
+                ['char?         (Prim1 'add1  (parse e))]
+                ['write-byte    (Prim1 'write-byte (parse e))]
+                ['eof-object?   (Prim1 'eof-object? (parse e))]
+                ['integer->char (Prim1 'integer->char (parse e))]
+                ['char->integer (Prim1 'char->integer (parse e))]))]
+         [3 (let ((e1 (second s))
+                  (e2 (third s)))
+              (match (car s)            
+                ['begin         (Begin (parse e1) (parse e2))]
+                ['+             (Prim2 '+ (parse e1) (parse e2))]
+                ['-             (Prim2 '- (parse e1) (parse e2))]
+                ['let           (Let (first (first e1))
+                                     (parse (second (first e1)))
+                                     (parse e2))]))]
+         [4 (let ((e1 (second s))
+                  (e2 (third s))
+                  (e3 (fourth s)))
+              (match (car s)
+                ['if            (If (parse e1) (parse e2) (parse e3))]))])]))
+
+  ; interp.rkt
   ;(provide interp interp-env)
   ;(require "ast.rkt" "interp-prim.rkt")
   
@@ -44,6 +87,7 @@
   ;; | Void
   
   ;; type REnv = (Listof (List Id Value))
+  
   
   ;; Expr -> Answer
   (define (interp e)
@@ -144,5 +188,6 @@
   
   ;; Go!
   (interp
-   (list 'Let 'x (list 'Prim0 'read-byte)
-         (list 'Prim2 '+ (list 'Var 'x) (list 'Int 4)))))
+   (parse
+    (list 'let (list (list 'x (list 'read-byte)))
+          (list '+ 'x 4)))))

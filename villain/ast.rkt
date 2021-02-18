@@ -25,7 +25,7 @@
 ;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
-;;           | (Let Id Expr Expr)
+;;           | (Let (Listof Id) (Listof Expr) Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
@@ -47,6 +47,7 @@
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
+;; type Binding = (Binding Id Expr)
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
@@ -62,7 +63,7 @@
 (struct Prim3 (p e1 e2 e3) #:prefab)
 (struct If    (e1 e2 e3)   #:prefab)
 (struct Begin (e1 e2)      #:prefab)
-(struct Let   (x e1 e2)    #:prefab)
+(struct Let   (xs es e)    #:prefab)
 (struct Var   (x)          #:prefab)
 (struct App   (f es)       #:prefab)
 (struct Match (e0 cs)      #:prefab)
@@ -75,4 +76,3 @@
 (struct Sym (s)            #:prefab)
 (struct Cons (p1 p2)       #:prefab)
 (struct Box (p)            #:prefab)
-

@@ -504,6 +504,33 @@
   (check-equal? (run '(sixth (list 1 2 3 4 5 6 7 8 9 10))) 6)
   (check-equal? (run '(tenth (list 1 2 3 4 5 6 7 8 9 10))) 10)
   (check-equal? (run '(third (list 1 2 3 4 5 6 7 8 9 10))) 3)
+
+  ;; Standard library: bool.rkt
+  (check-equal? (run '(boolean? #t)) #t)
+  (check-equal? (run '(boolean? #f)) #t)
+  (check-equal? (run '(boolean? 0)) #f)
+  (check-equal? (run '(not #t)) #f)
+  (check-equal? (run '(not #f)) #t)
+  (check-equal? (run '(not 0)) #f)
+  
+  ;; n-ary let
+  (check-equal? (run '(let () 4)) 4)
+  (check-equal? (run '(let ((x 4)) 3)) 3)
+  (check-equal? (run '(let ((x 4)) x)) 4)
+  (check-equal? (run '(let ((x 4) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((x (let ((y 4)) y)) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((y 6) (x (let ((y 4)) y))) (+ x y))) 10)
+  (check-equal? (run '(let ((y (let ((y 4)) y)) (x (let ((z 4)) z)) (z 2)) (+ z (+ x y)))) 10)
+  (check-equal? (run '(let ((x (add1 12)) (y 9)) (let ((x (add1 x)) (z y)) (+ z x)))) 23)
+
+  ;; cond
+  (check-equal? (run '(cond)) (void))
+  (check-equal? (run '(cond (else 1))) 1)
+  (check-equal? (run '(cond (#t 1))) 1)
+  (check-equal? (run '(cond (#t 2) (else 1))) 2)
+  (check-equal? (run '(cond (#f 2) (else 1))) 1)
+  (check-equal? (run '(cond (#f 2) (else 1))) 1)
+  (check-equal? (run '(cond (0 2) (else 1))) 2)
   )
 
 

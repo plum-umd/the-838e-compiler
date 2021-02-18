@@ -72,10 +72,10 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
-    [(Let x e1 e2)
-     (match (interp-env e1 r ds)
+    [(Let xs es e)
+     (match (interp-env* es r ds)
        ['err 'err]
-       [v (interp-env e2 (ext r x v) ds)])]
+       [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)
