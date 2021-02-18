@@ -593,7 +593,8 @@
                      "")
                 (cons (void) "abcdefghijklmnopqrstuvwxyz"))
 
-
+  ;; Villain examples
+  (check-equal? (run '(read-char) "a") #\a)
  
 
   )

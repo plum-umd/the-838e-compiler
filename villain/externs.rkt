@@ -79,7 +79,9 @@
 (define (op->extern o)
   (match o
     ['peek-byte 'peek_byte]
+    ['peek-char 'peek_char]
     ['read-byte 'read_byte]
+    ['read-char 'read_char]
     ['write-byte 'write_byte]
     ['gensym 'gensym]
     #;['string->symbol 'str_to_symbol]  ;; always included now
