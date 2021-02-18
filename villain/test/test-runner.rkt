@@ -504,6 +504,16 @@
   (check-equal? (run '(sixth (list 1 2 3 4 5 6 7 8 9 10))) 6)
   (check-equal? (run '(tenth (list 1 2 3 4 5 6 7 8 9 10))) 10)
   (check-equal? (run '(third (list 1 2 3 4 5 6 7 8 9 10))) 3)
+  
+  ;; n-ary let
+  (check-equal? (run '(let () 4)) 4)
+  (check-equal? (run '(let ((x 4)) 3)) 3)
+  (check-equal? (run '(let ((x 4)) x)) 4)
+  (check-equal? (run '(let ((x 4) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((x (let ((y 4)) y)) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((y 6) (x (let ((y 4)) y))) (+ x y))) 10)
+  (check-equal? (run '(let ((y (let ((y 4)) y)) (x (let ((z 4)) z)) (z 2)) (+ z (+ x y)))) 10)
+  (check-equal? (run '(let ((x (add1 12)) (y 9)) (let ((x (add1 x)) (z y)) (+ z x)))) 23)
   )
 
 
