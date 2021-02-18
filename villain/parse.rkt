@@ -37,6 +37,10 @@
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
+    [(list 'cond) (Prim0 'void)]
+    [(list 'cond (list 'else e)) (parse-e e)]
+    [(list 'cond (list e1 e2) c ...)
+     (If (parse-e e1) (parse-e e2) (parse-e (cons 'cond c)))]
     [(list 'if e1 e2 e3)
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let bs e)
