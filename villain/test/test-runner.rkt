@@ -504,6 +504,14 @@
   (check-equal? (run '(sixth (list 1 2 3 4 5 6 7 8 9 10))) 6)
   (check-equal? (run '(tenth (list 1 2 3 4 5 6 7 8 9 10))) 10)
   (check-equal? (run '(third (list 1 2 3 4 5 6 7 8 9 10))) 3)
+
+  ;; Standard library: bool.rkt
+  (check-equal? (run '(boolean? #t)) #t)
+  (check-equal? (run '(boolean? #f)) #t)
+  (check-equal? (run '(boolean? 0)) #f)
+  (check-equal? (run '(not #t)) #f)
+  (check-equal? (run '(not #f)) #t)
+  (check-equal? (run '(not 0)) #f)
   
   ;; n-ary let
   (check-equal? (run '(let () 4)) 4)

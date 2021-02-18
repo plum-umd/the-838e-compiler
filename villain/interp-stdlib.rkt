@@ -3,6 +3,7 @@
 (require "parse.rkt" "ast.rkt")
 
 (require racket/runtime-path)
+(define-runtime-path bool.rkt "bool.rkt")
 (define-runtime-path list.rkt "list.rkt")
 (define-runtime-path math.rkt "math.rkt")
 
@@ -14,6 +15,7 @@
         [(Lib ps ds) ds]))))
 
 (define stdlib
-  (append (load-lib-ds list.rkt)
+  (append (load-lib-ds bool.rkt)
+          (load-lib-ds list.rkt)
           (load-lib-ds math.rkt)))
 
