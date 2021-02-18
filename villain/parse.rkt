@@ -40,7 +40,8 @@
     [(list 'if e1 e2 e3)
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'let bs e)
-     (Let (map parse-binding bs) (parse-e e))]      
+     (let ((x+es (map parse-binding bs)))
+       (Let (map first x+es) (map second x+es) (parse-e e)))]
       ; NOTE: We currently assume that there are no duplicate identifiers in bindings for a let
     [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(list 'match e0 cs ...)
@@ -73,7 +74,7 @@
 
 (define (parse-binding b)
   (match b
-    [(list (? symbol? v) e) (Binding v (parse-e e))]))
+    [(list (? symbol? v) e) (list v (parse-e e))]))
 
 (define op0
   '(read-byte peek-byte void gensym))

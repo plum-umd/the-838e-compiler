@@ -25,7 +25,7 @@
 ;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
-;;           | (Let (Listof Binding) Expr)
+;;           | (Let (Listof Id) (Listof Expr) Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
@@ -63,6 +63,7 @@
 (struct Prim3 (p e1 e2 e3) #:prefab)
 (struct If    (e1 e2 e3)   #:prefab)
 (struct Begin (e1 e2)      #:prefab)
+(struct Let   (xs es e)    #:prefab)
 (struct Var   (x)          #:prefab)
 (struct App   (f es)       #:prefab)
 (struct Match (e0 cs)      #:prefab)
@@ -75,13 +76,3 @@
 (struct Sym (s)            #:prefab)
 (struct Cons (p1 p2)       #:prefab)
 (struct Box (p)            #:prefab)
-
-;; Let and Binding structs + useful function
-(struct Let     (bs e2)         #:prefab)
-(struct Binding (v e)           #:prefab)
-
-;; (Listof Bindings) -> (Listof Id) . (Listof Expr)
-;; Returns a pair of the IDs and Expressions for a list of Bindings
-(define (split-bindings bs)
-    (match bs
-        [(list (Binding is vs) ...) (cons is vs)])) ; NOTE: assumes well-formed input

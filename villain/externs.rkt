@@ -46,17 +46,13 @@
     [(Begin e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
-    [(Let bs e)
-     (append (externs-bs bs)
+    [(Let xs es e)
+     (append (externs-es es)
              (externs-e e))]
     [(Match e cs)
      (append (externs-e e)
              (externs-cs cs))]
     [_ '()]))
-
-;; (Listof Bindings) -> (Listof Id)
-(define (externs-bs bs)
-  (externs-es (cdr (split-bindings bs))))
 
 ;; [Listof Clause] -> [Listof Id]
 (define (externs-cs cs)
