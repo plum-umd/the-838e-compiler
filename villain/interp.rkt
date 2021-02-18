@@ -72,10 +72,11 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
-    [(Let x e1 e2)
-     (match (interp-env e1 r ds)
-       ['err 'err]
-       [v (interp-env e2 (ext r x v) ds)])]
+    [(Let bs e)
+      (let ((split-bs (split-bindings bs)))
+        (match (interp-env* (cdr split-bs) r ds)
+          ['err 'err]
+          [vs (interp-env e (append (reverse (zip (car split-bs) vs)) r) ds)]))]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)
