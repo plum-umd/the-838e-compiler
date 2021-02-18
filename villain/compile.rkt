@@ -509,17 +509,41 @@
                  (Mov rax val-void)))])))                   
 
 ;; Id [Listof Expr] CEnv Boolean -> Asm
+(define (compile-app f es c tail?)
+  (if tail?
+      (compile-tail-app f es c)
+      (compile-nontail-app f es c)))
+
+;; Id [Listof Expr] CEnv -> Asm
+(define (compile-tail-app f es c)
+  (seq (compile-es es c)
+       (%% "move args for tail call")
+       (move-args (length c) (sub1 (length es)))
+       (Add rsp (* 8 (sub1 (length c))))
+       (Mov rcx (imm->bits (length es)))
+       (Jmp (symbol->label f))))
+
+;; Integer Integer -> Asm
+(define (move-args c-ct i)
+  (cond [(= c-ct 1) (seq (%% "already in place for tail call"))]
+        [(zero? i)  (seq (%% "done moving args for tail call"))]
+        [else
+         (seq (Mov r8 (Offset rsp i))
+              (Mov (Offset rsp (+ c-ct i -1)) r8)
+              (move-args c-ct (sub1 i)))]))
+
+;; Id [Listof Expr] CEnv -> Asm
 ;; Here's why this code is so gross: you have to align the stack for the call
 ;; but you have to do it *before* evaluating the arguments es, because you need
 ;; es's values to be just above 'rsp when the call is made.  But if you push
 ;; a frame in order to align the call, you've got to compile es in a static
 ;; environment that accounts for that frame, hence:
-(define (compile-app f es c tail?)
+(define (compile-nontail-app f es c)
   (if (even? (+ (length es) (length c))) 
       (seq (compile-es es c) 
            (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f)))            ; pop args
-      (seq (Sub rsp 8)                          ; adjust stack
+           (Call (symbol->label f)))
+      (seq (Sub rsp 8)
            (compile-es es (cons #f c))
            (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
