@@ -39,8 +39,10 @@
      (Begin (parse-e e1) (parse-e e2))]
     [(list 'if e1 e2 e3)
      (If (parse-e e1) (parse-e e2) (parse-e e3))]
-    [(list 'let (list (list (? symbol? x) e1)) e2)
-     (Let x (parse-e e1) (parse-e e2))]
+    [(list 'let bs e)
+     (let ((x+es (map parse-binding bs)))
+       (Let (map first x+es) (map second x+es) (parse-e e)))]
+      ; NOTE: We currently assume that there are no duplicate identifiers in bindings for a let
     [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(list 'match e0 cs ...)
      (Match (parse-e e0) (map parse-c cs))]
@@ -69,6 +71,10 @@
     [(list 'box (? symbol? x1))
      (Box x1)]
     [_ (error "bad match pattern" s)]))
+
+(define (parse-binding b)
+  (match b
+    [(list (? symbol? v) e) (list v (parse-e e))]))
 
 (define op0
   '(read-byte peek-byte void gensym))

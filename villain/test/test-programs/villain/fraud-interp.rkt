@@ -59,43 +59,43 @@
       ['Var   (let ((x (second e))) (lookup r x))]
       ['Prim0 (let ((p (second e))) (interp-prim0 p))]
       ['Prim1
-       (let ((p (second e)))
-         (let ((e (third e)))
-           (match (interp-env e r)
-             ['err 'err]
-             [v (interp-prim1 p v)])))]
+       (let ((p (second e))
+             (e (third e)))
+         (match (interp-env e r)
+           ['err 'err]
+           [v (interp-prim1 p v)]))]
       ['Prim2
-       (let ((p (second e)))
-         (let ((e1 (third e)))
-           (let ((e2 (fourth e)))         
-             (match (interp-env e1 r)
-               ['err 'err]
-               [v1 (match (interp-env e2 r)
-                     ['err 'err]
-                     [v2 (interp-prim2 p v1 v2)])]))))]
+       (let ((p  (second e))
+             (e1 (third e))
+             (e2 (fourth e)))
+         (match (interp-env e1 r)
+           ['err 'err]
+           [v1 (match (interp-env e2 r)
+                 ['err 'err]
+                 [v2 (interp-prim2 p v1 v2)])]))]
       ['If
-       (let ((e1 (second e)))
-         (let ((e2 (third e)))
-           (let ((e3 (fourth e)))
-             (match (interp-env e1 r)
-               ['err 'err]
-               [v
-                (if v
-                    (interp-env e2 r)
-                    (interp-env e3 r))]))))]
+       (let ((e1 (second e))
+             (e2 (third e))
+             (e3 (fourth e)))
+         (match (interp-env e1 r)
+           ['err 'err]
+           [v
+            (if v
+                (interp-env e2 r)
+                (interp-env e3 r))]))]
       ['Begin
-       (let ((e1 (second e)))
-         (let ((e2 (third e)))
-           (match (interp-env e1 r)
-             ['err 'err]
-             [v    (interp-env e2 r)])))]
+       (let ((e1 (second e))
+             (e2 (third e)))
+         (match (interp-env e1 r)
+           ['err 'err]
+           [v    (interp-env e2 r)]))]
       ['Let
-       (let ((x (second e)))
-         (let ((e1 (third e)))
-           (let ((e2 (fourth e)))
-             (match (interp-env e1 r)
-               ['err 'err]
-               [v (interp-env e2 (ext r x v))]))))]))
+       (let ((x  (second e))
+             (e1 (third e))
+             (e2 (fourth e)))
+         (match (interp-env e1 r)
+           ['err 'err]
+           [v (interp-env e2 (ext r x v))]))]))
 
 ;; Env Id -> Value
   (define (lookup r x)

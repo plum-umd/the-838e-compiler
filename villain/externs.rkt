@@ -46,9 +46,9 @@
     [(Begin e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
-    [(Let x e1 e2)
-     (append (externs-e e1)
-             (externs-e e2))]
+    [(Let xs es e)
+     (append (externs-es es)
+             (externs-e e))]
     [(Match e cs)
      (append (externs-e e)
              (externs-cs cs))]
