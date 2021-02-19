@@ -517,6 +517,13 @@
   (check-equal? (run '(not #t)) #f)
   (check-equal? (run '(not #f)) #t)
   (check-equal? (run '(not 0)) #f)
+
+  ; Standard library: math.rkt
+  (check-equal? (run '(* 1 2 3 4)) 24)
+  (check-equal? (run '(* 1 (* 2 1) 2 2)) 8)
+  (check-equal? (run '(let ((x (+ 1 2)))
+                      (let ((z (* 1 x)))
+                        (* x z)))) 9)
   
   ;; n-ary let
   (check-equal? (run '(let () 4)) 4)
@@ -555,6 +562,11 @@
                                (vector-ref x 2))))
                 3)
   )
+  ; apply
+  (check-equal? (run '(apply * 1 2 3)) 6)
+  (check-equal? (run '(apply * 4 3 2 1)) 24)
+
+)
 
 
 (define (test-runner-io run)

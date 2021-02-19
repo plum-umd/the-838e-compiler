@@ -80,6 +80,21 @@
      (match (interp-env* es r ds)
        ['err 'err]
        [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
+    [(Apply f ex)
+     (match (interp-env ex r ds)
+       [(list vs ...)
+        (match (defns-lookup ds f)
+          [(Defn f xs e)
+           ; check arity matches
+           (if (= (length xs) (length vs))
+               (interp-env e (zip xs vs) ds)
+               'err)] 
+          [(Defn* f xs xs* e) 
+           (if (>= (length vs) (length xs)) 
+               (interp-env e 
+                  (append (zip xs (take vs (length xs))) 
+                          (list (list xs* (list-tail vs (length xs))))) ds)
+               'err)])])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)

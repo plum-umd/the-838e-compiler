@@ -135,6 +135,7 @@
     [(Vec ds)           (compile-vector ds c)]    
     [(Var x)            (compile-variable x c)]
     [(App f es)         (compile-app f es c tail?)]
+    [(Apply f e)        (compile-apply f e c)]
     [(Prim0 p)          (compile-prim0 p c)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
@@ -231,6 +232,29 @@
 (define (compile-variable x c)
   (let ((i (lookup x c)))
     (seq (Mov rax (Offset rsp i)))))
+
+;; Apply Func Expr CEnv -> Asm
+(define (compile-apply f e c)
+  (let ((ret (gensym 'ret))
+        (loop (gensym 'loop)))
+   (seq (Lea r8 ret)
+        (Push r8)
+        (compile-e-nontail e c)
+        (assert-cons rax c)
+        (Mov rcx (imm->bits 0))
+      (Label loop)
+        (assert-cons rax c)       ; must be cons type
+        (Xor rax type-cons)       ; convert to pointer
+        (Mov r8 (Offset rax 8))   ; get first element
+        (Push r8)                 ; push on to stack
+        (Add rcx (imm->bits 1))   ; increment count
+        (Mov rax (Offset rax 0))  ; get second
+        (Cmp rax (imm->bits '()))
+        (Jne loop)
+        ; rcx alread has argument count
+        (Jmp (symbol->label f))  ; result should be in rax
+      (Label ret)
+)))
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)
