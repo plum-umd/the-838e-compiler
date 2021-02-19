@@ -26,22 +26,22 @@ int64_t write_byte(int64_t c) {
 }
 
 int64_t read_char(void) {
-  wint_t c = getwc(in);
+  wchar_t c = getwc(in);
   return (c == WEOF) ?
     val_eof :
-    (int64_t)(c << int_shift);
+    (int64_t)(c << char_shift | char_type_tag);
 }
 
 int64_t peek_char(void) {
-  wint_t c = getwc(in);
+  wchar_t c = getwc(in);
   ungetwc(c, in);
-  return (c == EOF) ?
+  return (c == WEOF) ?
     val_eof :
-    (int64_t)(c << int_shift);
+    (int64_t)(c << char_shift | char_type_tag);
 }
 
 int64_t write_char(int64_t c) {
-  int64_t codepoint = c >> int_shift;
+  int64_t codepoint = c >> char_shift;
   putwc((wchar_t) codepoint, out);
   return 0;
 }

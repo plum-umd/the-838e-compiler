@@ -83,6 +83,7 @@
     ['read-byte 'read_byte]
     ['read-char 'read_char]
     ['write-byte 'write_byte]
+    ['write-char 'write_char]
     ['gensym 'gensym]
     #;['string->symbol 'str_to_symbol]  ;; always included now
     [_ (char-op->uc o)]))

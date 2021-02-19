@@ -304,7 +304,7 @@
                (unpad-stack c)
                (Mov rax val-void))]
          ['write-char
-          (seq (assert-byte c)
+          (seq (assert-char rax c)
                (pad-stack c)
                (Mov rdi rax)
                (Call 'write_char)

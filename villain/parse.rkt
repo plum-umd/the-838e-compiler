@@ -83,7 +83,7 @@
 (define op0
   '(read-byte peek-byte read-char peek-char void gensym))
 (define op1
-  '(add1 sub1 zero? char? write-byte eof-object?
+  '(add1 sub1 zero? char? write-byte write-char eof-object?
          integer->char char->integer box unbox empty? car cdr
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
