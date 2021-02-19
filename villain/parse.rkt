@@ -87,12 +87,12 @@
 (define op1
   '(add1 sub1 zero? char? write-byte write-char eof-object?
          integer->char char->integer box unbox empty? car cdr
-         integer-length
+         integer-length integer? 
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string?
          symbol->string string->symbol symbol? vector? vector-length))
 (define op2
-  '(+ - eq? cons string-ref make-string make-vector vector-ref))  
+  '(+ - eq? cons string-ref make-string <= make-vector vector-ref))  
 
 (define op3
   '(string-set!  vector-set!))  
