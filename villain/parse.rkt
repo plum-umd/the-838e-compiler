@@ -74,7 +74,7 @@
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string?
-         symbol->string string->symbol symbol? vector? vector-length list?))
+         symbol->string string->symbol symbol? vector? vector-length))
 (define op2
   '(+ - eq? cons string-ref make-string make-vector vector-ref))  
 (define op3

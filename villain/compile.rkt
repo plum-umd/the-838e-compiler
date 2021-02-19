@@ -11,7 +11,7 @@
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref, list?
+                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
@@ -299,23 +299,7 @@
          ['vector-length (seq (assert-vector rax c)
                               (Xor rax type-vector)
                               (Mov rax (Offset rax 0)))]
-         ['list? (let ((l1 (gensym)) (l2 (gensym)) (l3 (gensym))) (seq
-                  (Label l1)
-                  (Mov r9 rax)
-
-                  (type-pred ptr-mask type-cons)
-                  (Cmp rax (imm->bits #f))
-                  (Je l2)
-                  (Xor r9 type-cons)
-                  (Mov rax (Offset r9 0))     ;cdr into rax
-                  (Jmp l1)
-                  (Label l2)
-                  (Cmp r9 val-empty)
-                  (Jne l3)
-                  (Mov rax (imm->bits #t))
-
-                  (Label l3)
-                      ))]
+       
          )))
 
 ;; Op2 Expr Expr CEnv -> Asm
