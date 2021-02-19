@@ -15,6 +15,7 @@
     [(list 'integer->char (? codepoint?)) (integer->char v)]
     [(list 'eof-object? v)                (eof-object? v)]
     [(list 'write-byte (? byte?))         (write-byte v)]
+    [(list 'write-char (? char?))         (write-char v)]
     [(list 'box v)                        (box v)]
     [(list 'unbox (? box?))               (unbox v)]
     [(list 'car (? pair?))                (car v)]

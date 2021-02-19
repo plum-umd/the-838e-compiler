@@ -593,7 +593,20 @@
                      "")
                 (cons (void) "abcdefghijklmnopqrstuvwxyz"))
 
-
- 
-
+  ;; Villain examples
+  (check-equal? (run '(read-char) "a") (cons #\a ""))
+  (check-equal? (run '(peek-char) "a") (cons #\a ""))
+  (check-equal? (run '(list (read-char) (read-char)) "ab") (cons '(#\a #\b) ""))
+  (check-equal? (run '(list (peek-char) (read-char) (read-char)) "ab") (cons '(#\a #\a #\b) ""))
+  (check-equal? (run '(write-char #\a) "") (cons (void) "a"))
+  (check-equal? (run '(read-char) "λ") (cons #\λ ""))
+  (check-equal? (run '(peek-char) "λ") (cons #\λ ""))
+  (check-equal? (run '(list (read-char) (read-char)) "λσ") (cons '(#\λ #\σ) ""))
+  (check-equal? (run '(list (peek-char) (read-char) (read-char)) "λσ") (cons '(#\λ #\λ #\σ) ""))
+  (check-equal? (run '(write-char #\λ) "") (cons (void) "λ"))
+  (check-equal? (run '(read-char) "文") (cons #\文 ""))
+  (check-equal? (run '(peek-char) "文") (cons #\文 ""))
+  (check-equal? (run '(write-char #\文) "") (cons (void) "文"))
+  (check-equal? (run '(list (read-char) (read-char)) "文斈") (cons '(#\文 #\斈) ""))
+  (check-equal? (run '(list (peek-char) (read-char) (read-char)) "文斈") (cons '(#\文 #\文 #\斈) ""))
   )
