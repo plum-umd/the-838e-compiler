@@ -7,7 +7,7 @@
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
-                               ; Also used in mul in vector functions
+                              
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
@@ -405,9 +405,7 @@
                  (Sub r9 (imm->bits 1))       ; 0-indexing
                  (Cmp rax r9)
                  (Jg (error-label c))
-                 (Mov r9 (imm->bits 8))       ;r9 is just 8
-                 (Mul r9)                     ;stores result in rax of index * 8?
-                 (Mov rax rdx)                ;lower portion in rax
+                 (Sal rax 3)                  ;Shift the index 3 to the left instead of multiplying by 8
                  (Add r8 rax)                 
                  (Mov rax (Offset r8 0))      ;Accounting for 0-indexing, we need to shift one more spot over
 
@@ -532,11 +530,9 @@
                  (Cmp r10 r9)
                  (Jg (error-label c))
                  (Mov r9 (imm->bits 8))       ;r9 is just 8
-                 (Push rax)                    ; saving the value
-                 (Mov rax r10)                ;rax is the index
-                 (Mul r9)                     ;stores result in rdx:rax of index * 8?
-                 (Pop rax)                    
-                 (Add r8 rdx)                 
+
+                 (Sal r10 3)                   ;shift index to multiply by 8
+            
                  (Mov (Offset r8 0) rax)      
                  (Mov rax val-void)
           )
