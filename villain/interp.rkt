@@ -104,15 +104,15 @@
                (if (= l v)
                    (interp-env e r ds)
                    (interp-match v cs r ds))
-               (if (eq? l v)
+               (if (equal? l v)
                    (interp-env e r ds)
                    (interp-match v cs r ds)))]
           [(String s)
-           (if (eq? v s)
+           (if (equal? v s)
                (interp-env e r ds)
                (interp-match v cs r ds))]
           [(Symbol s)
-           (if (eq? v s)
+           (if (equal? v s)
                (interp-env e r ds)
                (interp-match v cs r ds))]
           [(Box x)
@@ -135,7 +135,7 @@
 
 ;; Defns Symbol -> Defn
 (define (defns-lookup ds f)
-  (findf (match-lambda [(Defn g _ _) (eq? f g)])
+  (findf (match-lambda [(Defn g _ _) (equal? f g)])
          ds))
 
 (define (zip xs ys)
