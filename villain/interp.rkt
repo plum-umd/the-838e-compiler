@@ -37,9 +37,9 @@
     [(Float f) f]
     [(String s) s]
     [(Symbol s) s]
-    [(Vector v) v]
     [(Eof)    eof]
     [(Empty)  '()]
+    [(Vector v) (list->vector (map (lambda (e1) (interp-env e1 r ds)) (vector->list v)))]
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
@@ -110,6 +110,7 @@
        ['err 'err]
        [v (interp-match v cs r ds)])]
     [_ 'err]))
+
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)

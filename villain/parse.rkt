@@ -27,8 +27,9 @@
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Float s)]
-    [(? string?)                   (String s)] 
-    [(? vector?)                   (Vector s)]
+    [(? string?)                   (String s)]
+                                                     ;;in order to properly parse the args
+    [(? vector?)                   (Vector  (parse-vec-lit s))]
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
@@ -81,6 +82,24 @@
 (define (parse-binding b)
   (match b
     [(list (? symbol? v) e) (list v (parse-e e))]))
+
+(define (parse-vec-lit-aux s)
+  (match s
+    [(? integer?)                  (Int s)]
+    [(? boolean?)                  (Bool s)]
+    [(? char?)                     (Char s)]
+    [(? flonum?)                   (Float s)]
+    [(? string?)                   (String s)]
+                                                     ;;Only basic types in vector literals for now
+                                                     ;;Not sure best way to work with lists because
+                                                     ;;Parsing hasn't been done for them yet
+    [_ (Symbol s)]
+    )
+  )
+
+(define (parse-vec-lit v)
+  (list->vector (map parse-vec-lit-aux (vector->list v)))
+  )
 
 (define op0
   '(read-byte peek-byte read-char peek-char void gensym))
