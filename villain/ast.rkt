@@ -16,7 +16,8 @@
 ;;           | (Symbol Symbol)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
-;;           | (Prim2 Op2 Expr Expr)      
+;;           | (Prim2 Op2 Expr Expr)
+;;           | (Prim2Var Op2Var Expr Expr)
 ;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
@@ -34,8 +35,8 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq?
 ;;           | 'cons
-;;           | 'make-prefab-struct
-;;           | 'string-ref               
+;;           | 'string-ref
+;; type Op2Var = 'make-prefab-struct
 ;; type Op3  = 'string-set!                    
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
@@ -56,6 +57,7 @@
 (struct Prim1 (p e)        #:prefab)
 (struct Prim2 (p e1 e2)    #:prefab)
 (struct Prim3 (p e1 e2 e3) #:prefab)
+(struct Prim2Var (p e1 rest) #:prefab)
 (struct If    (e1 e2 e3)   #:prefab)
 (struct Begin (e1 e2)      #:prefab)
 (struct Let   (x e1 e2)    #:prefab)

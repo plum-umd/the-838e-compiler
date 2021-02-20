@@ -30,6 +30,7 @@
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
+    [(list (? (op? op2Var) p2) e1 rest ...) (Prim2Var p2 (parse-e e1) (map parse-e rest))]
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
@@ -75,7 +76,8 @@
          symbol->string string->symbol symbol?))
 (define op2
   '(+ - eq? cons string-ref make-string make-prefab-struct))
-  
+(define op2Var
+  '(make-prefab-struct))
 (define op3
   '(string-set!))  
 
