@@ -34,11 +34,7 @@
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
-    [(list (? (op? op2Var) p2)
-           (list (? symbol? s) (? exact-nonnegative-integer? n1)
-                 (list (? exact-nonnegative-integer? n2) v2)
-                 (? list? l))
-           rest ...) (Prim2Var p2 (parse-e e1) (map parse-e rest))]
+    [(list 'make-prefab-struct (? prefab-key? k) rest ...) (Mps (parse-prefab-key k) (map parse-e rest))]
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
@@ -85,6 +81,25 @@
   (match b
     [(list (? symbol? v) e) (list v (parse-e e))]))
 
+(define (parse-prefab-key k)
+  (match k
+    [(cons 'quote (list (? symbol? s)))
+     (let ((s (parse-e (cons 'quote (list s))))
+               (n1 (parse-e 0))
+               (auto (list (parse-e 0) (parse-e #f)))
+               (mut '()))
+           (Prefab-Key s n1 auto mut))]
+    [(list (cons 'quote (list (? symbol? s))) (? exact-nonnegative-integer? n1) ...
+           (list (? exact-nonnegative-integer? n2) v2) ...
+           (? list? l)...)
+     (if (and (<= (length n1) 1) (<= (length n2) 1) (<= (length v2) 1) (<= (length l) 1))
+         (let ((s (parse-e (cons 'quote (list s))))
+               (n1 (if (= (length n1) 1) (parse-e (car n1)) (parse-e 0)))
+               (auto (if (and (= (length n2) 1) (= (length v2) 1)) (list (parse-e (car n2)) (parse-e (car v2))) (list (parse-e 0) (parse-e #f))))
+               (mut (if (= (length l) 1) (map parse-e (car l)) '())))
+           (Prefab-Key s n1 auto mut))
+         (error "invalid prefab key"))]))
+    
 (define op0
   '(read-byte peek-byte read-char peek-char void gensym))
 (define op1
@@ -96,11 +111,16 @@
          symbol->string string->symbol symbol?))
 (define op2
   '(+ - eq? cons string-ref make-string <=))
-(define op2Var
-  '(make-prefab-struct))
 (define op3
   '(string-set!))  
 (define (op? ops)
   (λ (x)
     (and (symbol? x)
          (memq x ops))))
+(define (prefab-key? k)
+  (match k
+    [(cons 'quote (list (? symbol? s))) #t]
+    [(list (cons 'quote (list (? symbol? s))) (? exact-nonnegative-integer? n1) ...
+           (list (? exact-nonnegative-integer? n2) v2) ...
+           (? list? l)...) #t] ;;Only allowed until we implement vectors, list? should change to vector?
+    [_ #f]))

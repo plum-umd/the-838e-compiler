@@ -22,7 +22,7 @@
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
 ;;           | (Prim2 Op2 Expr Expr)
-;;           | (Prim2Var Op2Var Expr Expr)
+;;           | (Mps Prefab-Key Expr...)     
 ;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
@@ -40,7 +40,6 @@
 ;;           | 'empty?
 ;; type Op2  = '+ | '- | 'eq? | '<=
 ;;           | 'cons | 'string-ref
-;; type Op2Var = 'make-prefab-struct
 ;; type Op3  = 'string-set!                    
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
@@ -50,6 +49,8 @@
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
+;; type Prefab-Key = (Listof Prefab-Key-Entries)
+;; type Prefab-Key-Entries = Symbol | Integer | (Pairof Integer Expr) | (Listof Integer)
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
@@ -63,7 +64,8 @@
 (struct Prim1 (p e)        #:prefab)
 (struct Prim2 (p e1 e2)    #:prefab)
 (struct Prim3 (p e1 e2 e3) #:prefab)
-(struct Prim2Var (p e1 rest) #:prefab)
+(struct Mps (pk rest) #:prefab)
+(struct Prefab-Key (s n1 auto mut) #:prefab)
 (struct If    (e1 e2 e3)   #:prefab)
 (struct Begin (e1 e2)      #:prefab)
 (struct Let   (xs es e)    #:prefab)
