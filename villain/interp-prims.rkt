@@ -69,7 +69,7 @@
 
 ;; Op3 Value Value Value -> Answer
 (define (interp-prim4 p v1 v2 v3 v4)
-  (match (list p v1 v2 v3)
+  (match (list p v1 v2 v3 v4)
     [(list 'vector-cas! (? vector?)
            (? integer?) v3 v4)        (if (<= 0 v2 (sub1 (vector-length v1)))
                                               (vector-cas! v1 v2 v3 v4)

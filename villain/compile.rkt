@@ -131,25 +131,26 @@
 ;; Expr CEnv -> Asm
 (define (compile-e e c)
   (seq (match e
-         [(Int i)            (compile-value i)]
-         [(Bool b)           (compile-value b)]
-         [(Char c)           (compile-value c)]
-         [(Float f)          (compile-value f)]
-         [(Eof)              (compile-value eof)]
-         [(Empty)            (compile-value '())]
-         [(String s)         (compile-string s)]      
-         [(Symbol s)         (compile-symbol s c)]
-         [(Vector v)         (compile-vector v c)]
-         [(Var x)            (compile-variable x c)]
-         [(App f es)         (compile-app f es c)]    
-         [(Prim0 p)          (compile-prim0 p c)]
-         [(Prim1 p e)        (compile-prim1 p e c)]
-         [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-         [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
-         [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
-         [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let xs es e)      (compile-let xs es e c)]
-         [(Match e0 cs)      (compile-match e0 cs c)])))
+         [(Int i)              (compile-value i)]
+         [(Bool b)             (compile-value b)]
+         [(Char c)             (compile-value c)]
+         [(Float f)            (compile-value f)]
+         [(Eof)                (compile-value eof)]
+         [(Empty)              (compile-value '())]
+         [(String s)           (compile-string s)]      
+         [(Symbol s)           (compile-symbol s c)]
+         [(Vector v)           (compile-vector v c)]
+         [(Var x)              (compile-variable x c)]
+         [(App f es)           (compile-app f es c)]    
+         [(Prim0 p)            (compile-prim0 p c)]
+         [(Prim1 p e)          (compile-prim1 p e c)]
+         [(Prim2 p e1 e2)      (compile-prim2 p e1 e2 c)]
+         [(Prim3 p e1 e2 e3)   (compile-prim3 p e1 e2 e3 c)]
+         [(Prim4 p e1 e2 e3 e4)(compile-prim4 p e1 e2 e3 e4 c)]
+         [(If e1 e2 e3)        (compile-if e1 e2 e3 c)]
+         [(Begin e1 e2)        (compile-begin e1 e2 c)]
+         [(Let xs es e)        (compile-let xs es e c)]
+         [(Match e0 cs)        (compile-match e0 cs c)])))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -486,7 +487,7 @@
                  (Sub r9 (imm->bits 1))       ; 0-indexing
                  (Cmp rax r9)
                  (Jg (error-label c))
-                 (Sal rax 3)                  ;Shift the index 3 to the left instead of multiplying by 8
+                 (Sar rax 1)                  ;Shift the index 1 to the right 
                  (Add r8 rax)                 
                  (Mov rax (Offset r8 0))      ;Accounting for 0-indexing, we need to shift one more spot over
 
@@ -610,16 +611,59 @@
                  (Sub r9 (imm->bits 1))       ; 0-indexing
                  (Cmp r10 r9)
                  (Jg (error-label c))
-                 (Mov r9 (imm->bits 8))       ;r9 is just 8
 
-                 (Sal r10 3)                   ;shift index to multiply by 8
-            
+                 (Sar r10 1)                   ;shift index to multiply by 8
+                 (Add r8 r10)
                  (Mov (Offset r8 0) rax)      
                  (Mov rax val-void)
           )
          ]
 )))                   
 
+;; Op3 Expr Expr Expr Expr CEnv -> Asm
+
+(define (compile-prim4 p e1 e2 e3 e4 c)
+  (seq (compile-e e1 c)
+       (Push rax)
+       (compile-e e2 (cons #f c))
+       (Push rax)
+       (compile-e e3 (cons #f (cons #f c)))
+       (Push rax)
+       (compile-e e4 (cons #f (cons #f (cons #f c))))
+       (match p
+         ['vector-cas!
+          (let ((l1 (gensym 'different) ))(seq
+           (Pop r10)   ;Old-v in r10
+           (Pop r8)    ;Pos in r8
+           (assert-integer r8 c)
+           (Pop r9)    ;Vector in r9
+           (Push r8)    ;Juggling registers
+           (Mov r8 r9) ;moving Vector to r8
+           (assert-vector r8 c)
+           (Pop r9)    ;Pos now in r9
+           (Push rax)  ;pushing new-v onto stack, don't need it yet and I don't want to add a new register
+           (Cmp r9 0)
+           (Jl (error-label c))
+           (Xor r8 type-vector)
+           (Mov rax (Offset r8 0))      ;length now in rax
+           (Add r8 8)                   ; r8 will now be pointing to the first element
+           (Sub rax (imm->bits 1))       ; 0-indexing
+           (Cmp r9 rax)
+           (Jg (error-label c))
+           (Sar r9 1)                   ;shift index to multiply by 8
+           (Add r8 r9)                  ;r8 now pointing to the correct element
+           (Cmp (Offset r8 0) r10)
+           (Mov rax (imm->bits #f))
+           (Pop r10)
+           (Jne l1)
+           (Mov rax (imm->bits #t))
+           (Pop r10)
+           (Mov (Offset r8 0) r10)      ;new value into the vector
+           (Label l1)
+           ))]
+         )
+       )
+  )
 ;; Id [Listof Expr] CEnv -> Asm
 ;; Here's why this code is so gross: you have to align the stack for the call
 ;; but you have to do it *before* evaluating the arguments es, because you need
