@@ -10,12 +10,12 @@
                               
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match, 
-                  ; compile-define
+                  ; compile-define, vector-cas!
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref
+                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref, vector-cas!
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!, vector-cas!
 
 (define rcx 'rcx) ; arity indicator
 
@@ -601,7 +601,7 @@
                  (Cmp r10 r9)
                  (Jg (error-label c))
 
-                 (Sar r10 1)                   ;shift index to multiply by 8
+                 (Sar r10 1)                  
                  (Add r8 r10)
                  (Mov (Offset r8 0) rax)      
                  (Mov rax val-void)
@@ -622,31 +622,31 @@
        (match p
          ['vector-cas!
           (let ((l1 (gensym 'different) ))(seq
-           (Pop r10)   ;Old-v in r10
-           (Pop r8)    ;Pos in r8
+           (Pop r10)                         ;Old-v in r10
+           (Pop r8)                          ;Pos in r8
            (assert-integer r8 c)
-           (Pop r9)    ;Vector in r9
-           (Push r8)    ;Juggling registers
-           (Mov r8 r9) ;moving Vector to r8
+           (Pop r9)                          ;Vector in r9
+           (Push r8)                         ;Juggling registers
+           (Mov r8 r9)                       ;moving Vector to r8
            (assert-vector r8 c)
-           (Pop r9)    ;Pos now in r9
-           (Push rax)  ;pushing new-v onto stack, don't need it yet and I don't want to add a new register
+           (Pop r9)                          ;Pos now in r9
+           (Push rax)                        ;pushing new-v onto stack, don't need it yet
            (Cmp r9 0)
            (Jl (error-label c))
            (Xor r8 type-vector)
-           (Mov rax (Offset r8 0))      ;length now in rax
-           (Add r8 8)                   ; r8 will now be pointing to the first element
-           (Sub rax (imm->bits 1))       ; 0-indexing
+           (Mov rax (Offset r8 0))           
+           (Add r8 8)                        
+           (Sub rax (imm->bits 1))           
            (Cmp r9 rax)
            (Jg (error-label c))
-           (Sar r9 1)                   ;shift index to multiply by 8
-           (Add r8 r9)                  ;r8 now pointing to the correct element
+           (Sar r9 1)                     
+           (Add r8 r9)                  
            (Cmp (Offset r8 0) r10)
            (Mov rax (imm->bits #f))
-           (Pop r10)
+           (Pop r10)                        ;new-v is now in r10
            (Jne l1)
            (Mov rax (imm->bits #t))
-           (Mov (Offset r8 0) r10)      ;new value into the vector
+           (Mov (Offset r8 0) r10)      
            (Label l1)
            ))]
          )
