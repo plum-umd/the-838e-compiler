@@ -41,7 +41,9 @@
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
+    [(Prim0 'read-char) (read-char)]
     [(Prim0 'peek-byte) (peek-byte)]
+    [(Prim0 'peek-char) (peek-char)]
     [(Prim0 'gensym)    (gensym)]
     [(Prim1 p e)
      (match (interp-env e r ds)
@@ -72,10 +74,10 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
-    [(Let x e1 e2)
-     (match (interp-env e1 r ds)
+    [(Let xs es e)
+     (match (interp-env* es r ds)
        ['err 'err]
-       [v (interp-env e2 (ext r x v) ds)])]
+       [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)

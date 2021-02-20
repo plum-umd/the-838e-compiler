@@ -10,6 +10,7 @@ else
 endif
 
 objs_lib = \
+	bool.o \
 	math.o \
 	list.o
 
