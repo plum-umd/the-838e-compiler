@@ -128,7 +128,7 @@
     [(Empty)               (compile-value '())]
     [(String s)            (compile-string s)]
     [(Symbol s)            (compile-symbol s c)]
-    [(Vector v)            (compile-vector v c)]
+    [(Vec ds)              (compile-vector ds c)]
     [(Var x)               (compile-variable x c)]
     [(App f es)            (compile-app f es c tail?)]
     [(Prim0 p)             (compile-prim0 p c)]
@@ -161,16 +161,16 @@
          (Or rax type-string)
          (Add rbx (* 8 (add1 (ceiling (/ length 3))))))))
 
-;; Vector CEnv -> Asm
-(define (compile-vector v c)
-  (let ((length (vector-length v))) ;; are we allowed to do this?
-    (seq (Mov r9 (imm->bits length))
+;; Vec CEnv -> Asm
+(define (compile-vector ds c)
+  (let ((len (length ds)))
+    (seq (Mov r9 (imm->bits len))
          (Mov (Offset rbx 0) r9) ;;write length in first word, will also store rbx location
          (Mov r10 rbx)
          (Add rbx 8)
          (Mov r9 rbx)    ;;r9 will be used in compile-vec-elems as a temporary heap pointer
-         (Add rbx (* 8 length)) ;; rbx now points to next open space on heap for future calls
-         (compile-vec-elems (vector->list v) c)
+         (Add rbx (* 8 len)) ;; rbx now points to next open space on heap for future calls
+         (compile-vec-elems ds c)
          (Mov rax r10)
          (Or rax type-vector))))
 

@@ -533,18 +533,28 @@
   (check-equal? (run '(cond (0 2) (else 1))) 2)
 
   
-;;Vector Examples
-(check-equal? (run '(vector 2 3)) (vector 2 3))
-  (check-equal? (run '(vector (+ 2 3))) (vector (+ 2 3)))
-(check-equal? (run #(2 s 3)) #(2 s 3))
-(check-equal? (run  (let ((x (vector 1 2 6))) (begin (vector-set! x 2 4) x)) )  (let ((x (vector 1 2 6))) (begin (vector-set! x 2 4) x)) )
-(check-equal? (run '(make-vector 2 "a")) (make-vector 2 "a"))
-(check-equal? (run '(let ((x (vector 1 2 3))) (begin (vector-set! x 0 3) (vector-ref x 0)))) (let ((x (vector 1 2 3))) (begin (vector-set! x 0 3) (vector-ref x 0))))
-(check-equal? (run '(let ((x (vector 1 2 6))) (begin (vector-set! x 2 3) (vector-ref x 2)))) (let ((x (vector 1 2 6))) (begin (vector-set! x 2 3) (vector-ref x 2))))
-(check-equal? (run '(let ((x (vector 1 2 6))) (begin (vector-cas! x 1 2 4) (vector-ref x 1)))) (let ((x (vector 1 2 6))) (begin (vector-cas! x 1 2 4) (vector-ref x 1))))
-(check-equal? (run '(vector-cas! (vector 1) 0 3 4)) (vector-cas! (vector 1) 0 3 4))
-  
-(check-equal? (run '(vector-cas! (vector 1 2 3) 1 2 5)) (vector-cas! (vector 1 2 3) 1 2 5))
+  ;;Vector Examples
+  (check-equal? (run '#(2 3)) (vector 2 3))
+  (check-equal? (run '#(2 s 3)) #(2 s 3))
+  (check-equal? (run  (let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 4) x)))
+                #(0 0 4))
+  (check-equal? (run '(make-vector 2 "a"))
+                #("a" "a"))
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 0 3)
+                               (vector-ref x 0))))
+                3)
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 3)
+                               (vector-ref x 2))))
+                3)
+  (check-equal? (run '(let ((x (make-vector 3 2)))
+                        (begin (vector-cas! x 1 2 4)
+                               (vector-ref x 1))))
+                4)
+  (check-equal? (run '(vector-cas! (make-vector 1 1) 0 3 4)) #f)
+  (check-equal? (run '(vector-cas! (make-vector 3 2) 1 2 5)) #t)
   )
 
 

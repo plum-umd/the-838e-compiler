@@ -18,7 +18,7 @@
 ;;           | (Bool Boolean)
 ;;           | (Char Character)
 ;;           | (String String)
-;;           | (Vector Vector)
+;;           | (Vec (Listof Expr))
 ;;           | (Symbol Symbol)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
@@ -74,7 +74,7 @@
 (struct Var   (x)             #:prefab)
 (struct App   (f es)          #:prefab)
 (struct Match (e0 cs)         #:prefab)
-(struct Vector (v)            #:prefab)
+(struct Vec   (es)            #:prefab)
 
 ;; Match clause
 (struct Clause (p e)          #:prefab)

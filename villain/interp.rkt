@@ -39,7 +39,7 @@
     [(Symbol s) s]
     [(Eof)    eof]
     [(Empty)  '()]
-    [(Vector v) (list->vector (map (lambda (e1) (interp-env e1 r ds)) (vector->list v)))]
+    [(Vec es) (list->vector (interp-env* es r ds))]
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]

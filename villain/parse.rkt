@@ -29,7 +29,7 @@
     [(? flonum?)                   (Float s)]
     [(? string?)                   (String s)]
                                                      ;;in order to properly parse the args
-    [(? vector?)                   (Vector  (parse-vec-lit s))]
+    [(? vector?)                   (Vec  (parse-vec-lit (vector->list s)))]
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
@@ -52,7 +52,6 @@
        (Let (map first x+es) (map second x+es) (parse-e e)))]
       ; NOTE: We currently assume that there are no duplicate identifiers in bindings for a let
     [(cons 'quote (list (? symbol? x))) (Symbol x)]
-    [(cons 'vector es) (Vector (list->vector (map parse-e es)))]
     [(list 'match e0 cs ...)
      (Match (parse-e e0) (map parse-c cs))]
     [(cons (? symbol? f) es)
@@ -99,9 +98,8 @@
     )
   )
 
-(define (parse-vec-lit v)
-  (list->vector (map parse-vec-lit-aux (vector->list v)))
-  )
+(define (parse-vec-lit ds)
+  (map parse-vec-lit-aux ds))
 
 (define op0
   '(read-byte peek-byte read-char peek-char void gensym))
