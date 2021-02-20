@@ -32,7 +32,7 @@
            (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
-           (compile-e e '())
+           (compile-e-tail e '())
            (Mov rdx rbx) ; return heap pointer in second return register           
            (Ret)
            (compile-defines ds)
@@ -82,7 +82,7 @@
      (seq (Label (symbol->label f)) 
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
-          (compile-e e (reverse xs))
+          (compile-e-tail e (reverse xs))
           ; return
           (Add rsp (* 8 (length xs))) ; pop args
           (Ret))]
@@ -110,32 +110,37 @@
             (Label end)
 
             (Push rax) ; push the rest list
-            (compile-e e (cons xs* (reverse xs)))
+            (compile-e-tail e (cons xs* (reverse xs)))
             ; return
             (Add rsp (* 8 (add1 (length xs)))) ; pop args
             (Ret)))]))
 
-;; Expr CEnv -> Asm
-(define (compile-e e c)
-  (seq (match e
-         [(Int i)            (compile-value i)]
-         [(Bool b)           (compile-value b)]
-         [(Char c)           (compile-value c)]
-         [(Float f)          (compile-value f)]
-         [(Eof)              (compile-value eof)]
-         [(Empty)            (compile-value '())]
-         [(String s)         (compile-string s)]      
-         [(Symbol s)         (compile-symbol s c)]
-         [(Var x)            (compile-variable x c)]
-         [(App f es)         (compile-app f es c)]    
-         [(Prim0 p)          (compile-prim0 p c)]
-         [(Prim1 p e)        (compile-prim1 p e c)]
-         [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-         [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
-         [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
-         [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let xs es e)      (compile-let xs es e c)]
-         [(Match e0 cs)      (compile-match e0 cs c)])))
+;; Expr CEnv Boolean -> Asm
+(define (compile-e e c tail?)
+  (match e
+    [(Int i)            (compile-value i)]
+    [(Bool b)           (compile-value b)]
+    [(Char c)           (compile-value c)]
+    [(Float f)          (compile-value f)]
+    [(Eof)              (compile-value eof)]
+    [(Empty)            (compile-value '())]
+    [(String s)         (compile-string s)]      
+    [(Symbol s)         (compile-symbol s c)]
+    [(Var x)            (compile-variable x c)]
+    [(App f es)         (compile-app f es c tail?)]
+    [(Prim0 p)          (compile-prim0 p c)]
+    [(Prim1 p e)        (compile-prim1 p e c)]
+    [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
+    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
+    [(If e1 e2 e3)      (compile-if e1 e2 e3 c tail?)]
+    [(Begin e1 e2)      (compile-begin e1 e2 c tail?)]
+    [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
+    [(Match e0 cs)      (compile-match e0 cs c tail?)]))
+
+(define (compile-e-tail e c)
+  (compile-e e c #t))
+(define (compile-e-nontail e c)
+  (compile-e e c #f))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -178,9 +183,9 @@
 ;;   (string->symbol "foo")
 ;; then compile it
 (define (compile-symbol s c)
-  (seq (compile-e (Prim1 'string->symbol
-                         (String (symbol->string s)))
-        c)))
+  (seq (compile-prim1 'string->symbol
+                      (String (symbol->string s))
+                      c)))
   
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
@@ -210,7 +215,7 @@
 
 ;; Op1 Expr CEnv -> Asm
 (define (compile-prim1 p e c)
-  (seq (compile-e e c)
+  (seq (compile-e-nontail e c)
        (match p
          ['add1
           (seq (assert-integer rax c)
@@ -340,9 +345,9 @@
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
-  (seq (compile-e e1 c)
+  (seq (compile-e-nontail e1 c)
        (Push rax)
-       (compile-e e2 (cons #f c))
+       (compile-e-nontail e2 (cons #f c))
        (match p
          ['+
           (seq (Pop r8)
@@ -458,11 +463,11 @@
 ;; Op3 Expr Expr Expr CEnv -> Asm
 
 (define (compile-prim3 p e1 e2 e3 c)
-  (seq (compile-e e1 c)
+  (seq (compile-e-nontail e1 c)
        (Push rax)
-       (compile-e e2 (cons #f c))
+       (compile-e-nontail e2 (cons #f c))
        (Push rax)
-       (compile-e e3 (cons #f (cons #f c)))
+       (compile-e-nontail e3 (cons #f (cons #f c)))
        (match p
          ['string-set!
           (let ((l1 (gensym 'loopmax2x)) (l2 (gensym 'exit_loop))
@@ -505,10 +510,34 @@
                  (Mov (Offset r8 8) rax)
                  (Mov rax val-void)))])))                   
 
+;; Id [Listof Expr] CEnv Boolean -> Asm
+(define (compile-app f es c tail?)
+  (if tail?
+      (compile-tail-app f es c)
+      (compile-nontail-app f es c)))
+
+;; Id [Listof Expr] CEnv -> Asm
+(define (compile-tail-app f es c)
+  (seq (compile-es es c)
+       (%% "move args for tail call")
+       (move-args (length c) (length es))
+       (Add rsp (* 8 (length c)))
+       (Mov rcx (imm->bits (length es)))
+       (Jmp (symbol->label f))))
+
+;; Integer Integer -> Asm
+(define (move-args c-ct i)
+  (cond [(zero? c-ct) (seq (%% "already in place for tail call"))]
+        [(zero? i)    (seq (%% "done moving args for tail call"))]
+        [else
+         (seq (Mov r8 (Offset rsp (* 8 (sub1 i))))
+              (Mov (Offset rsp (* 8 (+ c-ct (sub1 i)))) r8)
+              (move-args c-ct (sub1 i)))]))
+
 ;; Id [Listof Expr] CEnv -> Asm
 ;; The return address is placed above the arguments, so callee pops
 ;; arguments and return address is next frame
-(define (compile-app f es c)
+(define (compile-nontail-app f es c)
   (let ((ret (gensym 'ret)))
     (if (odd? (+ (length es) (length c)))
         (seq (Lea r8 ret)
@@ -531,7 +560,7 @@
   (match es
     ['() '()]
     [(cons e es)
-     (seq (compile-e e c)
+     (seq (compile-e-nontail e c)
           (Push rax)
           (compile-es es (cons #f c)))]))
 
@@ -544,64 +573,64 @@
          (Mov rax val-false)
          (Label l1))))
 
-;; Expr Expr Expr CEnv -> Asm
-(define (compile-if e1 e2 e3 c)
+;; Expr Expr Expr CEnv Boolean -> Asm
+(define (compile-if e1 e2 e3 c tail?)
   (let ((l1 (gensym 'if))
         (l2 (gensym 'if)))
-    (seq (compile-e e1 c)
+    (seq (compile-e-nontail e1 c)
          (Cmp rax val-false)
          (Je l1)
-         (compile-e e2 c)
+         (compile-e e2 c tail?)
          (Jmp l2)
          (Label l1)
-         (compile-e e3 c)
+         (compile-e e3 c tail?)
          (Label l2))))
 
-;; Expr Expr CEnv -> Asm
-(define (compile-begin e1 e2 c)
-  (seq (compile-e e1 c)
-       (compile-e e2 c)))
+;; Expr Expr CEnv Boolean -> Asm
+(define (compile-begin e1 e2 c tail?)
+  (seq (compile-e-nontail e1 c)
+       (compile-e e2 c tail?)))
 
-;; (Listof Id) (Listof Expr) Expr CEnv -> Asm
-(define (compile-let xs es e c)
+;; (Listof Id) (Listof Expr) Expr CEnv Boolean -> Asm
+(define (compile-let xs es e c tail?)
   (seq (compile-es es c)
-       (compile-e e (append (reverse xs) c))
+       (compile-e e (append (reverse xs) c) tail?)
        (Add rsp (* 8 (length xs)))))
 
-;; Expr [Listof Clause] CEnv-> Asm
-(define (compile-match e0 cs c)
+;; Expr [Listof Clause] CEnv Boolean -> Asm
+(define (compile-match e0 cs c tail?)
   (let ((return (gensym 'matchreturn)))
-    (seq (compile-e e0 c)
-         (compile-match-clauses cs return c)
+    (seq (compile-e-nontail e0 c)
+         (compile-match-clauses cs return c tail?)
          (Label return))))
 
-;; [Listof Clauses] Symbol CEnv -> Asm
-(define (compile-match-clauses cs return c)
+;; [Listof Clauses] Symbol CEnv Boolean -> Asm
+(define (compile-match-clauses cs return c tail?)
   (match cs
     ['() (seq (Jmp (error-label c)))]
     [(cons cl cs)
      (let ((next (gensym 'matchclause)))
-       (seq (compile-match-clause cl next return c)
+       (seq (compile-match-clause cl next return c tail?)
             (Label next)
-            (compile-match-clauses cs return c)))]))
+            (compile-match-clauses cs return c tail?)))]))
 
-;; Clause Symbol Symbol CEnv -> Asm
-(define (compile-match-clause cl next return c)
+;; Clause Symbol Symbol CEnv Boolean -> Asm
+(define (compile-match-clause cl next return c tail?)
   (match cl
     [(Clause p e)
      (match p
        [(Wild)
-        (seq (compile-e e c)
+        (seq (compile-e e c tail?)
              (Jmp return))]
        [(Var x)
         (seq (Push rax)
-             (compile-e e (cons x c))
+             (compile-e e (cons x c) tail?)
              (Add rsp 8)
              (Jmp return))]
        [(Lit l)
         (seq (Cmp rax (imm->bits l))
              (Jne next)
-             (compile-e e c)
+             (compile-e e c tail?)
              (Jmp return))]
        [(Sym s)
         (seq (Push rax)
@@ -610,8 +639,8 @@
              (Cmp rax r8)
              (Mov rax r8)
              (Jne next)
-             (compile-e e c)
-             (Jmp return))]       
+             (compile-e e c tail?)
+             (Jmp return))]
        [(Box x)
         (seq (Mov r8 rax)
              (And r8 ptr-mask)
@@ -620,7 +649,7 @@
              (Xor rax type-box)
              (Mov r8 (Offset rax 0))
              (Push r8)
-             (compile-e e (cons x c))
+             (compile-e e (cons x c) tail?)
              (Add rsp 8)
              (Jmp return))]
        [(Cons x1 x2)
@@ -633,7 +662,7 @@
              (Push r8)
              (Mov r8 (Offset rax 8))
              (Push r8)
-             (compile-e e (cons x1 (cons x2 c)))
+             (compile-e e (cons x1 (cons x2 c)) tail?)
              (Add rsp 16)
              (Jmp return))])]))
 
