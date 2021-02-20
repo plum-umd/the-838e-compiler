@@ -75,9 +75,6 @@
       [(Div a1)
        (string-append tab "div "
                       (arg->string a1) ", ")]
-       [(Mul a1)
-       (string-append tab "mul "
-                      (arg->string a1) ", ")]
       [(Sub a1 a2)
        (string-append tab "sub "
                       (arg->string a1) ", "
