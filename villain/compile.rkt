@@ -34,7 +34,7 @@
            (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
-           (compile-e e '(#f))
+           (compile-e e '())
            (Mov rdx rbx) ; return heap pointer in second return register           
            (Ret)
            (compile-defines ds)
@@ -65,7 +65,7 @@
           (compile-provides xs))]))
 
 (define (error-label c)
-  (if (odd? (length c))
+  (if (even? (length c))
       'raise_error
       'raise_error_align))
 
@@ -84,11 +84,9 @@
      (seq (Label (symbol->label f)) 
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
-          (compile-e e (parity (cons #f (reverse xs))))
+          (compile-e e (reverse xs))
           ; return
-          (Pop r8) ; save rp
           (Add rsp (* 8 (length xs))) ; pop args
-          (Push r8) ; replace rp
           (Ret))]
     [(Defn* f xs xs* e) 
      (let ((loop (gensym 'loop))
@@ -97,7 +95,6 @@
        (seq (Label (symbol->label f))
             (Cmp rcx (imm->bits (length xs)))
             (Jl 'raise_error)
-            (Pop r10)                         ; store return address
             (Mov rax (imm->bits '()))         ; initialize rest arg
             (Sub rcx (imm->bits (length xs))) ; # of things to pop off of stack
 
@@ -115,18 +112,10 @@
             (Label end)
 
             (Push rax) ; push the rest list
-            (Push r10) ; reinstall return address
-            (compile-e e (parity (cons #f (cons xs* (reverse xs)))))
+            (compile-e e (cons xs* (reverse xs)))
             ; return
-            (Pop r10)  ; save rp
             (Add rsp (* 8 (add1 (length xs)))) ; pop args
-            (Push r10) ; replace rp
             (Ret)))]))
-
-(define (parity c)
-  (if (even? (length c))
-      (append c (list #f))
-      c))
 
 ;; Expr CEnv -> Asm
 (define (compile-e e c)
@@ -664,21 +653,25 @@
        )
   )
 ;; Id [Listof Expr] CEnv -> Asm
-;; Here's why this code is so gross: you have to align the stack for the call
-;; but you have to do it *before* evaluating the arguments es, because you need
-;; es's values to be just above 'rsp when the call is made.  But if you push
-;; a frame in order to align the call, you've got to compile es in a static
-;; environment that accounts for that frame, hence:
+;; The return address is placed above the arguments, so callee pops
+;; arguments and return address is next frame
 (define (compile-app f es c)
-  (if (even? (+ (length es) (length c))) 
-      (seq (compile-es es c) 
-           (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f)))            ; pop args
-      (seq (Sub rsp 8)                          ; adjust stack
-           (compile-es es (cons #f c))
-           (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f))
-           (Add rsp 8))))
+  (let ((ret (gensym 'ret)))
+    (if (odd? (+ (length es) (length c)))
+        (seq (Lea r8 ret)
+             (Push r8)
+             (compile-es es (cons #f c))
+             (Mov rcx (imm->bits (length es)))
+             (Jmp (symbol->label f))
+             (Label ret))
+        (seq (Sub rsp 8)
+             (Lea r8 ret)
+             (Push r8)
+             (compile-es es (cons #f (cons #f c)))
+             (Mov rcx (imm->bits (length es)))
+             (Jmp (symbol->label f))
+             (Label ret)
+             (Add rsp 8)))))
 
 ;; [Listof Expr] CEnv -> Asm
 (define (compile-es es c)
@@ -794,7 +787,7 @@
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
 (define (pad-stack-call c i)
-  (match (even? (+ (length c) i))
+  (match (odd? (+ (length c) i))
     [#f (seq (Sub rsp 8) (% "padding stack"))]
     [#t (seq)]))
 
@@ -806,7 +799,7 @@
 ;; CEnv -> Asm
 ;; Undo the stack alignment after a call
 (define (unpad-stack-call c i)
-  (match (even? (+ (length c) i))
+  (match (odd? (+ (length c) i))
     [#f (seq (Add rsp 8) (% "unpadding"))]
     [#t (seq)]))
 
