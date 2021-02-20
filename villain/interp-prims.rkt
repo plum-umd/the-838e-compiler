@@ -8,6 +8,7 @@
     [(list 'add1 (? integer?))            (add1 v)]
     [(list 'sub1 (? integer?))            (sub1 v)]
     [(list 'zero? (? integer?))           (zero? v)]
+    [(list 'integer? v)                   (integer? v)]
     [(list 'integer-length (? integer?))  (integer-length v)]
     [(list 'char? v)                      (char? v)]
     [(list 'char->integer (? char?))      (char->integer v)]
@@ -32,6 +33,7 @@
   (match (list p v1 v2)
     [(list '+ (? integer?) (? integer?))  (+ v1 v2)]
     [(list '- (? integer?) (? integer?))  (- v1 v2)]
+    [(list '<= (? integer?) (? integer?)) (<= v1 v2)]
     [(list 'eq? v1 v2)                    (eqv? v1 v2)]
     [(list 'cons v1 v2)                   (cons v1 v2)]
     [(list 'make-prefab-struct (? symbol?) v2)     (make-prefab-struct v1 v2)]

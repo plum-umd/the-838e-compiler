@@ -7,8 +7,6 @@
   (check-equal? (run 7) 7)
   (check-equal? (run -8) -8)
 
-  
-
   ;; Blackmail examples
   (check-equal? (run '(add1 (add1 7))) 9)
   (check-equal? (run '(add1 (sub1 7))) 7)
@@ -162,6 +160,10 @@
                     (len (cons 1 (cons 2 (cons 3 '()))))))
                 3)
 
+  (check-equal? (run '(<= 0 0)) #t)
+  (check-equal? (run '(<= 0 1)) #t)
+  (check-equal? (run '(<= 1 0)) #f)
+
   ;; Pattern Matching Tests
   (check-equal? (run
                  '(match 2 [1 1] [2 2]))
@@ -172,6 +174,10 @@
   (check-equal? (run
                  '(match #\a [#\b #\b] [#\a #\a] [#\c #\c]))
                 #\a)
+  (check-equal? (run '(match 'x ['x #t] [_ #f])) #t)
+  (check-equal? (run '(match 'x ['y #t] [_ #f])) #f)
+  (check-equal? (run '(match #f ['y #t] [_ #f])) #f)
+  (check-equal? (run '(match 'x ['y #f] ['x #t] [_ #f])) #t)
   (check-equal? (run
                  '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
                 #t)
@@ -274,6 +280,12 @@
                          (tri )))
                 'err)
 
+  (check-equal? (run '(integer? 0)) #t)
+  (check-equal? (run '(integer? #f)) #f)
+  (check-equal? (run '(byte? 0)) #t)
+  (check-equal? (run '(byte? 255)) #t)
+  (check-equal? (run '(byte? 256)) #f)
+  (check-equal? (run '(byte? -1)) #f)
   (check-equal? (run '(integer-length   0)) 0)
   (check-equal? (run '(integer-length  -1)) 0)
   (check-equal? (run '(integer-length   1)) 1)
@@ -350,7 +362,46 @@
   (define (check-err e)
     ;; check error in both aligned and unaligned config
     (check-equal? (run e) 'err)
-    (check-equal? (run `(let ((x 0)) ,e)) 'err))
+    (check-equal? (run `(let ((x 0)) ,e)) 'err)) 
+
+  ;; Variable arity functions tests 
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2 3)))
+                '(1 2 3)) 
+  
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2)))
+                '(1 2)) 
+  
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) xs) 
+                    (at-least-two-lst 1)))
+                'err)
+
+  (check-equal? (run
+                 '(begin  
+                    (define (at-least-two-lst x y . xs) (cons x (cons y xs))) 
+                    (at-least-two-lst 1 2 (cons 4 '()))))
+                '(1 2 (4))) 
+
+  (check-equal? (run
+                 '(begin  
+                    (define (ret-two . xs) 2) 
+                    (ret-two 1 2 (cons 4 '()))))
+                  2) 
+
+  (check-equal? (run
+                 '(begin  
+                    (define (ret-two . xs) 2) 
+                    (ret-two 1 2 (cons 4 '()) #\a)))
+                  2)
+
+  
 
   (check-err '(add1 #f))
   (check-err '(sub1 #f))
@@ -389,6 +440,97 @@
   (check-err '(string-set! "a" -1 #\b))
   (check-err '(string-set! "a" 1 #\b))
   (check-err '(match '() [#f #f]))
+
+
+  ;; Standard library: list.rkt
+  (check-equal? (run '(append '() '())) '())
+  (check-equal? (run '(append '() (list 4 5 6)))
+                (list 4 5 6))
+  (check-equal? (run '(append (list 1 2 3) '()))
+                (list 1 2 3))
+  (check-equal? (run '(append (list 1 2 3) (list 4 5 6)))
+                (list 1 2 3 4 5 6))
+  (check-equal? (run '(append (list 1 2 3) (cons 4 5)))
+                (cons 1 (cons 2 (cons 3 (cons 4 5)))))
+  (check-equal? (run '(assq 'x '())) #f)
+  (check-equal? (run '(assq 'x (list (list 'x 1)))) '(x 1))
+  (check-equal? (run '(assq 'x (list (list 'y 1)))) #f)
+  (check-equal? (run '(assq 'x (list (list 'y 1) (list 'x 2)))) '(x 2))
+  (check-equal? (run '(assq 'x (list (list 'x 1) (list 'x 2)))) '(x 1))
+  (check-equal? (run '(eighth (list 1 2 3 4 5 6 7 8 9 10))) 8)
+  (check-equal? (run '(first (list 1 2 3 4 5 6 7 8 9 10))) 1)
+  (check-equal? (run '(fifth (list 1 2 3 4 5 6 7 8 9 10))) 5)
+  (check-equal? (run '(fourth (list 1 2 3 4 5 6 7 8 9 10))) 4)
+  (check-equal? (run '(last (list 1 2 3 4 5 6 7 8 9 10))) 10)
+  (check-equal? (run '(length (list 1 2 3 4 5 6 7 8 9 10))) 10)
+  (check-equal? (run '(list)) '())
+  (check-equal? (run '(list 1)) '(1))
+  (check-equal? (run '(list? '())) #t)
+  (check-equal? (run '(list? (list 1))) #t)
+  (check-equal? (run '(list? (cons 1 2))) #f)
+  (check-equal? (run '(list? #f)) #f)
+  (check-equal? (run '(memq 'x (list 'x 'y 'z))) #t)
+  (check-equal? (run '(memq 'z (list 'x 'y 'z))) #t)
+  (check-equal? (run '(memq 'q (list 'x 'y 'z))) #f)
+  (check-equal? (run '(memq 'x '())) #f)
+  (check-equal? (run '(list-ref (list 1 2 3 4 5 6 7 8 9 10) 0)) 1)
+  (check-equal? (run '(list-ref (list 1 2 3 4 5 6 7 8 9 10) 9)) 10)
+  (check-equal? (run '(list-tail (list 1 2 3 4 5 6 7 8 9 10) 10)) '())
+  (check-equal? (run '(list-tail (cons 'x 'y) 1)) 'y)
+  (check-equal? (run '(ninth (list 1 2 3 4 5 6 7 8 9 10))) 9)
+  (check-equal? (run '(null? '())) #t)
+  (check-equal? (run '(null? #f)) #f)
+  (check-equal? (run '(null? (list 1))) #f)
+  (check-equal? (run '(pair? '())) #f)
+  (check-equal? (run '(pair? #f)) #f)
+  (check-equal? (run '(pair? (list 1))) #t)
+  (check-equal? (run '(pair? (cons 1 2))) #t)
+  (check-equal? (run '(remq 'x (list 'x 'y 'z))) '(y z))
+  (check-equal? (run '(remq 'x (list 'x 'y 'z 'x))) '(y z x))
+  (check-equal? (run '(remq 'z (list 'x 'y 'z))) '(x y))
+  (check-equal? (run '(remq 'q (list 'x 'y 'z))) '(x y z))
+  (check-equal? (run '(remq 'x '())) '())
+  (check-equal? (run '(remq* 'x (list 'x 'y 'z))) '(y z))
+  (check-equal? (run '(remq* 'x (list 'x 'y 'z 'x))) '(y z))
+  (check-equal? (run '(remq* 'z (list 'x 'y 'z))) '(x y))
+  (check-equal? (run '(remq* 'q (list 'x 'y 'z))) '(x y z))
+  (check-equal? (run '(remq* 'x '())) '())
+  (check-equal? (run '(rest (list 1))) '())
+  (check-equal? (run '(rest (list 1 2 3))) '(2 3))
+  (check-equal? (run '(reverse '())) '())
+  (check-equal? (run '(reverse (list 1 2 3))) '(3 2 1))
+  (check-equal? (run '(second (list 1 2 3 4 5 6 7 8 9 10))) 2)
+  (check-equal? (run '(seventh (list 1 2 3 4 5 6 7 8 9 10))) 7)
+  (check-equal? (run '(sixth (list 1 2 3 4 5 6 7 8 9 10))) 6)
+  (check-equal? (run '(tenth (list 1 2 3 4 5 6 7 8 9 10))) 10)
+  (check-equal? (run '(third (list 1 2 3 4 5 6 7 8 9 10))) 3)
+
+  ;; Standard library: bool.rkt
+  (check-equal? (run '(boolean? #t)) #t)
+  (check-equal? (run '(boolean? #f)) #t)
+  (check-equal? (run '(boolean? 0)) #f)
+  (check-equal? (run '(not #t)) #f)
+  (check-equal? (run '(not #f)) #t)
+  (check-equal? (run '(not 0)) #f)
+  
+  ;; n-ary let
+  (check-equal? (run '(let () 4)) 4)
+  (check-equal? (run '(let ((x 4)) 3)) 3)
+  (check-equal? (run '(let ((x 4)) x)) 4)
+  (check-equal? (run '(let ((x 4) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((x (let ((y 4)) y)) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((y 6) (x (let ((y 4)) y))) (+ x y))) 10)
+  (check-equal? (run '(let ((y (let ((y 4)) y)) (x (let ((z 4)) z)) (z 2)) (+ z (+ x y)))) 10)
+  (check-equal? (run '(let ((x (add1 12)) (y 9)) (let ((x (add1 x)) (z y)) (+ z x)))) 23)
+
+  ;; cond
+  (check-equal? (run '(cond)) (void))
+  (check-equal? (run '(cond (else 1))) 1)
+  (check-equal? (run '(cond (#t 1))) 1)
+  (check-equal? (run '(cond (#t 2) (else 1))) 2)
+  (check-equal? (run '(cond (#f 2) (else 1))) 1)
+  (check-equal? (run '(cond (#f 2) (else 1))) 1)
+  (check-equal? (run '(cond (0 2) (else 1))) 2)
   )
 
 

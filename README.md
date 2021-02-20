@@ -58,3 +58,7 @@ Code emitted by the compiler depends upon the following libraries:
   $ echo "options=('staticlibs')" >> PKGBUILD
   $ makepkg -si
   ```
+
+## Reference
+
+- [standard libraries](stdlibs.md)

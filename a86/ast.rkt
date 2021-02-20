@@ -11,7 +11,25 @@
     (when (register? x)
       (error n "cannot use register as label name; given ~v" x))
     (unless (symbol? x)
-      (error n "expects symbol; given ~v" x))
+      (error n "expects label symbol; given ~v" x))
+    x))
+
+(define check:global-symbol
+  (λ (x n)
+    (unless (symbol? x)
+      (error n "expects global symbol; given ~v" x))
+    x))
+
+(define check:section-symbol
+  (λ (x n)
+    (unless (symbol? x)
+      (error n "expects section symbol; given ~v" x))
+    x))
+
+(define check:default-symbol
+  (λ (x n)
+    (unless (symbol? x)
+      (error n "expects default symbol; given ~v" x))
     x))
 
 (define check:target
@@ -84,6 +102,11 @@
 (define check:none
   (λ (n) (values)))
 
+; always passes
+(define check:pass
+  (λ (x n)
+    x))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Comments
 
@@ -114,6 +137,9 @@
            #:transparent
            #:guard guard)))
 
+(instruct Global  (x)      check:label-symbol)
+(instruct Default (x)      check:default-symbol)
+(instruct Section (x)      check:section-symbol)
 (instruct Label  (x)       check:label-symbol)
 (instruct Call   (x)       check:target)
 (instruct Ret    ()        check:none)
@@ -126,7 +152,9 @@
 (instruct Je     (x)       check:target)
 (instruct Jne    (x)       check:target)
 (instruct Jl     (x)       check:target)
+(instruct Jle    (x)       check:target)
 (instruct Jg     (x)       check:target)
+(instruct Jge    (x)       check:target)
 (instruct And    (dst src) check:src-dest)
 (instruct Or     (dst src) check:src-dest)
 (instruct Xor    (dst src) check:src-dest)
@@ -153,7 +181,10 @@
        (not (register? x))))
 
 (define (instruction? x)
-  (or (Label? x)
+  (or (Global? x)
+      (Default? x)
+      (Section? x)
+      (Label? x)
       (Extern? x)
       (Call? x)
       (Ret? x)
@@ -166,7 +197,9 @@
       (Je? x)
       (Jne? x)
       (Jl? x)
+      (Jle? x)      
       (Jg? x)
+      (Jge? x)
       (And? x)
       (Or? x)
       (Xor? x)
@@ -245,10 +278,14 @@
      (cons s (label-uses asm))]
     [(cons (Jl (? label-symbol? s)) asm)
      (cons s (label-uses asm))]
+    [(cons (Jle (? label-symbol? s)) asm)
+     (cons s (label-uses asm))]
     [(cons (Call (? label-symbol? s)) asm)
      (cons s (label-uses asm))]
     [(cons (Lea _ (? label-symbol? s)) asm)
-     (cons s (label-uses asm))]    
+     (cons s (label-uses asm))]
+    [(cons (Global s) asm)
+     (cons s (label-uses asm))] ; provided labels count as used
     [(cons _ asm)
      (label-uses asm)]))
 
@@ -257,7 +294,6 @@
 (define (check-label-targets-declared asm)
   (let ((ds (apply set (label-decls asm)))
         (us (apply set (label-uses asm))))
-
     (let ((undeclared (set-subtract us ds)))
       (unless (set-empty? undeclared)
         (error 'prog "undeclared labels found: ~v" (set->list undeclared))))))

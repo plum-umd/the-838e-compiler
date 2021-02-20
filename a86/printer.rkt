@@ -58,6 +58,9 @@
   (define (instr->string i)
     (match i
       [(Ret)       (string-append tab "ret")]
+      [(Global x)  (string-append tab "global "  (label-symbol->string x))]
+      [(Default x) (string-append tab "default " (symbol->string x))]
+      [(Section x) (string-append tab "section " (symbol->string x))]
       [(Label l)   (string-append (label-symbol->string l) ":")]
       [(Extern l)  (begin0 (string-append tab "extern " (label-symbol->string l))
                            (set! external-labels (cons l external-labels)))]
@@ -112,8 +115,14 @@
       [(Jl l)
        (string-append tab "jl "
                       (jump-target->string l))]
+      [(Jle l)
+       (string-append tab "jle "
+                      (jump-target->string l))]
       [(Jg l)
        (string-append tab "jg "
+                      (jump-target->string l))]
+      [(Jge l)
+       (string-append tab "jge "
                       (jump-target->string l))]
       [(Call l)
        (string-append tab "call "
@@ -156,11 +165,7 @@
   
   ;; entry point will be first label
   (match (findf Label? a)
-    [(Label g)
-     (string-append
-      tab "global " (label-symbol->string g) "\n"
-      tab "default rel\n"
-      tab "section .text\n"
-      (instrs->string a))]
+    [(Label _)
+     (instrs->string a)]
     [_
      (error "program does not have an initial label")]))

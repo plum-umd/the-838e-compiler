@@ -8,12 +8,13 @@
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
                                ; and string-set!
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
-                  ; make-string, compile-prim3, string-ref!, integer-length, match
+                  ; make-string, compile-prim3, string-ref!, integer-length, match, 
+                  ; compile-define
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, 
+                  ; string-set!, make-string, compile-define
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define
 (define rcx 'rcx) ; arity indicator
 
 ;; type CEnv = [Listof Variable]
@@ -21,9 +22,14 @@
 ;; Expr -> Asm
 (define (compile p)
   (match p
-    [(Prog ds e)  
-     (prog (externs p)
+    [(Prog ds e)
+     (prog (Global 'entry)
+           (Default 'rel)
+           (Section '.text)
+           (externs p)
            (Extern 'raise_error)
+           (Global 'raise_error_align)
+           (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e e '(#f))
@@ -33,6 +39,28 @@
            (Label 'raise_error_align)
            (Sub rsp 8)
            (Jmp 'raise_error))]))
+
+;; Expr -> Asm
+(define (compile-library p)
+  (match p
+    [(Lib xs ds)
+     (prog (compile-provides xs)
+           (Default 'rel)
+           (Section '.text)
+           (externs p)
+           (Extern 'raise_error)
+           (Extern 'raise_error_align)
+           (Extern 'str_to_symbol)           
+           (compile-defines ds))]))
+
+;; [Listof Id] -> Asm
+(define (compile-provides xs)
+  (match xs
+    ['()
+     (seq)]
+    [(cons x xs)
+     (seq (Global (symbol->label x))
+          (compile-provides xs))]))
 
 (define (error-label c)
   (if (odd? (length c))
@@ -55,7 +83,43 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
           (compile-e e (parity (cons #f (reverse xs))))
-          (Ret))]))
+          ; return
+          (Pop r8) ; save rp
+          (Add rsp (* 8 (length xs))) ; pop args
+          (Push r8) ; replace rp
+          (Ret))]
+    [(Defn* f xs xs* e) 
+     (let ((loop (gensym 'loop))
+           (end (gensym 'end)))
+
+       (seq (Label (symbol->label f))
+            (Cmp rcx (imm->bits (length xs)))
+            (Jl 'raise_error)
+            (Pop r10)                         ; store return address
+            (Mov rax (imm->bits '()))         ; initialize rest arg
+            (Sub rcx (imm->bits (length xs))) ; # of things to pop off of stack
+
+            (Label loop) ; at each step, rax <- cons pop rax
+            (Cmp rcx 0)
+            (Je end)
+            (Mov (Offset rbx 0) rax)
+            (Pop rax)
+            (Mov (Offset rbx 8) rax)
+            (Mov rax rbx)
+            (Add rbx 16)
+            (Or rax type-cons)
+            (Sub rcx (imm->bits 1))
+            (Jmp loop)
+            (Label end)
+
+            (Push rax) ; push the rest list
+            (Push r10) ; reinstall return address
+            (compile-e e (parity (cons #f (cons xs* (reverse xs)))))
+            ; return
+            (Pop r10)  ; save rp
+            (Add rsp (* 8 (add1 (length xs)))) ; pop args
+            (Push r10) ; replace rp
+            (Ret)))]))
 
 (define (parity c)
   (if (even? (length c))
@@ -81,7 +145,7 @@
          [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
-         [(Let x e1 e2)      (compile-let x e1 e2 c)]
+         [(Let xs es e)      (compile-let xs es e c)]
          [(Match e0 cs)      (compile-match e0 cs c)])))
 
 ;; Value -> Asm
@@ -162,6 +226,15 @@
          ['zero?
           (let ((l1 (gensym)))
             (seq (assert-integer rax c)
+                 (Cmp rax 0)
+                 (Mov rax val-true)
+                 (Je l1)
+                 (Mov rax val-false)
+                 (Label l1)))]
+         ['integer?
+          (let ((l1 (gensym)))
+            (seq (And rax mask-int)
+                 (Xor rax type-int)
                  (Cmp rax 0)
                  (Mov rax val-true)
                  (Je l1)
@@ -288,6 +361,16 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
+         ['<=
+          (let ((leq-true (gensym 'leq)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jle leq-true)
+                 (Mov rax (imm->bits #f))
+                 (Label leq-true)))]
          ['eq?
           (let ((l (gensym)))
 <<<<<<< HEAD
@@ -444,13 +527,12 @@
   (if (even? (+ (length es) (length c))) 
       (seq (compile-es es c) 
            (Mov rcx (imm->bits (length es)))
-           (Call (symbol->label f))
-           (Add rsp (* 8 (length es))))            ; pop args
-      (seq (Sub rsp 8)                             ; adjust stack
-           (compile-es es (cons #f c)) 
+           (Call (symbol->label f)))            ; pop args
+      (seq (Sub rsp 8)                          ; adjust stack
+           (compile-es es (cons #f c))
            (Mov rcx (imm->bits (length es)))
            (Call (symbol->label f))
-           (Add rsp (* 8 (add1 (length es)))))))   ; pop args and pad
+           (Add rsp 8))))
 
 ;; [Listof Expr] CEnv -> Asm
 (define (compile-es es c)
@@ -488,12 +570,11 @@
   (seq (compile-e e1 c)
        (compile-e e2 c)))
 
-;; Id Expr Expr CEnv -> Asm
-(define (compile-let x e1 e2 c)
-  (seq (compile-e e1 c)
-       (Push rax)
-       (compile-e e2 (cons x c))
-       (Add rsp 8)))
+;; (Listof Id) (Listof Expr) Expr CEnv -> Asm
+(define (compile-let xs es e c)
+  (seq (compile-es es c)
+       (compile-e e (append (reverse xs) c))
+       (Add rsp (* 8 (length xs)))))
 
 ;; Expr [Listof Clause] CEnv-> Asm
 (define (compile-match e0 cs c)
@@ -517,6 +598,9 @@
   (match cl
     [(Clause p e)
      (match p
+       [(Wild)
+        (seq (compile-e e c)
+             (Jmp return))]
        [(Var x)
         (seq (Push rax)
              (compile-e e (cons x c))
@@ -527,6 +611,15 @@
              (Jne next)
              (compile-e e c)
              (Jmp return))]
+       [(Sym s)
+        (seq (Push rax)
+             (compile-symbol s (cons #f c))
+             (Pop r8)
+             (Cmp rax r8)
+             (Mov rax r8)
+             (Jne next)
+             (compile-e e c)
+             (Jmp return))]       
        [(Box x)
         (seq (Mov r8 rax)
              (And r8 ptr-mask)
@@ -652,4 +745,3 @@
          (string->list (symbol->string s))))
     "_"
     (number->string (eq-hash-code s) 16))))
-
