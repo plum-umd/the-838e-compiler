@@ -657,7 +657,6 @@
            (Pop r10)
            (Jne l1)
            (Mov rax (imm->bits #t))
-           (Pop r10)
            (Mov (Offset r8 0) r10)      ;new value into the vector
            (Label l1)
            ))]
