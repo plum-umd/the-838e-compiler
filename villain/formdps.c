@@ -5,9 +5,9 @@ int main (int argc, char *argv[]) {
 	char * two = "2";
 	char * cspace = " ";
         char * move = "mv ";
-	char makerun2[100];
+	char makerun2[200];
         char * tmp;
-        char mvrun2[100];
+        char mvrun2[200];
         int len;
         if (strcmp(argv[1], "mv") == 0){
            len = strlen(argv[2]);
