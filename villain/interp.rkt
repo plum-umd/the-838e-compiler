@@ -33,7 +33,7 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
-    [(Float f) f]
+    [(Flonum f) f]
     [(String s) s]
     [(Symbol s) s]
     [(Eof)    eof]
