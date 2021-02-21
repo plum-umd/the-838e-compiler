@@ -1,5 +1,5 @@
 #lang racket
-(require "ast.rkt")
+(require "ast.rkt"  racket/flonum)
 (provide interp-prim1 interp-prim2 interp-prim3)
 
 ;; Op1 Value -> Answer
@@ -27,6 +27,7 @@
     [(list 'string->symbol (? string?))   (string->symbol v)]
     [(list 'symbol->string (? symbol?))   (symbol->string v)]
     [(list 'symbol? v)                    (symbol? v)]
+    [(list 'flonum? v)                    (flonum? v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer
@@ -42,7 +43,11 @@
                                               (string-ref v1 v2)
                                               'err)]   
     [(list 'make-string
-           (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]                         
+           (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]
+    [(list 'fl+ (? flonum?) (? flonum?))  (fl+ v1 v2)]
+    [(list 'fl- (? flonum?) (? flonum?))  (fl- v1 v2)]
+    [(list 'fl<= (? flonum?) (? flonum?))  (fl<= v1 v2)]
+    [(list 'fl= (? flonum?) (? flonum?))  (fl= v1 v2)]
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
