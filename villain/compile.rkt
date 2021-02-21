@@ -62,6 +62,40 @@
      (seq (Global (symbol->label x))
           (compile-provides xs))]))
 
+;; [Listof Id] -> Asm
+(define (compile-module-provided-externs xs)
+  (match xs
+    ['()  (seq)]
+    [(cons x xs)
+     (seq (Extern (symbol->label x))
+          (compile-module-provided-externs xs))]))
+
+;; Expr Boolean -> Asm
+(define (compile-module p root)
+  (match p
+    [(CMod pv-exts pvs ds e)
+     ;(display "externs p: ") (display (externs p))
+     (prog (if root (Global 'entry) (seq))
+           (compile-provides pvs)
+           (Default 'rel)
+           (Section '.text)
+           (compile-module-provided-externs pv-exts)
+           (externs p)
+           (Extern 'raise_error)
+           (if root (Global 'raise_error_align) (seq))
+           (Extern 'str_to_symbol)
+           (if root
+               (seq (Label 'entry)
+                         (Mov rbx rdi) ; recv heap pointer
+                         (compile-e-tail e '())
+                         (Mov rdx rbx) ; return heap pointer in second return register           
+                         (Ret)
+                         (Label 'raise_error_align)
+                         (Sub rsp 8)
+                         (Jmp 'raise_error))
+               (seq))
+           (compile-defines ds))]))
+
 (define (error-label c)
   (if (even? (length c))
       'raise_error

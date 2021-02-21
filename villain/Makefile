@@ -29,11 +29,17 @@ char.o: types.h
 io.o: runtime.h
 symbol.o: str.h
 
-%.run: %.o runtime.o
-	gcc runtime.o $< -o $@ $(libs) -lm
+%.run:  %.o
+	gcc formdps.c -o formdps
+	./formdps make $@
 
-runtime.o: $(objs)
-	ld -r $(objs) -o runtime.o
+%.run2: %.o runtime.o 
+	gcc runtime.o $< -o $@ $(libs) -lm
+	./formdps mv $@
+	rm -f modulefiles formdps
+
+runtime.o: $(objs) $(shell cat modulefiles)
+	ld -r $(shell cat modulefiles) $(objs) -o runtime.o
 
 .SUFFIXES: .c .s .o .rkt
 .c.o:
@@ -46,5 +52,5 @@ runtime.o: $(objs)
 	racket -t compile-file.rkt -m $< > $@
 
 clean:
-	rm -f *.o *.s
+	rm -f *.o *.s modulefiles formdps
 	find . -name "*.run" -delete
