@@ -26,7 +26,7 @@
     [(? integer?)                  (Int s)]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
-    [(? flonum?)                   (Float s)]
+    [(? flonum?)                   (Flonum s)]
     [(? string?)                   (String s)] 
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
@@ -88,9 +88,9 @@
          integer-length
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string? integer?
-         symbol->string string->symbol symbol?))
+         symbol->string string->symbol symbol? flonum?))
 (define op2
-  '(+ - eq? cons string-ref make-string <=))
+  '(+ - eq? cons string-ref make-string <= fl+ fl- fl<= fl=))
 (define op3
   '(string-set!))  
 
