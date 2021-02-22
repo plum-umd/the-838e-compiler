@@ -531,6 +531,24 @@
   (check-equal? (run '(cond (#f 2) (else 1))) 1)
   (check-equal? (run '(cond (#f 2) (else 1))) 1)
   (check-equal? (run '(cond (0 2) (else 1))) 2)
+
+  
+  ;;Vector Examples
+  (check-equal? (run '#(2 3)) (vector 2 3))
+  (check-equal? (run '#(2 s 3)) #(2 s 3))
+  (check-equal? (run  (let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 4) x)))
+                #(0 0 4))
+  (check-equal? (run '(make-vector 2 "a"))
+                #("a" "a"))
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 0 3)
+                               (vector-ref x 0))))
+                3)
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 3)
+                               (vector-ref x 2))))
+                3)
   )
 
 
@@ -609,4 +627,7 @@
   (check-equal? (run '(write-char #\文) "") (cons (void) "文"))
   (check-equal? (run '(list (read-char) (read-char)) "文斈") (cons '(#\文 #\斈) ""))
   (check-equal? (run '(list (peek-char) (read-char) (read-char)) "文斈") (cons '(#\文 #\文 #\斈) ""))
+  
+
+
   )

@@ -1,6 +1,6 @@
 #lang racket
 (require "ast.rkt")
-(provide interp-prim1 interp-prim2 interp-prim3)
+(provide interp-prim1 interp-prim2 interp-prim3 interp-prim4)
 
 ;; Op1 Value -> Answer
 (define (interp-prim1 p1 v)
@@ -27,6 +27,8 @@
     [(list 'string->symbol (? string?))   (string->symbol v)]
     [(list 'symbol->string (? symbol?))   (symbol->string v)]
     [(list 'symbol? v)                    (symbol? v)]
+    [(list 'vector? v)                    (vector? v)]
+    [(list 'vector-length v)              (vector-length v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer
@@ -42,7 +44,14 @@
                                               (string-ref v1 v2)
                                               'err)]   
     [(list 'make-string
-           (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]                         
+           (? integer?) (? char?))        (if (< v1 0) 'err (make-string v1 v2))]       
+    [(list 'make-vector
+           (? integer?) v2 )        (if (< v1 0) 'err (make-vector v1 v2))]
+    [(list 'vector-ref
+           (? vector?) (? integer?)) (if (<= 0 v2 (sub1 (vector-length v1)))
+                                              (vector-ref v1 v2)
+                                              'err)]
+           
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
@@ -51,7 +60,20 @@
     [(list 'string-set! (? string?)
            (? integer?) (? char?))        (if (<= 0 v2 (sub1 (string-length v1)))
                                               (string-set! v1 v2 v3)
+                                              'err)]
+     [(list 'vector-set! (? vector?)
+           (? integer?) v3)        (if (<= 0 v2 (sub1 (vector-length v1)))
+                                              (vector-set! v1 v2 v3)
                                               'err)]  
+    [_                                    'err]))
+
+;; Op3 Value Value Value -> Answer
+(define (interp-prim4 p v1 v2 v3 v4)
+  (match (list p v1 v2 v3 v4)
+    [(list 'vector-cas! (? vector?)
+           (? integer?) v3 v4)        (if (<= 0 v2 (sub1 (vector-length v1)))
+                                              (vector-cas! v1 v2 v3 v4)
+                                              'err)]
     [_                                    'err]))
 
 ;; Any -> Boolean
