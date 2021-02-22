@@ -46,9 +46,9 @@
     [(Begin e1 e2)
      (append (externs-e e1)
              (externs-e e2))]
-    [(Let x e1 e2)
-     (append (externs-e e1)
-             (externs-e e2))]
+    [(Let xs es e)
+     (append (externs-es es)
+             (externs-e e))]
     [(Match e cs)
      (append (externs-e e)
              (externs-cs cs))]
@@ -83,7 +83,10 @@
   (match o
     ['peek-byte '(peek_byte peek_byte_port)]
     ['read-byte '(read_byte read_byte_port)]
+    ['peek-char 'peek_char]
+    ['read-char 'read_char]
     ['write-byte 'write_byte]
+    ['write-char 'write_char]
     ['gensym 'gensym]
     #;['string->symbol 'str_to_symbol]  ;; always included now
     ['open-input-file 'open_input_file]
@@ -107,36 +110,40 @@
 ;; [Listof Id]
 ;; List of each Id provided by a stdlib
 (define stdlib-ids
-  (append '(byte? ; math
-            *)
-          ; list
-          '(append
-            assq
-            eighth
-            first
-            fifth
-            fourth
-            last
-            length
-            list
-            list?
-            list-ref
-            list-tail
-            memq
-            ninth
-            null?
-            pair?
-            remq
-            remq*
-            rest
-            reverse
-            second
-            seventh
-            sixth
-            tenth
-            third)
-          ; NOTE: add new stdlib-provided Ids here
-          ))
+  '(; bool
+    boolean? 
+    not
+    ; math
+    byte? 
+    *
+    ; list
+    append
+    assq
+    eighth
+    first
+    fifth
+    fourth
+    last
+    length
+    list
+    list?
+    list-ref
+    list-tail
+    memq
+    ninth
+    null?
+    pair?
+    remq
+    remq*
+    rest
+    reverse
+    second
+    seventh
+    sixth
+    tenth
+    third
+    ; NOTE: add new stdlib-provided Ids here    
+    ))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label

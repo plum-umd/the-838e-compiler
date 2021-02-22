@@ -159,9 +159,9 @@
     [#\t (if (delim? p) #t (committed-delim '(#\r #\u #\e) #t p))]
     ;; could also be #fl
     [#\f (if (delim? p) #f (committed-delim '(#\a #\l #\s #\e) #f p))] 
-    [#\( (unimplemented "vector")]
-    [#\[ (unimplemented "vector")]
-    [#\{ (unimplemented "vector")]
+    [#\( (<vector> #\( p)]
+    [#\[ (<vector> #\[ p)]
+    [#\{ (<vector> #\{ p)]
     [#\s (unimplemented "structure")]
     [#\\ (<char-start> p)]
     [#\: (<keyword> p)]
@@ -382,7 +382,45 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Lists of pairs
+;; Vectors
+
+(module+ test
+  (define (pv s)
+    (<vector> #\( (open-input-string s)))
+
+  (check-equal? (pv ")") #())
+  (check-equal? (pv "x)") #(x))
+  (check-equal? (pv "x y z)") #(x y z))
+  (check-equal? (pv "#;() x y z)") #(x y z))
+  (check-equal? (pv "x #;() y z)") #(x y z))
+  (check-equal? (pv "x y z #;())") #(x y z))
+  (check-equal? (pv ";f\nx y z #;())") #(x y z))
+  (check-equal? (pv ";f\nx y z #;();\n)") #(x y z))
+  (check-pred err? (pv "x . y)"))
+  (check-pred err? (pv "x y . z)"))
+  (check-pred err? (pv "#;() x y . z)"))
+  (check-pred err? (pv "x #;() y . z)"))
+  (check-pred err? (pv "x y #;() . z)"))
+  (check-pred err? (pv "x y . #;() z)"))
+  (check-pred err? (pv "x y . z #;())"))
+  (check-pred err? (pv "#||# x y . z)"))
+  (check-pred err? (pv "x #||# y . z)"))
+  (check-pred err? (pv "x y #||# . z)"))
+  (check-pred err? (pv "x y . #||# z)"))
+  (check-pred err? (pv "x y . z #||#)"))
+  (check-pred err? (pv "x y . z ;f\n)")))
+
+(define (<vector> paren p)
+  (let ((r (<list-or-pair> paren p)))
+    (if (err? r)
+        r
+        (if (list? r)
+            (list->vector r)
+            (err p "dotted list in vector")))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Lists or pairs
 
 (module+ test
   (define (pd s)

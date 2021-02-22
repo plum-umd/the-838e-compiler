@@ -177,6 +177,7 @@
   (check-equal? (run '(match 'x ['x #t] [_ #f])) #t)
   (check-equal? (run '(match 'x ['y #t] [_ #f])) #f)
   (check-equal? (run '(match #f ['y #t] [_ #f])) #f)
+  (check-equal? (run '(match 'x ['y #f] ['x #t] [_ #f])) #t)
   (check-equal? (run
                  '(match (cdr (cons 3 '())) ['() #t] [eof #f]))
                 #t)
@@ -504,6 +505,52 @@
   (check-equal? (run '(tenth (list 1 2 3 4 5 6 7 8 9 10))) 10)
   (check-equal? (run '(third (list 1 2 3 4 5 6 7 8 9 10))) 3)
 
+  ;; Standard library: bool.rkt
+  (check-equal? (run '(boolean? #t)) #t)
+  (check-equal? (run '(boolean? #f)) #t)
+  (check-equal? (run '(boolean? 0)) #f)
+  (check-equal? (run '(not #t)) #f)
+  (check-equal? (run '(not #f)) #t)
+  (check-equal? (run '(not 0)) #f)
+  
+  ;; n-ary let
+  (check-equal? (run '(let () 4)) 4)
+  (check-equal? (run '(let ((x 4)) 3)) 3)
+  (check-equal? (run '(let ((x 4)) x)) 4)
+  (check-equal? (run '(let ((x 4) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((x (let ((y 4)) y)) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((y 6) (x (let ((y 4)) y))) (+ x y))) 10)
+  (check-equal? (run '(let ((y (let ((y 4)) y)) (x (let ((z 4)) z)) (z 2)) (+ z (+ x y)))) 10)
+  (check-equal? (run '(let ((x (add1 12)) (y 9)) (let ((x (add1 x)) (z y)) (+ z x)))) 23)
+
+  ;; cond
+  (check-equal? (run '(cond)) (void))
+  (check-equal? (run '(cond (else 1))) 1)
+  (check-equal? (run '(cond (#t 1))) 1)
+  (check-equal? (run '(cond (#t 2) (else 1))) 2)
+  (check-equal? (run '(cond (#f 2) (else 1))) 1)
+  (check-equal? (run '(cond (#f 2) (else 1))) 1)
+  (check-equal? (run '(cond (0 2) (else 1))) 2)
+
+  
+  ;; Vector Examples
+  (check-equal? (run '#(2 3)) (vector 2 3))
+  (check-equal? (run '#(2 s 3)) #(2 s 3))
+  (check-equal? (run  (let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 4) x)))
+                #(0 0 4))
+  (check-equal? (run '(make-vector 2 "a"))
+                #("a" "a"))
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 0 3)
+                               (vector-ref x 0))))
+                3)
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 3)
+                               (vector-ref x 2))))
+                3)
+
+  ;; Ports
   (define (run-with-file rkt file-contents)
     (define file-path (make-temporary-file "input~a.txt"))
     (define file-port (open-output-file file-path #:exists 'truncate))
@@ -622,7 +669,23 @@
                      "")
                 (cons (void) "abcdefghijklmnopqrstuvwxyz"))
 
+  ;; Villain examples
+  (check-equal? (run '(read-char) "a") (cons #\a ""))
+  (check-equal? (run '(peek-char) "a") (cons #\a ""))
+  (check-equal? (run '(list (read-char) (read-char)) "ab") (cons '(#\a #\b) ""))
+  (check-equal? (run '(list (peek-char) (read-char) (read-char)) "ab") (cons '(#\a #\a #\b) ""))
+  (check-equal? (run '(write-char #\a) "") (cons (void) "a"))
+  (check-equal? (run '(read-char) "λ") (cons #\λ ""))
+  (check-equal? (run '(peek-char) "λ") (cons #\λ ""))
+  (check-equal? (run '(list (read-char) (read-char)) "λσ") (cons '(#\λ #\σ) ""))
+  (check-equal? (run '(list (peek-char) (read-char) (read-char)) "λσ") (cons '(#\λ #\λ #\σ) ""))
+  (check-equal? (run '(write-char #\λ) "") (cons (void) "λ"))
+  (check-equal? (run '(read-char) "文") (cons #\文 ""))
+  (check-equal? (run '(peek-char) "文") (cons #\文 ""))
+  (check-equal? (run '(write-char #\文) "") (cons (void) "文"))
+  (check-equal? (run '(list (read-char) (read-char)) "文斈") (cons '(#\文 #\斈) ""))
+  (check-equal? (run '(list (peek-char) (read-char) (read-char)) "文斈") (cons '(#\文 #\文 #\斈) ""))
+  
 
- 
 
   )

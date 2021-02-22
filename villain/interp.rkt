@@ -11,7 +11,8 @@
 ;; | Integer
 ;; | Boolean
 ;; | Character
-;; | String        
+;; | String
+;; | Vector
 ;; | Eof
 ;; | Void
 ;; | '()
@@ -38,10 +39,13 @@
     [(Symbol s) s]
     [(Eof)    eof]
     [(Empty)  '()]
+    [(Vec es) (list->vector (interp-env* es r ds))]
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
+    [(Prim0 'read-char) (read-char)]
     [(Prim0 'peek-byte) (peek-byte)]
+    [(Prim0 'peek-char) (peek-char)]
     [(Prim0 'gensym)    (gensym)]
     [(Prim1 p e)
      (match (interp-env e r ds)
@@ -61,6 +65,16 @@
              [v2 (match (interp-env e3 r ds)
                    ['err 'err]
                    [v3 (interp-prim3 p v1 v2 v3)])])])]
+    [(Prim4 p e1 e2 e3 e4)
+     (match (interp-env e1 r ds)
+       ['err 'err]
+       [v1 (match (interp-env e2 r ds)
+             ['err 'err]
+             [v2 (match (interp-env e3 r ds)
+                   ['err 'err]
+                   [v3 (match (interp-env e4 r ds)
+                         ['err 'err]
+                         [v4 (interp-prim4 p v1 v2 v3 v4)])])])])]
     [(If p e1 e2)
      (match (interp-env p r ds)
        ['err 'err]
@@ -72,10 +86,10 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
-    [(Let x e1 e2)
-     (match (interp-env e1 r ds)
+    [(Let xs es e)
+     (match (interp-env* es r ds)
        ['err 'err]
-       [v (interp-env e2 (ext r x v) ds)])]
+       [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)
@@ -96,6 +110,7 @@
        ['err 'err]
        [v (interp-match v cs r ds)])]
     [_ 'err]))
+
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)

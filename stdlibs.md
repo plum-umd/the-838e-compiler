@@ -13,10 +13,14 @@ To add a new standard library, "mystdlib":
    where `f1`, `f2`, ... `fn` are the functions provided by "mystdlib".
 3. In
    `villain/externs.rkt", append the ids provided by "mystdlib" to the list of symbols defined by `stdlib-ids`.
-4. In `villain/Makefile`:
-   1. In the `stdlib` label, append the command `make mystdlib.o`.
-   2. In the `runtime.o` label, add `stdlib.o` to the list of object files
-      passed to `ld`'s `-r` option (right before the `-o` option)
+4. In `villain/Makefile`, append `mystdlib.o` to the list `objs_lib`.
+   ```diff
+    objs_lib = \
+    	math.o \
+   -	list.o
+   +	list.o \
+   +	mystdlib.o
+   ```
 
 After doing these steps, the ids provided by "mystdlib" should be available to
 all programs. Making an executable via `%.run` will automatically make all
