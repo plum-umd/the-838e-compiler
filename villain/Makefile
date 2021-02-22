@@ -9,13 +9,8 @@ else
   libs='-l:libunistring.a'
 endif
 
-objs_lib = \
-	lib/bool.o \
-	lib/math.o \
-	lib/list.o
-
 objs = \
-	$(objs_lib) \
+	$(patsubst %.rkt,%.o,$(wildcard lib/*rkt)) \
 	main.o \
 	char.o \
 	io.o \

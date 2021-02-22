@@ -1,6 +1,6 @@
 #lang racket
 (provide externs char-op->uc symbol->label)
-(require "ast.rkt" a86/ast)
+(require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
   (match p
@@ -101,44 +101,6 @@
 ;; Is x provided by a stdlib?
 (define (stdlib-provided? x)
   (memq x stdlib-ids))
-
-;; [Listof Id]
-;; List of each Id provided by a stdlib
-(define stdlib-ids
-  '(; bool
-    boolean? 
-    not
-    ; math
-    byte? 
-    *
-    ; list
-    append
-    assq
-    eighth
-    first
-    fifth
-    fourth
-    last
-    length
-    list
-    list?
-    list-ref
-    list-tail
-    memq
-    ninth
-    null?
-    pair?
-    remq
-    remq*
-    rest
-    reverse
-    second
-    seventh
-    sixth
-    tenth
-    third
-    ; NOTE: add new stdlib-provided Ids here    
-    ))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label
