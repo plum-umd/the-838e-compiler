@@ -63,7 +63,7 @@ void utf8_encode_string(int64_t *str, char *buffer) {
 #define port_buffer_bytes 8
 
 FILE *open_input_file(int64_t untagged_str, char *buffer) {
-  // Str is untagged in asm prior to calling here. very confusing. Might be
+  // Str is untagged in asm prior to calling here. Very confusing. Might be
   // worth an extra or and xor just to avoid this.
   utf8_encode_string((int64_t *) untagged_str,  buffer);
   FILE *f = fopen(buffer, "r");
@@ -82,29 +82,28 @@ void close_input_port(int64_t port_val) {
   }
 }
 
+int populate_buffer(int64_t *port) {
+  if (port_buffer_offset(port) >= port_buffer_len(port)) {
+    int64_t num_read = fread(port_buffer(port), sizeof(int8_t), port_buffer_bytes, port_file(port));
+    port_buffer_len(port) = num_read;
+    port_buffer_offset(port) = 0;
+    return num_read > 0;
+  }
+  return 1;
+}
+
 int64_t read_byte_port(int64_t port_val) {
   int64_t *port = untag_port(port_val);
   if (port_closed(port)) {
     error_handler();
   }
-  int8_t byte;
-  if (port_buffer_offset(port) < port_buffer_len(port)) {
-    byte = port_buffer(port)[port_buffer_offset(port)];
+  int has_bytes = populate_buffer(port);
+  if (has_bytes) {
+    int8_t byte = port_buffer(port)[port_buffer_offset(port)];
     port_buffer_offset(port)++;
-  } else {
-    int64_t num_read = fread(port_buffer(port), sizeof(int8_t), port_buffer_bytes, port_file(port));
-    port_buffer_len(port) = num_read;
-    // Start a 1 because we immediately read a byte
-    port_buffer_offset(port) = 1;
-    if (num_read > 0) {
-      byte = port_buffer(port)[0];
-    } else {
-      byte = EOF;
-    }
+    return (byte << int_shift);
   }
-  return (byte == EOF) ?
-    val_eof :
-    (int64_t)(byte << int_shift);
+  return val_eof;
 }
 
 int64_t peek_byte_port(int64_t port_val) {
@@ -112,23 +111,12 @@ int64_t peek_byte_port(int64_t port_val) {
   if (port_closed(port)) {
     error_handler();
   }
-  int8_t byte;
-  if (port_buffer_offset(port) < port_buffer_len(port)) {
-    byte = port_buffer(port)[port_buffer_offset(port)];
-  } else {
-    int64_t num_read = fread(port_buffer(port), sizeof(int8_t), port_buffer_bytes, port_file(port));
-    port_buffer_len(port) = num_read;
-    // Start at 0 because we don't consume the byte
-    port_buffer_offset(port) = 0;
-    if (num_read > 0) {
-      byte = port_buffer(port)[0];
-    } else {
-      byte = EOF;
-    }
+  int has_bytes = populate_buffer(port);
+  if (has_bytes) {
+    int8_t byte = port_buffer(port)[port_buffer_offset(port)];
+    return (byte << int_shift);
   }
-  return (byte == EOF) ?
-    val_eof :
-    (int64_t)(byte << int_shift);
+  return val_eof;
 }
 
 int64_t read_byte(void) {
