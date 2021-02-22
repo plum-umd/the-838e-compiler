@@ -17,6 +17,7 @@
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define
 (define rcx 'rcx) ; arity indicator
+(define al  'al)  ; low byte of rax ; open-input-file
 
 ;; type CEnv = [Listof Variable]
 
@@ -368,24 +369,23 @@
 
              ;; struct Port {
              ;;   FILE *file;
-             ;;   int64_t buffer_len;
-             ;;   int64_t buffer_offset;
-             ;;   int64_t buffer_closed;
+             ;;   int8_t buffer_len;
+             ;;   int8_t buffer_offset;
+             ;;   int8_t buffer_closed;
              ;;   int8_t buffer[port-buffer-bytes];
              ;; };
-             ;; TODO: offset, length, and closed flag all stored in 64 bits. Pack
-             ;;     these some other way. Offset and length only need to hold
-             ;;     sizeof(buffer). Make them uint8_t and we can have up to 512
-             ;;     buffered bytes. Make the flag another uint8_t for simplicity.
-             ;;     After accounting for the buffer, this whole structure needs to
-             ;;     align to an 8 byte boundary, so size buffer appropriately.
-             (Mov r8 rbx) ;; Save heap ptr
+             (Mov r8 rbx)
              (Mov (Offset rbx 0) rax) ;; Store file pointer on heap
-             (Xor rax rax)
-             (Mov (Offset rbx 8) rax)  ;; Store offset into buffer
-             (Mov (Offset rbx 16) rax) ;; Store number of buffered bytes
-             (Mov (Offset rbx 24) rax) ;; Store "closed" flag
-             (Add rbx (+ 32 port-buffer-bytes))
+             (Xor al al)
+             (Mov (Offset rbx 8) al)  ;; Store offset into buffer
+             (Mov (Offset rbx 9) al)  ;; Store number of buffered bytes
+             (Mov (Offset rbx 10) al) ;; Store "closed" flag
+             ;; Advance heap pointer, allocating space for a buffer
+             ;; Choose actual space allocated based on declared
+             ;; port-buffer-size and bytes used by rest of structure to maintain
+             ;; heap alignment.  
+             (Add rbx (+ (- 8 (modulo (+ 11 port-buffer-bytes) 8)) 11
+                         port-buffer-bytes))
              (Mov rax r8)
              (Or rax type-port)
              )]

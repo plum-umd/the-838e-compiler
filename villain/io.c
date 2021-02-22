@@ -56,10 +56,10 @@ void utf8_encode_string(int64_t *str, char *buffer) {
 
 #define untag_port(p) ((int64_t*) (p ^ port_type_tag))
 #define port_file(p) ((FILE*) p[0])
-#define port_buffer_len(p) (p[1])
-#define port_buffer_offset(p) (p[2])
-#define port_closed(p) (p[3])
-#define port_buffer(p) ((int8_t*)(p + 4))
+#define port_buffer_len(p) (((int8_t*)(p + 1))[0])
+#define port_buffer_offset(p) (((int8_t*)(p + 1))[1])
+#define port_closed(p) (((int8_t*)(p + 1))[2])
+#define port_buffer(p) (((int8_t*)(p + 1)) + 3)
 #define port_buffer_bytes 8
 
 FILE *open_input_file(int64_t untagged_str, char *buffer) {

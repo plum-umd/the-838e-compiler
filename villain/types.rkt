@@ -24,8 +24,8 @@
 (define float-shift  (+ 5 imm-shift))
 (define mask-float #b11111111)
 
-;; Should be a multiple of 8 for heap alignment
-;; Kept low intentionally to test buffering code
+;; Buffer size will get padded so that port structure aligns to 8 byte
+;; boundary. Kept low intentionally to test buffering code.
 (define port-buffer-bytes 8)
 
 (define (bits->imm b)
