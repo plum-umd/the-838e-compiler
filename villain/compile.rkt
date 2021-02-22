@@ -346,7 +346,6 @@
 
              ;; Save the heap pointer as second argument for c function call
              (Mov rsi rbx)
-             ;; TODO: this could be stack allocated
              ;; Allocate a buffer on the heap for the c-string
              (Xor rax type-string)
              ;; r8 <- chars in input string
