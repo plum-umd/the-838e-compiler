@@ -1,5 +1,5 @@
 UNAME := $(shell uname)
-.PHONY: test
+.PHONY: test std default
 
 ifeq ($(UNAME), Darwin)
   format=macho64
@@ -9,36 +9,46 @@ else
   libs='-l:libunistring.a'
 endif
 
+objs_lib = \
+	bool.o \
+	math.o \
+	list.o
+
+objs = \
+	$(objs_lib) \
+	main.o \
+	char.o \
+	io.o \
+	symbol.o \
+	str.o \
+	bignums.o
+
+default: runtime.o
+
+main.o: types.h runtime.h
+char.o: types.h
+io.o: runtime.h
+symbol.o: str.h
+
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs) -lm -lgmp
 
-runtime.o: main.o char.o io.o symbol.o str.o bignums.o
-	ld -r main.o char.o io.o symbol.o str.o bignums.o -o runtime.o
+runtime.o: $(objs)
+	ld -r $(objs) -o runtime.o
 
-main.o: main.c types.h runtime.h
-	gcc -fPIC -c main.c -o main.o
-
-char.o: char.c types.h
-	gcc -fPIC -c char.c -o char.o
-
-io.o: io.c runtime.h
-	gcc -fPIC -c io.c -o io.o
-
-symbol.o: symbol.c str.h
-	gcc -fPIC -c symbol.c -o symbol.o
-
-str.o: str.c
-	gcc -fPIC -c str.c -o str.o
+.SUFFIXES: .c .s .o .rkt
+.c.o:
+	gcc -fPIC -c -o $@ $< 
 
 bignums.o: bignums.c
 	gcc -fPIC -c bignums.c -o bignums.o
 
-%.o: %.s
+.s.o:
 	nasm -f $(format) -o $@ $<
 
-%.s: %.rkt
+.rkt.s:
 	racket -t compile-file.rkt -m $< > $@
 
 clean:
 	rm -f *.o *.s
-	find . -name *.run -delete
+	find . -name "*.run" -delete

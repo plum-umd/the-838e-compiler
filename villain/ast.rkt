@@ -2,10 +2,15 @@
 (provide (all-defined-out))
 
 ;; type Prog = (Prog (Listof Defn) Expr)
-(struct Prog (ds e) #:prefab)
+;;           | (Lib  (Listof Id) (Listof Defn))
+(struct Prog (ds e)  #:prefab)
+(struct Lib  (xs ds) #:prefab)
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
-(struct Defn (f xs e) #:prefab)
+(struct Defn (f xs e) #:prefab) 
+
+;; type Defn* = (Defn* Id (Listof Id) Id Expr)
+(struct Defn* (f xs xs* e) #:prefab)
 
 ;; type Expr = (Eof)
 ;;           | (Empty)
@@ -21,27 +26,29 @@
 ;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
-;;           | (Let Id Expr Expr)
+;;           | (Let (Listof Id) (Listof Expr) Expr)
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
 ;; type Id   = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
-;; type Op1  = 'add1 | 'sub1 | 'zero?
+;; type Op1  = 'add1 | 'sub1 | 'zero? | 'integer?
 ;;           | 'char? | 'integer->char | 'char->integer
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
 ;;           | 'string-length | 'string? | make-string     
 ;;           | 'empty?
-;; type Op2  = '+ | '- | 'eq?
+;; type Op2  = '+ | '- | 'eq? | '<=
 ;;           | 'cons | 'string-ref
 ;; type Op3  = 'string-set!                    
 ;; type Pat  = (Wild)
 ;;           | (Var Id)
 ;;           | (Lit Literal)
+;;           | (Sym Symbol)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
+;; type Binding = (Binding Id Expr)
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)
@@ -58,7 +65,7 @@
 (struct Prim3 (p e1 e2 e3) #:prefab)
 (struct If    (e1 e2 e3)   #:prefab)
 (struct Begin (e1 e2)      #:prefab)
-(struct Let   (x e1 e2)    #:prefab)
+(struct Let   (xs es e)    #:prefab)
 (struct Var   (x)          #:prefab)
 (struct App   (f es)       #:prefab)
 (struct Match (e0 cs)      #:prefab)
@@ -68,6 +75,6 @@
 ;; Pattern constructors
 (struct Wild ()            #:prefab)
 (struct Lit (l)            #:prefab)
+(struct Sym (s)            #:prefab)
 (struct Cons (p1 p2)       #:prefab)
 (struct Box (p)            #:prefab)
-

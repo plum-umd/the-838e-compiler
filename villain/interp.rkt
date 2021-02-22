@@ -2,7 +2,8 @@
 (provide interp interp-env interp-prim1)
 (require "ast.rkt"
          "env.rkt"
-         "interp-prims.rkt")
+         "interp-prims.rkt"
+         "interp-stdlib.rkt")
 
 ;; type Answer = Value | 'err
 
@@ -24,7 +25,7 @@
 (define (interp p)
   (match p
     [(Prog ds e)
-     (interp-env e '() ds)]))
+     (interp-env e '() (append ds stdlib))]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -40,7 +41,9 @@
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
+    [(Prim0 'read-char) (read-char)]
     [(Prim0 'peek-byte) (peek-byte)]
+    [(Prim0 'peek-char) (peek-char)]
     [(Prim0 'gensym)    (gensym)]
     [(Prim1 p e)
      (match (interp-env e r ds)
@@ -71,10 +74,10 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
-    [(Let x e1 e2)
-     (match (interp-env e1 r ds)
+    [(Let xs es e)
+     (match (interp-env* es r ds)
        ['err 'err]
-       [v (interp-env e2 (ext r x v) ds)])]
+       [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)
@@ -83,11 +86,18 @@
            ; check arity matches
            (if (= (length xs) (length vs))
                (interp-env e (zip xs vs) ds)
+               'err)] 
+          [(Defn* f xs xs* e) 
+           (if (>= (length vs) (length xs)) 
+               (interp-env e 
+                  (append (zip xs (take vs (length xs))) 
+                          (list (list xs* (list-tail vs (length xs))))) ds)
                'err)])])]
     [(Match e0 cs)
      (match (interp-env e0 r ds)
        ['err 'err]
-       [v (interp-match v cs r ds)])]))
+       [v (interp-match v cs r ds)])]
+    [_ 'err]))
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)
@@ -101,6 +111,10 @@
           [(Var x) (interp-env e (ext r x v) ds)]
           [(Lit l)
            (if (eq? l v)
+               (interp-env e r ds)
+               (interp-match v cs r ds))]
+          [(Sym s)
+           (if (eq? s v)
                (interp-env e r ds)
                (interp-match v cs r ds))]
           [(Box x)
@@ -123,7 +137,7 @@
 
 ;; Defns Symbol -> Defn
 (define (defns-lookup ds f)
-  (findf (match-lambda [(Defn g _ _) (eq? f g)])
+  (findf (match-lambda [(Defn g _ _) (eq? f g)] [(Defn* g _ _ _) (eq? f g)])
          ds))
 
 (define (zip xs ys)

@@ -70,3 +70,6 @@ Code emitted by the compiler depends upon the following libraries:
   $ make check
   $ make install
   ```
+## Reference
+
+- [standard libraries](stdlibs.md)
