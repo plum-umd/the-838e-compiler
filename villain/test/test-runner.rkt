@@ -549,12 +549,6 @@
                         (begin (vector-set! x 2 3)
                                (vector-ref x 2))))
                 3)
-  (check-equal? (run '(let ((x (make-vector 3 2)))
-                        (begin (vector-cas! x 1 2 4)
-                               (vector-ref x 1))))
-                4)
-  (check-equal? (run '(vector-cas! (make-vector 1 1) 0 3 4)) #f)
-  (check-equal? (run '(vector-cas! (make-vector 3 2) 1 2 5)) #t)
   )
 
 

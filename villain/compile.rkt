@@ -10,12 +10,12 @@
 
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
-                  ; compile-define, vector-cas!
+                  ; compile-define
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref, vector-cas!
+                  ; string-set!, make-string, compile-vector, vector-set!, vector-ref
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!, vector-cas!
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
 
 (define rcx 'rcx) ; arity indicator
 
@@ -135,7 +135,6 @@
     [(Prim1 p e)           (compile-prim1 p e c)]
     [(Prim2 p e1 e2)       (compile-prim2 p e1 e2 c)]
     [(Prim3 p e1 e2 e3)    (compile-prim3 p e1 e2 e3 c)]
-    [(Prim4 p e1 e2 e3 e4) (compile-prim4 p e1 e2 e3 e4 c)]
     [(If e1 e2 e3)         (compile-if e1 e2 e3 c tail?)]
     [(Begin e1 e2)         (compile-begin e1 e2 c tail?)]
     [(Let x e1 e2)         (compile-let x e1 e2 c tail?)]
@@ -593,45 +592,6 @@
               (Add r8 r10)
               (Mov (Offset r8 0) rax)
               (Mov rax val-void))])))
-
-;; Op3 Expr Expr Expr Expr CEnv -> Asm
-(define (compile-prim4 p e1 e2 e3 e4 c)
-  (seq (compile-e-nontail e1 c)
-       (Push rax)
-       (compile-e-nontail e2 (cons #f c))
-       (Push rax)
-       (compile-e-nontail e3 (cons #f (cons #f c)))
-       (Push rax)
-       (compile-e-nontail e4 (cons #f (cons #f (cons #f c))))
-       (match p
-         ['vector-cas!
-          (let ((l1 (gensym 'different)))
-            (seq (Pop r10)                         ;Old-v in r10
-                 (Pop r8)                          ;Pos in r8
-                 (assert-integer r8 c)
-                 (Pop r9)                          ;Vector in r9
-                 (Push r8)                         ;Juggling registers
-                 (Mov r8 r9)                       ;moving Vector to r8
-                 (assert-vector r8 c)
-                 (Pop r9)                          ;Pos now in r9
-                 (Push rax)                        ;pushing new-v onto stack, don't need it yet
-                 (Cmp r9 0)
-                 (Jl (error-label c))
-                 (Xor r8 type-vector)
-                 (Mov rax (Offset r8 0))
-                 (Add r8 8)
-                 (Sub rax (imm->bits 1))
-                 (Cmp r9 rax)
-                 (Jg (error-label c))
-                 (Sar r9 1)
-                 (Add r8 r9)
-                 (Cmp (Offset r8 0) r10)
-                 (Mov rax (imm->bits #f))
-                 (Pop r10)                        ;new-v is now in r10
-                 (Jne l1)
-                 (Mov rax (imm->bits #t))
-                 (Mov (Offset r8 0) r10)
-                 (Label l1)))])))
 
 ;; Id [Listof Expr] CEnv Boolean -> Asm
 (define (compile-app f es c tail?)

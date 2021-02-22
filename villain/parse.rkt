@@ -36,9 +36,7 @@
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
-    [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
-    [(list (? (op? op4) p4) e1 e2 e3 e4) (Prim4 p4 (parse-e e1) (parse-e e2) (parse-e e3) (parse-e e4))] 
-
+    [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
     [(list 'cond) (Prim0 'void)]
@@ -86,17 +84,13 @@
 
 (define (parse-vec-lit-aux s)
   (match s
-    [(? integer?)                  (Int s)]
-    [(? boolean?)                  (Bool s)]
-    [(? char?)                     (Char s)]
-    [(? flonum?)                   (Float s)]
-    [(? string?)                   (String s)]
-                                                     ;;Only basic types in vector literals for now
-                                                     ;;Not sure best way to work with lists because
-                                                     ;;Parsing hasn't been done for them yet
-    [_ (Symbol s)]
-    )
-  )
+    [(? integer?) (Int s)]
+    [(? boolean?) (Bool s)]
+    [(? char?)    (Char s)]
+    [(? flonum?)  (Float s)]
+    [(? string?)  (String s)]
+    [(? symbol?)  (Symbol s)]
+    [_ (error "unsupported vector literal")]))
 
 (define (parse-vec-lit ds)
   (map parse-vec-lit-aux ds))
