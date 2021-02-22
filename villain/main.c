@@ -58,21 +58,20 @@ void print_result(int64_t result) {
     printf("%" PRId64, result >> int_shift);
   } else if (char_type_tag == (char_type_mask & result)) {
     print_char(result);
-  } else if (float_type_tag == (float_type_mask & result)) {        
-    int sig = (int)(result >> (float_shift +32));
-    int sign= (int)(1 &  (result >> (float_shift + 31)));
-    int exp = (int)(( (1 <<  8) - 1) &  (result >> (float_shift + 23)));
-    int mantissa = (int)(( (1 <<  23) - 1 )&  (result >> (float_shift)));
-    float dec_man= 0;
-    for (int i = -23; i<0; i++) {
+  } else if (flonum_type_tag == (ptr_type_mask & result)) {  
+    result = *((int64_t *)(result ^ flonum_type_tag));
+    int64_t sign= 1 &  (result >> 63);
+    int64_t exp = (( (1 <<  11) - 1) &  (result >> 52));
+    int64_t mantissa = ( ( (int64_t)1 <<  52) - 1 )&  result;
+    double dec_man= 0;
+    for (int i = -52; i<0; i++) {
         if (1 == (1 & mantissa)) {
           dec_man+=pow(2, i);
         }
         mantissa=mantissa>>1;
     }
-    float resultFloat=  pow(-1, sign) * pow(2,exp - 127) * (1 + dec_man);
-    float roundedResult = (round(resultFloat * (pow(10, sig)))/(pow(10,sig)));
-    printf("%f", resultFloat);  
+    double resultFlonum=  pow(-1, sign) * pow(2,exp - 1023) * (1 + dec_man);
+    printf("%f", resultFlonum);  
   } else if (str_type_tag == (ptr_type_mask & result)) { 
     printf("\"");
     print_str((int64_t *)(result ^ str_type_tag));

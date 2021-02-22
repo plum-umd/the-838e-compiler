@@ -17,6 +17,7 @@
 ;;           | (Int Integer)
 ;;           | (Bool Boolean)
 ;;           | (Char Character)
+;;           | (Flonum f)
 ;;           | (String String)
 ;;           | (Vec (Listof Expr))
 ;;           | (Symbol Symbol)
@@ -54,13 +55,12 @@
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
 
-
 (struct Eof   ()              #:prefab)
 (struct Empty ()              #:prefab)
 (struct Int   (i)             #:prefab)
 (struct Bool  (b)             #:prefab)
 (struct Char  (c)             #:prefab)
-(struct Float (f)             #:prefab)
+(struct Flonum (f)            #:prefab)
 (struct String (s)            #:prefab)   
 (struct Symbol (s)            #:prefab)
 (struct Prim0 (p)             #:prefab)

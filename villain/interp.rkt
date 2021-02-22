@@ -34,7 +34,7 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
-    [(Float f) f]
+    [(Flonum f) f]
     [(String s) s]
     [(Symbol s) s]
     [(Eof)    eof]
@@ -65,16 +65,6 @@
              [v2 (match (interp-env e3 r ds)
                    ['err 'err]
                    [v3 (interp-prim3 p v1 v2 v3)])])])]
-    [(Prim4 p e1 e2 e3 e4)
-     (match (interp-env e1 r ds)
-       ['err 'err]
-       [v1 (match (interp-env e2 r ds)
-             ['err 'err]
-             [v2 (match (interp-env e3 r ds)
-                   ['err 'err]
-                   [v3 (match (interp-env e4 r ds)
-                         ['err 'err]
-                         [v4 (interp-prim4 p v1 v2 v3 v4)])])])])]
     [(If p e1 e2)
      (match (interp-env p r ds)
        ['err 'err]

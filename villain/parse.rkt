@@ -26,7 +26,8 @@
     [(? integer?)                  (Int s)]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
-    [(? flonum?)                   (Float s)]
+    [(? flonum?)                   (Flonum s)]
+    [(? string?)                   (String s)] 
     [(? string?)                   (String s)]
                                                      ;;in order to properly parse the args
     [(? vector?)                   (Vec  (parse-vec-lit (vector->list s)))]
@@ -87,7 +88,7 @@
     [(? integer?) (Int s)]
     [(? boolean?) (Bool s)]
     [(? char?)    (Char s)]
-    [(? flonum?)  (Float s)]
+    [(? flonum?)  (Flonum s)]
     [(? string?)  (String s)]
     [(? symbol?)  (Symbol s)]
     [_ (error "unsupported vector literal")]))
@@ -102,10 +103,14 @@
          integer->char char->integer box unbox empty? car cdr
          integer-length integer? 
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string?
-         symbol->string string->symbol symbol? vector? vector-length))
+         string-length string? integer?
+         flonum?
+         symbol->string string->symbol symbol?
+         vector? vector-length))
 (define op2
-  '(+ - eq? cons string-ref make-string <= make-vector vector-ref))  
+  '(+ - eq? cons string-ref make-string <=
+      make-vector vector-ref
+      fl+ fl- fl<= fl=))
 
 (define op3
   '(string-set!  vector-set!))  

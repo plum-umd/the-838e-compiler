@@ -305,7 +305,6 @@
                                (even? (sub1 x))))
                          (even? 101)))
                 #f)
-
   (check-equal? (run
                  '(begin (define (map-add1 xs)
                            (if (empty? xs)
@@ -351,13 +350,19 @@
     ;; Testing floats
   (check-equal? (run 4.2) 4.2)
   (check-equal? (run -4.2) -4.2)
-  
   (check-equal? (run 3.3333) 3.3333)
   (check-equal? (run 790.321) 790.321)
   (check-equal? (run -8990.32) -8990.32)
   (check-equal? (run -9999999) -9999999)
   (check-equal? (run .9999999) .9999999)
+  (check-equal? (run -9999999.9999999) -9999999.9999999)
+  (check-equal? (run '(fl+ -7.5 2.33)) -5.17)
+  (check-equal? (run '(fl- 7.5 2.33)) 5.17)
+  (check-equal? (run '(fl- -7.5 2.33)) -9.83)
+  (check-equal? (run '(fl= -7.5 2.33)) #f)
+  (check-equal? (run '(fl= 2.2 2.2)) #t)
 
+  
   ;; Errors and stack alignment
   (define (check-err e)
     ;; check error in both aligned and unaligned config
@@ -627,7 +632,4 @@
   (check-equal? (run '(write-char #\文) "") (cons (void) "文"))
   (check-equal? (run '(list (read-char) (read-char)) "文斈") (cons '(#\文 #\斈) ""))
   (check-equal? (run '(list (peek-char) (read-char) (read-char)) "文斈") (cons '(#\文 #\文 #\斈) ""))
-  
-
-
   )
