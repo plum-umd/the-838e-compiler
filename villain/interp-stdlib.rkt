@@ -1,17 +1,17 @@
 #lang racket
 (provide stdlib)
-(require "parse.rkt" "ast.rkt")
+(require "parse.rkt" "ast.rkt" "read.rkt")
 
 (require racket/runtime-path)
-(define-runtime-path bool.rkt "bool.rkt")
-(define-runtime-path list.rkt "list.rkt")
-(define-runtime-path math.rkt "math.rkt")
+(define-runtime-path bool.rkt "lib/bool.rkt")
+(define-runtime-path list.rkt "lib/list.rkt")
+(define-runtime-path math.rkt "lib/math.rkt")
 
-(define (load-lib-ds f)   
+(define (load-lib-ds f)
   (with-input-from-file f
     (lambda ()
       (read-line) ; ignore #lang
-      (match (parse (read))
+      (match (parse-library (read-all))
         [(Lib ps ds) ds]))))
 
 (define stdlib
