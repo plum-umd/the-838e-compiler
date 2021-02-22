@@ -28,13 +28,16 @@
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Flonum s)]
     [(? string?)                   (String s)] 
+    [(? string?)                   (String s)]
+                                                     ;;in order to properly parse the args
+    [(? vector?)                   (Vec  (parse-vec-lit (vector->list s)))]
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
-    [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
+    [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'begin e1 e2)
      (Begin (parse-e e1) (parse-e e2))]
     [(list 'cond) (Prim0 'void)]
@@ -80,19 +83,40 @@
   (match b
     [(list (? symbol? v) e) (list v (parse-e e))]))
 
+(define (parse-vec-lit-aux s)
+  (match s
+    [(? integer?) (Int s)]
+    [(? boolean?) (Bool s)]
+    [(? char?)    (Char s)]
+    [(? flonum?)  (Flonum s)]
+    [(? string?)  (String s)]
+    [(? symbol?)  (Symbol s)]
+    [_ (error "unsupported vector literal")]))
+
+(define (parse-vec-lit ds)
+  (map parse-vec-lit-aux ds))
+
 (define op0
   '(read-byte peek-byte read-char peek-char void gensym))
 (define op1
   '(add1 sub1 zero? char? write-byte write-char eof-object?
          integer->char char->integer box unbox empty? car cdr
-         integer-length
+         integer-length integer? 
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string? integer?
-         symbol->string string->symbol symbol? flonum?))
+         flonum?
+         symbol->string string->symbol symbol?
+         vector? vector-length))
 (define op2
-  '(+ - eq? cons string-ref make-string <= fl+ fl- fl<= fl=))
+  '(+ - eq? cons string-ref make-string <=
+      make-vector vector-ref
+      fl+ fl- fl<= fl=))
+
 (define op3
-  '(string-set!))  
+  '(string-set!  vector-set!))  
+(define op4
+  '(vector-cas!))  
+
 
 (define (op? ops)
   (λ (x)
