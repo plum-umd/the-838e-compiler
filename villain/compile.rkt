@@ -452,6 +452,22 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
+         ['*
+          (seq (Pop r8)
+               (assert-integer r8 c)
+               (assert-integer rax c)
+               (IMul rax r8)
+               (Sar rax int-shift))]
+         ['/
+          (seq (Mov r8 rax)
+               (Pop rax)
+               (assert-integer r8 c)
+               (assert-integer rax c)
+               (Cmp r8 (imm->bits 0))
+               (Je (error-label c))
+               (Mov rdx 0)
+               (IDiv r8)
+               )]
          ['<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)

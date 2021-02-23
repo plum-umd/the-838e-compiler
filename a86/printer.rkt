@@ -72,6 +72,13 @@
        (string-append tab "add "
                       (arg->string a1) ", "
                       (arg->string a2))]
+      [(IMul a1 a2)
+       (string-append tab "imul "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+      [(IDiv a1)
+       (string-append tab "idiv "
+                      (arg->string a1) ", ")]
       [(Div a1)
        (string-append tab "div "
                       (arg->string a1) ", ")]
