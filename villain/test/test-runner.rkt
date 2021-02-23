@@ -305,7 +305,6 @@
                                (even? (sub1 x))))
                          (even? 101)))
                 #f)
-
   (check-equal? (run
                  '(begin (define (map-add1 xs)
                            (if (empty? xs)
@@ -351,13 +350,19 @@
     ;; Testing floats
   (check-equal? (run 4.2) 4.2)
   (check-equal? (run -4.2) -4.2)
-  
   (check-equal? (run 3.3333) 3.3333)
   (check-equal? (run 790.321) 790.321)
   (check-equal? (run -8990.32) -8990.32)
   (check-equal? (run -9999999) -9999999)
   (check-equal? (run .9999999) .9999999)
+  (check-equal? (run -9999999.9999999) -9999999.9999999)
+  (check-equal? (run '(fl+ -7.5 2.33)) -5.17)
+  (check-equal? (run '(fl- 7.5 2.33)) 5.17)
+  (check-equal? (run '(fl- -7.5 2.33)) -9.83)
+  (check-equal? (run '(fl= -7.5 2.33)) #f)
+  (check-equal? (run '(fl= 2.2 2.2)) #t)
 
+  
   ;; Errors and stack alignment
   (define (check-err e)
     ;; check error in both aligned and unaligned config
@@ -531,6 +536,24 @@
   (check-equal? (run '(cond (#f 2) (else 1))) 1)
   (check-equal? (run '(cond (#f 2) (else 1))) 1)
   (check-equal? (run '(cond (0 2) (else 1))) 2)
+
+  
+  ;;Vector Examples
+  (check-equal? (run '#(2 3)) (vector 2 3))
+  (check-equal? (run '#(2 s 3)) #(2 s 3))
+  (check-equal? (run  (let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 4) x)))
+                #(0 0 4))
+  (check-equal? (run '(make-vector 2 "a"))
+                #("a" "a"))
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 0 3)
+                               (vector-ref x 0))))
+                3)
+  (check-equal? (run '(let ((x (make-vector 3 0)))
+                        (begin (vector-set! x 2 3)
+                               (vector-ref x 2))))
+                3)
   )
 
 
