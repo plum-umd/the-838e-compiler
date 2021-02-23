@@ -5,8 +5,6 @@
 ;;           | (Lib  (Listof Id) (Listof Defn))
 (struct Prog (ds e)  #:prefab)
 (struct Lib  (xs ds) #:prefab)
-(struct Mod  (pvs rqs ds e) #:prefab)
-(struct CMod (pv-exts pvs ds e) #:prefab) ; for compiling a module 
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
 (struct Defn (f xs e) #:prefab) 

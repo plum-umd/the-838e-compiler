@@ -7,11 +7,6 @@
     [(Prog ds e)
      (remove-duplicates (append (externs-ds ds)
                                 (externs-e e)))]
-    [(CMod pv-exts pvs ds e)
-     (let ((exts (apply set (append (externs-ds ds)
-                                    (externs-e e))))
-           (prvs (apply set (map Extern (map symbol->label pv-exts)))))
-       (set->list (set-subtract exts prvs)))]
     [(Lib ps ds)
      ; provided ids aren't external
      (let ((exts (apply set (externs-ds ds)))
