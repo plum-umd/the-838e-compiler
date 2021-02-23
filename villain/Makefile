@@ -15,24 +15,26 @@ objs = \
 	char.o \
 	io.o \
 	symbol.o \
-	str.o
+	str.o \
+	wrap.o
 
 default: runtime.o
 
-main.o: types.h runtime.h
-char.o: types.h
-io.o: runtime.h
+main.o: villain.h runtime.h
+char.o: villain.h
+io.o: runtime.h villain.h
 symbol.o: str.h
+wrap.o: villain.h types.h
 
 %.run: %.o runtime.o
-	gcc runtime.o $< -o $@ $(libs) -lm
+	gcc runtime.o $< -o $@ $(libs)
 
 runtime.o: $(objs)
 	ld -r $(objs) -o runtime.o
 
 .SUFFIXES: .c .s .o .rkt
 .c.o:
-	gcc -fPIC -c -o $@ $< 
+	gcc -fPIC -c -o $@ $<
 
 .s.o:
 	nasm -f $(format) -o $@ $<

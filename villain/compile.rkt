@@ -130,16 +130,16 @@
     [(Flonum f)         (compile-flonum f)]
     [(Eof)              (compile-value eof)]
     [(Empty)            (compile-value '())]
-    [(String s)         (compile-string s)]      
+    [(String s)         (compile-string s)]
     [(Symbol s)         (compile-symbol s c)]
-    [(Vec ds)           (compile-vector ds c)]    
+    [(Vec ds)           (compile-vector ds c)]
     [(Var x)            (compile-variable x c)]
     [(App f es)         (compile-app f es c tail?)]
     [(Apply f e)        (compile-apply f e c tail?)]
     [(Prim0 p)          (compile-prim0 p c)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
+    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]
     [(If e1 e2 e3)      (compile-if e1 e2 e3 c tail?)]
     [(Begin e1 e2)      (compile-begin e1 e2 c tail?)]
     [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
@@ -166,19 +166,19 @@
 
 ;; String -> Asm
 (define (compile-string s)
-  (let ((length (string-length s)))
-    (seq (Mov r9 (imm->bits length))
+  (let ((len (string-length s)))
+    (seq (Mov r9 (imm->bits len))
          (Mov (Offset rbx 0) r9)         ;; write length in word 0
          (Mov r9 0)
          (compile-str-chars (string->list s) 3 0 1)
          (Mov rax rbx)
          (Or rax type-string)
-         (Add rbx (* 8 (add1 (ceiling (/ length 3))))))))
+         (Add rbx (* 8 (add1 (ceiling (/ len 3))))))))
 
 ;; Vec CEnv -> Asm
 (define (compile-vector ds c)
   (let ((len (length ds)))
-    (seq (Mov r9 (imm->bits len))
+    (seq (Mov r9 len)
          (Mov (Offset rbx 0) r9) ;;write length in first word, will also store rbx location
          (Mov r10 rbx)
          (Add rbx 8)
@@ -424,16 +424,16 @@
                (Xor rax type-symbol)     ; replace symbol tag with str
                (Or rax type-string))]
          ['symbol?
-          (type-pred ptr-mask type-symbol)]  
+          (type-pred ptr-mask type-symbol)]
          ['empty? (eq-imm val-empty)]
          ['vector? (type-pred ptr-mask type-vector)]
          ['vector-length
           (seq (assert-vector rax c)
                (Xor rax type-vector)
-               (Mov rax (Offset rax 0)))]
+               (Mov rax (Offset rax 0))
+               (Sal rax int-shift))]
          ['flonum?
-          (type-pred ptr-mask type-flonum)]
-         )))
+          (type-pred ptr-mask type-flonum)])))
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
@@ -591,7 +591,7 @@
          ['fl+ (seq
                (Pop r8)
                (assert-flonum r8 c)
-               (assert-flonum rax c) 
+               (assert-flonum rax c)
                (Xor rax type-flonum)
                (Mov rax (Offset rax 0))
                (Xor r8 type-flonum)
@@ -604,7 +604,7 @@
            (seq
                (Pop r8)
                (assert-flonum r8 c)
-               (assert-flonum rax c) 
+               (assert-flonum rax c)
                (Xor rax type-flonum)
                (Mov rax (Offset rax 0))
                (Mov r11 (arithmetic-shift 1 63))
@@ -620,7 +620,7 @@
           (let ((eq-true (gensym 'eq)))
             (seq (Pop r8)
                  (assert-flonum r8 c)
-                 (assert-flonum rax c) 
+                 (assert-flonum rax c)
                  (Xor rax type-flonum)
                  (Mov rax (Offset rax 0))
                  (Xor r8 type-flonum)
@@ -631,12 +631,12 @@
                  (Mov rax (imm->bits #f))
                  (Label eq-true)))]
 
-         
+
              ['fl<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
                  (assert-flonum r8 c)
-               (assert-flonum rax c) 
+               (assert-flonum rax c)
                  (Xor rax type-flonum)
                  (Mov rax (Offset rax 0))
                  (Xor r8 type-flonum)
@@ -652,16 +652,16 @@
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
                  (Label leq-true)))]
-         
+
           )))
 
 (define (compile-fl+)
   (let ((l1 (gensym)) (l2 (gensym)) (l3 (gensym)) (l4 (gensym))
                               (l5 (gensym)) (l6 (gensym)) (l7 (gensym)))
-            
-       
-          (seq 
-            
+
+
+          (seq
+
                ;; e1 (the bigger flonum) will be contained in r8
                ;; and e2 will be contained in rax
                (Mov r9 rax)
@@ -671,13 +671,13 @@
                (Mov r12 (- (arithmetic-shift 1 63) 1))
                (And r10 r12)
                (Cmp r9 r10)
-               
+
                (Jl l1)
                (Mov r9 rax)
                (Mov rax r8)
                (Mov r8 r9)
                (Label l1)
-               
+
 
                ;; e2's mantissa with a 1 to the left of it
                ;; stored in r9
@@ -686,14 +686,14 @@
                (And r9 r11)
                (Mov r12 (arithmetic-shift 1 52))
                (Add r9 r12)
-               
+
                ;; e1's mantissa with a 1 to the left of it
                ;; stored in r10
                (Mov r10 r8)
                (And r10 r11)
                (Mov r12 (arithmetic-shift 1 52))
                (Add r10 r12)
-               
+
                ;; e2's expt
                ;; stored in r12
                (Mov r12 rax)
@@ -704,7 +704,7 @@
                ;; stored in r11
                (Mov r11 r8)
                (Sar r11 52)
-               (And r11 (- (arithmetic-shift 1 11) 1))         
+               (And r11 (- (arithmetic-shift 1 11) 1))
 
                ;; makes e2's expt the same size of e1
                ;; and shifts e2's mantissa in this loop
@@ -719,7 +719,7 @@
                ;; e2's sign. stored in r13
                (Mov r13 rax)
                (Sar r13 63)
-               
+
                ;; e1's sign. stored in r12
                (Mov r12 r8)
                (Sar r12 63)
@@ -741,7 +741,7 @@
                (Sal r10 1)
                (Sub r11 1)
                (Jmp l6)
-               
+
                ;; else m1 + m2
                (Label l4)
                (Add r10 r9)
@@ -753,7 +753,7 @@
                (Jg l5)
                (Add r11 1)
                (Mov r9 r10)
-               (Sar r10 1) 
+               (Sar r10 1)
                (And r9 1)
                (Mov r13 0)
                (Cmp r9 r13)
@@ -765,20 +765,20 @@
                ;; adjusts the mantissa
                (Mov r9 (arithmetic-shift 1 52))
                (Sub r10 r9 )
-               
+
                ;; Construction of the final result
                (Label l7)
-        
+
                (Mov rax r12)
                (Sal rax 11)
                (Add rax r11)
                (Sal rax 52)
-               (Add rax r10)             
+               (Add rax r10)
                (Mov (Offset rbx 0) rax)
                (Mov rax rbx)
                (Or rax type-flonum)
                (Add rbx 8)
-             
+
       )))
 
 ;; Op3 Expr Expr Expr CEnv -> Asm

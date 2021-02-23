@@ -1,129 +1,132 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include "types.h"
+#include "villain.h"
 #include "runtime.h"
-#include <math.h>
 
 FILE* in;
 FILE* out;
 void (*error_handler)();
 int64_t *heap;
 
-FILE* in;
-FILE* out;
-void (*error_handler)();
-int64_t *heap;
-
-void print_result(int64_t);
-void print_vector(int64_t);
-void print_str(int64_t *);
-
-void error_exit() {
+void error_exit()
+{
   printf("err\n");
   exit(1);
 }
 
-void raise_error() {
+void raise_error()
+{
   return error_handler();
 }
 
-int main(int argc, char** argv) {
+void print_str(vl_str *);
+void print_char(vl_char);
+void print_cons(vl_cons *);
+void print_vector(vl_vec *);
+
+void print_result(vl_val x)
+{
+  switch (vl_typeof(x)) {
+  case VL_INT:
+    printf("%" PRId64, vl_unwrap_int(x));
+    break;
+  case VL_CHAR:
+    print_char(vl_unwrap_char(x));
+    break;
+  case VL_BOOL:
+    if (vl_unwrap_bool(x))
+      printf("#t");
+    else
+      printf("#f");
+    break;
+  case VL_EOF:
+    printf("#<eof>");
+    break;
+  case VL_VOID:
+    break;
+  case VL_EMPTY:
+    printf("'()");
+    break;
+  case VL_BOX:
+    printf("#&");
+    print_result(vl_unwrap_box(x)->val);
+    break;
+  case VL_CONS:
+    printf("'(");
+    print_cons(vl_unwrap_cons(x));
+    printf(")");
+    break;
+  case VL_STR:
+    putchar('"');
+    print_str(vl_unwrap_str(x));
+    putchar('"');
+    break;
+  case VL_SYMBOL:
+    putchar('\'');
+    print_str((vl_str *)vl_unwrap_symbol(x));
+    break;
+  case VL_VEC:
+    print_vector(vl_unwrap_vec(x));
+    break;
+  case VL_FLONUM:
+    printf("%f", vl_unwrap_flonum(x));
+    break;
+  case VL_INVALID:
+  default:
+    error_exit();
+    break;
+  }
+}
+
+void print_vector(vl_vec *v)
+{
+  uint64_t i;
+
+  printf("'#(");
+  for (int i = 0; i < v->len; ++i) {
+    print_result(v->buf[i]);
+
+    if (i < v->len - 1)
+      putchar(' ');
+  }
+  printf(")");
+}
+
+void print_cons(vl_cons *cons)
+{
+  print_result(cons->fst);
+
+  switch (vl_typeof(cons->snd)) {
+  case VL_EMPTY:
+    // nothing
+    break;
+  case VL_CONS:
+    printf(" ");
+    print_cons(vl_unwrap_cons(cons->snd));
+    break;
+  default:
+    printf(" . ");
+    print_result(cons->snd);
+    break;
+  }
+}
+
+int main(int argc, char** argv)
+{
+  vl_val result;
+
   in = stdin;
   out = stdout;
   error_handler = &error_exit;
   heap = malloc(8 * heap_size);
-  int64_t result = entry(heap);
+
+  result = entry(heap);
+
   print_result(result);
-  if (result != val_void) printf("\n");
+  if (vl_typeof(result) != VL_VOID)
+    putchar('\n');
+
   free(heap);
   return 0;
-}
-
-void print_char(int64_t);
-void print_cons(int64_t);
-
-void print_result(int64_t result) {
-  if (cons_type_tag == (ptr_type_mask & result)) {
-    printf("'(");
-    print_cons(result);
-    printf(")");
-  } else if (box_type_tag == (ptr_type_mask & result)) {
-    printf("#&");
-    print_result (*((int64_t *)(result ^ box_type_tag)));
-  } else if(vector_type_tag == (ptr_type_mask & result)) {
-    print_vector(result);
-                                                          
-  }  else if (int_type_tag == (int_type_mask & result)) {
-    printf("%" PRId64, result >> int_shift);
-  } else if (char_type_tag == (char_type_mask & result)) {
-    print_char(result);
-  } else if (flonum_type_tag == (ptr_type_mask & result)) {  
-    result = *((int64_t *)(result ^ flonum_type_tag));
-    int64_t sign= 1 &  (result >> 63);
-    int64_t exp = (( (1 <<  11) - 1) &  (result >> 52));
-    int64_t mantissa = ( ( (int64_t)1 <<  52) - 1 )&  result;
-    double dec_man= 0;
-    for (int i = -52; i<0; i++) {
-        if (1 == (1 & mantissa)) {
-          dec_man+=pow(2, i);
-        }
-        mantissa=mantissa>>1;
-    }
-    double resultFlonum=  pow(-1, sign) * pow(2,exp - 1023) * (1 + dec_man);
-    printf("%f", resultFlonum);  
-  } else if (str_type_tag == (ptr_type_mask & result)) { 
-    printf("\"");
-    print_str((int64_t *)(result ^ str_type_tag));
-    printf("\"");
-  } else if (symbol_type_tag == (ptr_type_mask & result)) {
-    printf("'");
-    print_str((int64_t *)(result ^ symbol_type_tag));
-  } else {
-    switch (result) {
-    case val_true:
-      printf("#t"); break;
-    case val_false:
-      printf("#f"); break;
-    case val_eof:
-      printf("#<eof>"); break;
-    case val_empty:
-      printf("()"); break;
-    case val_void:
-      /* nothing */ break;
-    }
-  }
-}
-
-void print_vector(int64_t result) {
-  int64_t len = *((int64_t *)(result ^ vector_type_tag));
-  int64_t  curr = result+8;
-  int64_t i = 0;
-  printf("#(");
-  while(i < len){ //should be len
-     print_result(*((int64_t *)((curr) ^ vector_type_tag)));
-     
-     curr= curr + 8;
-     i+=16;
-     if(i < len){
-        printf(" ");
-              };
-  }
-  printf(")");
-
-}
-
-void print_cons(int64_t a) {
-  int64_t car = *((int64_t *)((a + 8) ^ cons_type_tag));
-  int64_t cdr = *((int64_t *)((a + 0) ^ cons_type_tag));
-  print_result(car);
-  if (cdr == val_empty) {
-    // nothing
-  } else if (cons_type_tag == (ptr_type_mask & cdr)) {
-    printf(" ");
-    print_cons(cdr);
-  } else {
-    printf(" . ");
-    print_result(cdr);
-  }
 }
