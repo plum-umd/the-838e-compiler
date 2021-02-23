@@ -1,5 +1,5 @@
 #lang racket
-(provide * byte?)
+(provide = * byte?)
 
 ;; not exactly the right place, but fine for now
 (define (byte? b)
@@ -22,3 +22,16 @@
     ['() 1]
     [(cons x xs)
      (*/2 x (apply * xs))]))
+
+(define (= . xs)
+  (match xs
+    [(cons x xs) (=/a x xs)]))
+
+(define (=/a x xs)
+  (match xs
+    ['() #t]
+    [(cons y xs)
+     ; FIXME: using eq? because things are machine integers now
+     (if (eq? x y)
+         (=/a y xs)
+         #f)]))
