@@ -11,7 +11,7 @@
           #f)
       #f))
 
-  ; multiplication
+ ; multiplication
 (define (*/2 x y)
   (if (zero? y)
       0

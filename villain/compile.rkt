@@ -452,6 +452,28 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
+         ['quotient
+          (seq (Mov r8 rax)
+               (Pop rax)
+               (assert-integer r8 c)
+               (assert-integer rax c)
+               (Cmp r8 (imm->bits 0))
+               (Je (error-label c))
+               (Cqo)
+               (IDiv r8)
+               (Sal rax int-shift)
+               )]
+         ['remainder
+          (seq (Mov r8 rax)
+               (Pop rax)
+               (assert-integer r8 c)
+               (assert-integer rax c)
+               (Cmp r8 (imm->bits 0))
+               (Je (error-label c))
+               (Cqo)
+               (IDiv r8)
+               (Mov rax rdx)
+               )]
          ['<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
