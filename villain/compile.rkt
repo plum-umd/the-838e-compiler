@@ -233,20 +233,37 @@
   (let ((i (lookup x c)))
     (seq (Mov rax (Offset rsp i)))))
 
-;; Apply Func Expr CEnv Boolean -> Asm
+;; Id Expr CEnv Boolean -> Asm
 (define (compile-apply f e c tail?)
-  (let ((ret  (gensym 'ret))
-        (done (gensym 'done))
-        (loop (gensym 'loop)))
-    ;; this is the non-tail version
+  (if tail?
+      (compile-tail-apply f e c)
+      (compile-nontail-apply f e c)))
+
+;; Id Expr CEnv -> Asm
+(define (compile-tail-apply f e c)
+  (seq (compile-e-nontail e c)
+       (Add rsp (* 8 (length c))) ; reset stack
+       (list->stack c)
+       (Jmp (symbol->label f))))
+
+;; Id Expr CEnv -> Asm
+(define (compile-nontail-apply f e c)
+  (let ((ret  (gensym 'ret)))
     (seq (compile-e-nontail e c)
          (pad-stack c)
          (Lea r8 ret)
          (Push r8)
+         (list->stack c)
+         (Jmp (symbol->label f))
+         (Label ret)
+         (unpad-stack c))))
 
-         ;; Traverse list in rax, pushing elements on to stack,
-         ;; calculating length in rcx
-         (Mov rcx (imm->bits 0))
+;; Traverse list in rax, pushing elements on to stack,
+;; calculating length in rcx
+(define (list->stack c)
+  (let ((done (gensym 'done))
+        (loop (gensym 'loop)))
+    (seq (Mov rcx (imm->bits 0))
          (Label loop)
          (Cmp rax (imm->bits '()))
          (Je done)
@@ -257,11 +274,7 @@
          (Add rcx (imm->bits 1))
          (Mov rax (Offset rax 0))
          (Jmp loop)
-         (Label done)
-
-         (Jmp (symbol->label f))
-         (Label ret)
-         (unpad-stack c))))
+         (Label done))))
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)
