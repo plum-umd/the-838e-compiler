@@ -12,8 +12,13 @@
       #f))
 
   ; multiplication
-(define (* x y)
+(define (*/2 x y)
   (if (zero? y)
       0
-      (+ x (* x (sub1 y)))))
+      (+ x (*/2 x (sub1 y)))))
 
+(define (* . xs)
+  (match xs
+    ['() 1]
+    [(cons x xs)
+     (*/2 x (apply * xs))]))

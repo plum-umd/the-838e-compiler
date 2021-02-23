@@ -94,7 +94,8 @@
                (interp-env e 
                   (append (zip xs (take vs (length xs))) 
                           (list (list xs* (list-tail vs (length xs))))) ds)
-               'err)])])]
+               'err)])]
+       [_ 'err])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)
@@ -109,7 +110,8 @@
                (interp-env e 
                   (append (zip xs (take vs (length xs))) 
                           (list (list xs* (list-tail vs (length xs))))) ds)
-               'err)])])]
+               'err)])]
+       [_ 'err])]
     [(Match e0 cs)
      (match (interp-env e0 r ds)
        ['err 'err]

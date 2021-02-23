@@ -135,7 +135,7 @@
     [(Vec ds)           (compile-vector ds c)]    
     [(Var x)            (compile-variable x c)]
     [(App f es)         (compile-app f es c tail?)]
-    [(Apply f e)        (compile-apply f e c)]
+    [(Apply f e)        (compile-apply f e c tail?)]
     [(Prim0 p)          (compile-prim0 p c)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
@@ -233,28 +233,35 @@
   (let ((i (lookup x c)))
     (seq (Mov rax (Offset rsp i)))))
 
-;; Apply Func Expr CEnv -> Asm
-(define (compile-apply f e c)
-  (let ((ret (gensym 'ret))
+;; Apply Func Expr CEnv Boolean -> Asm
+(define (compile-apply f e c tail?)
+  (let ((ret  (gensym 'ret))
+        (done (gensym 'done))
         (loop (gensym 'loop)))
-   (seq (Lea r8 ret)
-        (Push r8)
-        (compile-e-nontail e c)
-        (assert-cons rax c)
-        (Mov rcx (imm->bits 0))
-      (Label loop)
-        (assert-cons rax c)       ; must be cons type
-        (Xor rax type-cons)       ; convert to pointer
-        (Mov r8 (Offset rax 8))   ; get first element
-        (Push r8)                 ; push on to stack
-        (Add rcx (imm->bits 1))   ; increment count
-        (Mov rax (Offset rax 0))  ; get second
-        (Cmp rax (imm->bits '()))
-        (Jne loop)
-        ; rcx alread has argument count
-        (Jmp (symbol->label f))  ; result should be in rax
-      (Label ret)
-)))
+    ;; this is the non-tail version
+    (seq (compile-e-nontail e c)
+         (pad-stack c)
+         (Lea r8 ret)
+         (Push r8)
+
+         ;; Traverse list in rax, pushing elements on to stack,
+         ;; calculating length in rcx
+         (Mov rcx (imm->bits 0))
+         (Label loop)
+         (Cmp rax (imm->bits '()))
+         (Je done)
+         (assert-cons rax c)
+         (Xor rax type-cons)
+         (Mov r8 (Offset rax 8))
+         (Push r8)
+         (Add rcx (imm->bits 1))
+         (Mov rax (Offset rax 0))
+         (Jmp loop)
+         (Label done)
+
+         (Jmp (symbol->label f))
+         (Label ret)
+         (unpad-stack c))))
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)
