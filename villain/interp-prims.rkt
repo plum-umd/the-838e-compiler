@@ -37,6 +37,9 @@
   (match (list p v1 v2)
     [(list '+ (? integer?) (? integer?))  (+ v1 v2)]
     [(list '- (? integer?) (? integer?))  (- v1 v2)]
+    [(list 'multiply (? integer?) (? integer?) (* v1 v2))]
+    [(list 'quotient (? integer?) (? integer?) (quotient v1 v2))]
+    [(list 'remainder (? integer?) (? integer?) (remainder v1 v2))]
     [(list '<= (? integer?) (? integer?)) (<= v1 v2)]
     [(list 'eq? v1 v2)                    (eqv? v1 v2)]
     [(list 'cons v1 v2)                   (cons v1 v2)]
