@@ -16,6 +16,7 @@ void (*error_handler)();
 int64_t *heap;
 
 void print_result(int64_t);
+void print_vector(int64_t);
 void print_str(int64_t *);
 
 void error_exit() {
@@ -43,7 +44,6 @@ void print_char(int64_t);
 void print_cons(int64_t);
 
 void print_result(int64_t result) {
-
   if (cons_type_tag == (ptr_type_mask & result)) {
     printf("'(");
     print_cons(result);
@@ -51,25 +51,27 @@ void print_result(int64_t result) {
   } else if (box_type_tag == (ptr_type_mask & result)) {
     printf("#&");
     print_result (*((int64_t *)(result ^ box_type_tag)));
-  } else if (int_type_tag == (int_type_mask & result)) {
+  } else if(vector_type_tag == (ptr_type_mask & result)) {
+    print_vector(result);
+                                                          
+  }  else if (int_type_tag == (int_type_mask & result)) {
     printf("%" PRId64, result >> int_shift);
   } else if (char_type_tag == (char_type_mask & result)) {
     print_char(result);
-  } else if (float_type_tag == (float_type_mask & result)) {        
-    int sig = (int)(result >> (float_shift +32));
-    int sign= (int)(1 &  (result >> (float_shift + 31)));
-    int exp = (int)(( (1 <<  8) - 1) &  (result >> (float_shift + 23)));
-    int mantissa = (int)(( (1 <<  23) - 1 )&  (result >> (float_shift)));
-    float dec_man= 0;
-    for (int i = -23; i<0; i++) {
+  } else if (flonum_type_tag == (ptr_type_mask & result)) {  
+    result = *((int64_t *)(result ^ flonum_type_tag));
+    int64_t sign= 1 &  (result >> 63);
+    int64_t exp = (( (1 <<  11) - 1) &  (result >> 52));
+    int64_t mantissa = ( ( (int64_t)1 <<  52) - 1 )&  result;
+    double dec_man= 0;
+    for (int i = -52; i<0; i++) {
         if (1 == (1 & mantissa)) {
           dec_man+=pow(2, i);
         }
         mantissa=mantissa>>1;
     }
-    float resultFloat=  pow(-1, sign) * pow(2,exp - 127) * (1 + dec_man);
-    float roundedResult = (round(resultFloat * (pow(10, sig)))/(pow(10,sig)));
-    printf("%f", resultFloat);  
+    double resultFlonum=  pow(-1, sign) * pow(2,exp - 1023) * (1 + dec_man);
+    printf("%f", resultFlonum);  
   } else if (str_type_tag == (ptr_type_mask & result)) { 
     printf("\"");
     print_str((int64_t *)(result ^ str_type_tag));
@@ -91,6 +93,24 @@ void print_result(int64_t result) {
       /* nothing */ break;
     }
   }
+}
+
+void print_vector(int64_t result) {
+  int64_t len = *((int64_t *)(result ^ vector_type_tag));
+  int64_t  curr = result+8;
+  int64_t i = 0;
+  printf("#(");
+  while(i < len){ //should be len
+     print_result(*((int64_t *)((curr) ^ vector_type_tag)));
+     
+     curr= curr + 8;
+     i+=16;
+     if(i < len){
+        printf(" ");
+              };
+  }
+  printf(")");
+
 }
 
 void print_cons(int64_t a) {

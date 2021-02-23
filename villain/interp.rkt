@@ -11,7 +11,8 @@
 ;; | Integer
 ;; | Boolean
 ;; | Character
-;; | String        
+;; | String
+;; | Vector
 ;; | Eof
 ;; | Void
 ;; | '()
@@ -33,11 +34,12 @@
     [(Int i)  i]
     [(Bool b) b]
     [(Char c) c]
-    [(Float f) f]
+    [(Flonum f) f]
     [(String s) s]
     [(Symbol s) s]
     [(Eof)    eof]
     [(Empty)  '()]
+    [(Vec es) (list->vector (interp-env* es r ds))]
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
@@ -98,6 +100,7 @@
        ['err 'err]
        [v (interp-match v cs r ds)])]
     [_ 'err]))
+
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)
