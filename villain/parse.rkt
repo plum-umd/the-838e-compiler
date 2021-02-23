@@ -132,7 +132,7 @@
          symbol->string string->symbol symbol?
          vector? vector-length))
 (define op2
-  '(+ - eq? cons string-ref make-string <=
+  '(+ - quotient remainder eq? cons string-ref make-string <=
       make-vector vector-ref
       fl+ fl- fl<= fl=))
 

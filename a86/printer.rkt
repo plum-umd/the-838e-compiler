@@ -58,6 +58,7 @@
   (define (instr->string i)
     (match i
       [(Ret)       (string-append tab "ret")]
+      [(Cqo)       (string-append tab "cqo")]
       [(Global x)  (string-append tab "global "  (label-symbol->string x))]
       [(Default x) (string-append tab "default " (symbol->string x))]
       [(Section x) (string-append tab "section " (symbol->string x))]
@@ -72,6 +73,13 @@
        (string-append tab "add "
                       (arg->string a1) ", "
                       (arg->string a2))]
+      [(IMul a1 a2)
+       (string-append tab "imul "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+      [(IDiv a1)
+       (string-append tab "idiv "
+                      (arg->string a1) ", ")]
       [(Div a1)
        (string-append tab "div "
                       (arg->string a1) ", ")]
@@ -141,6 +149,7 @@
        (string-append tab "bsr "
                       (arg->string a1) ", "
                       (arg->string a2))]))
+
 
   (define (comment->string c)
     (match c

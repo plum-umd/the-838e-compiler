@@ -520,10 +520,13 @@
 
   ; Standard library: math.rkt
   (check-equal? (run '(* 1 2 3 4)) 24)
+  (check-equal? (run '(* -2 3 4)) -24)
   (check-equal? (run '(* 1 (* 2 1) 2 2)) 8)
   (check-equal? (run '(let ((x (+ 1 2)))
                       (let ((z (* 1 x)))
                         (* x z)))) 9)
+  (check-equal? (run '(quotient -6 3)) -2)
+  (check-equal? (run '(remainder -11 3)) -2)
 
   ; Standard library: string.rkt
   (check-equal? (run '(string)) "")
