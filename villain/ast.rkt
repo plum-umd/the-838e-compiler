@@ -40,7 +40,7 @@
 ;;           | 'box | 'car | 'cdr | 'unbox
 ;;           | 'string-length | 'string? | make-string    
 ;;           | 'empty?  |'vector? |'vector-length |list?
-;; type Op2  = '+ | '- | multiply | quotient| remainder
+;; type Op2  = '+ | '- | * | quotient| remainder
 ;;           | 'eq? | 'cons | 'string-ref | 'make-vector 
 ;;           | 'vector-ref |'vector-set!
 ;; type Op3  = 'string-set!

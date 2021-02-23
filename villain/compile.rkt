@@ -452,7 +452,7 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
-         ['multiply
+         ['*
           (seq (Pop r8)
                (assert-integer r8 c)
                (assert-integer rax c)
