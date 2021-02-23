@@ -525,6 +525,23 @@
                       (let ((z (* 1 x)))
                         (* x z)))) 9)
 
+  ; Standard library: string.rkt
+  (check-equal? (run '(string)) "")
+  (check-equal? (run '(string #\a #\b #\c)) "abc")
+  (check-equal? (run '(string-append "" "")) "")
+  (check-equal? (run '(string-append "asdf" "")) "asdf")
+  (check-equal? (run '(string-append "" "qwerty")) "qwerty")
+  (check-equal? (run '(string-append "asdf" "qwerty")) "asdfqwerty")
+  (check-equal? (run '(let ((s (string #\A #\p #\p #\l #\e)))
+                        (begin (begin (string-copy! s 4 "y")
+                                      (string-copy! s 0 s 3 4))
+                               s)))
+                "lpply")
+  (check-equal? (run '(string->list "")) '())
+  (check-equal? (run '(string->list "abc")) '(#\a #\b #\c))
+  (check-equal? (run '(list->string '())) "")
+  (check-equal? (run '(list->string (list #\a #\b #\c))) "abc")
+
   ;; n-ary let
   (check-equal? (run '(let () 4)) 4)
   (check-equal? (run '(let ((x 4)) 3)) 3)
