@@ -465,8 +465,9 @@
                (assert-integer rax c)
                (Cmp r8 (imm->bits 0))
                (Je (error-label c))
-               (Mov rdx 0)
+               (Cqo)
                (IDiv r8)
+               (Sal rax int-shift)
                )]
          ['<=
           (let ((leq-true (gensym 'leq)))

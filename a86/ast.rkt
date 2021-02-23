@@ -166,6 +166,7 @@
 (instruct Pop    (a1)      check:register)
 (instruct Lea    (dst x)   check:lea)
 (instruct Bsr    (dst src) check:src-dest)
+(instruct Cqo    ()        check:none)
 
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
@@ -195,6 +196,7 @@
       (Sub? x)
       (IMul? x)
       (IDiv? x)
+      (Cqo? x)
       (Div? x)
       (Cmp? x)
       (Jmp? x)
