@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include "types.h"
-
-void print_codepoint(int64_t);
-void print_str(int64_t *);
-void print_str_char(int64_t);
+#include "utf8.h"
+#include "char.h"
 
 void print_char (int64_t v) {
   int64_t codepoint = v >> char_shift;
@@ -33,45 +31,16 @@ void print_char (int64_t v) {
   }
 }
 
-void print_codepoint(int64_t v) {
-  int64_t codepoint = v >> char_shift;
-  // Print using UTF-8 encoding of codepoint
-  // https://en.wikipedia.org/wiki/UTF-8
-  if (codepoint < 128) {
-    printf("%c", (char) codepoint);
-  } else if (codepoint < 2048) {
-    printf("%c%c",
-	   (char)(codepoint >> 6) | 192,
-	   ((char)codepoint & 63) | 128);
-  } else if (codepoint < 65536) {
-    printf("%c%c%c",
-	   (char)(codepoint >> 12) | 224,
-	   ((char)(codepoint >> 6) & 63) | 128,
-	   ((char)codepoint & 63) | 128);
-  } else {
-    printf("%c%c%c%c",
-	   (char)(codepoint >> 18) | 240,
-	   ((char)(codepoint >> 12) & 63) | 128,
-	   ((char)(codepoint >> 6) & 63) | 128,
-	   ((char)codepoint & 63) | 128);
-  }
+int32_t get_str_codepoint(int64_t *str, int64_t codepoint_idx) {
+  int i = 1 + codepoint_idx / 3;
+  int j = codepoint_idx % 3;
+  return 0x1FFFFF & (str[i] >> (j * 21));
 }
 
 void print_str(int64_t *str) {
   int64_t len = (str[0] >> int_shift);
-  int temp;
-  int i, j;
-  int n = (len % 3 == 0) ? len / 3 : (len / 3 + 1);
-  for (i = 1; i < n; i++) {
-    for (j = 0; j < 3; j++) {
-      temp = str[i] >> (j * 21);
-      print_str_char(temp);
-    }
-  }
-  i = (len % 3 == 0) ? 3 : (len % 3);
-  for (j = 0; j < i; j++){
-    temp = str[n] >> (j * 21);
-    print_str_char(temp);
+  for (int64_t i = 0 ; i < len; i++) {
+    print_str_char(get_str_codepoint(str, i));
   }
 }
 

@@ -15,13 +15,14 @@ objs = \
 	char.o \
 	io.o \
 	symbol.o \
-	str.o
+	str.o \
+	utf8.o
 
 default: runtime.o
 
-main.o: types.h runtime.h
-char.o: types.h
-io.o: runtime.h
+main.o: types.h runtime.h char.h
+char.o: types.h utf8.h char.h
+io.o: runtime.h utf8.h char.h
 symbol.o: str.h
 
 %.run: %.o runtime.o

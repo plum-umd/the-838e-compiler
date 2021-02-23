@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "types.h"
 #include "runtime.h"
+#include "char.h"
 #include <math.h>
 
 FILE* in;
@@ -17,7 +18,6 @@ int64_t *heap;
 
 void print_result(int64_t);
 void print_vector(int64_t);
-void print_str(int64_t *);
 
 void error_exit() {
   printf("err\n");
@@ -79,6 +79,8 @@ void print_result(int64_t result) {
   } else if (symbol_type_tag == (ptr_type_mask & result)) {
     printf("'");
     print_str((int64_t *)(result ^ symbol_type_tag));
+  } else if (port_type_tag == (ptr_type_mask & result)) {
+    printf("#<input-port>");
   } else {
     switch (result) {
     case val_true:
