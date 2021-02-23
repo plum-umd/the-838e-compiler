@@ -73,6 +73,7 @@
 (struct Let   (xs es e)       #:prefab)
 (struct Var   (x)             #:prefab)
 (struct App   (f es)          #:prefab)
+(struct Apply (f e)           #:prefab)
 (struct Match (e0 cs)         #:prefab)
 (struct Vec   (es)            #:prefab)
 
