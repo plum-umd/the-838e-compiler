@@ -11,6 +11,18 @@
 ;; S-Expr -> Prog
 (define (parse s)
   (match s
+    [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
+           (and ds (list 'define _ _)) ...)
+     (Mod pvs rqs (map parse-d ds) (parse-e '(void)))]
+    [(list 'begin (list 'require rqs ...)
+           (and ds (list 'define _ _)) ...)
+     (Mod '() rqs (map parse-d ds) (parse-e '(void)))]
+    [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
+           (and ds (list 'define _ _)) ... e)
+     (Mod pvs rqs (map parse-d ds) (parse-e e))]
+    [(list 'begin (list 'require rqs ...)
+           (and ds (list 'define _ _)) ... e)
+     (Mod '() rqs (map parse-d ds) (parse-e e))]
     [(list 'begin (and ds (list-rest 'define _ _)) ... e)
      (Prog (map parse-d ds) (parse-e e))]
     [e (Prog '() (parse-e e))]))
