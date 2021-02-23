@@ -142,7 +142,8 @@
          [(Prim0 p)          (compile-prim0 p c)]
          [(Prim1 p e)        (compile-prim1 p e c)]
          [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-         [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]  
+         [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]
+         [(Mps p rest) (compile-mps p rest c)]
          [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
          [(Begin e1 e2)      (compile-begin e1 e2 c)]
          [(Let xs es e)      (compile-let xs es e c)]
@@ -321,11 +322,7 @@
          ['string?
           (type-pred ptr-mask type-string)]  
          ['string->symbol
-<<<<<<< HEAD
-          (seq (assert-string rax)
-=======
           (seq (assert-string rax c)
->>>>>>> main
                (Xor rax type-string)
                (pad-stack c)
                (Mov rdi rax)
@@ -333,11 +330,7 @@
                (unpad-stack c)
                (Or rax type-symbol))]
          ['symbol->string
-<<<<<<< HEAD
-          (seq (assert-symbol rax)
-=======
           (seq (assert-symbol rax c)
->>>>>>> main
                (Xor rax type-symbol)     ; replace symbol tag with str
                (Or rax type-string))]
          ['symbol?
@@ -373,13 +366,8 @@
                  (Label leq-true)))]
          ['eq?
           (let ((l (gensym)))
-<<<<<<< HEAD
-            (seq (Cmp rax (Offset rsp 0))
-                 (Pop rax)
-=======
             (seq (Pop r8)
                  (Cmp rax r8)
->>>>>>> main
                  (Mov rax val-true)
                  (Je l)
                  (Mov rax val-false)
@@ -515,8 +503,78 @@
                  (And rax rdx)                 ; set to zero char at index
                  (Or rax r9)                   ; write char arg at index                   
                  (Mov (Offset r8 8) rax)
-                 (Mov rax val-void)))])))                   
+                 (Mov rax val-void)))])))
 
+;;Prefab-Key [Listof Expr] CEnv -> Asm
+(define (compile-mps prefab-key rest c)
+  (match prefab-key
+     [(Prefab-Key s n1 (list n2 v2) muts)
+      (let ((buildPrefab (gensym "buildPrefab"))
+            (end (gensym "end"))
+            (keyLength (+ 4 (length muts))))
+        (seq
+         (compile-prefab-key prefab-key c) ;;Place all the prefab key values on the stack
+         (compile-prefab-values rest (extend c (+ 4 (length muts)))) ;;Place all the struct values on the stack
+
+
+         (Mov r8 keyLength)
+         (Mov (Offset rbx 0) r8)
+         (Mov rax (* 8 (+ keyLength (length rest))))
+
+         (Label buildPrefab)
+         (Pop r8)
+         (Mov r9 rbx)
+         (Add r9 rax)
+         (Mov (Offset r9 0) r8)
+         (Sub rax 8)
+         (Cmp rax 0)
+         (Je end)
+         (Jmp buildPrefab)
+         
+         (Label end)
+         (Mov rax rbx)
+         (Or rax type-prefab)))]))
+
+;;CEnv integer -> CEnv
+;;Given a compile time environment and a size, add size number of #f to the environment.
+(define (extend c size)
+  (if (> size 0)
+      (cons #f (extend c (- size 1)))
+      c))
+    
+;;Prefab-Key CEnv -> Asm
+(define (compile-prefab-key prefab-key c)
+  (match prefab-key
+    [(Prefab-Key s n1 (list n2 v2) muts)
+     (seq
+      (compile-e s c)
+      (Push rax)
+      (compile-e n1 (cons #f c))
+      (Push rax)
+      (compile-e n2 (cons #f (cons #f c)))
+      (Push rax)
+      (compile-e v2 (cons #f (cons #f (cons #f c))))
+      (Push rax)
+              
+      (compile-prefab-muts muts (cons #f (cons #f (cons #f (cons #f c))))))]))
+
+;;[Listof Integer] CEnv -> Asm
+(define (compile-prefab-muts muts c)
+  (match muts
+    [(cons (Int i) muts)
+     (seq (compile-e (Int i) c)
+          (Push rax)
+          (compile-prefab-muts muts (cons #f c)))]
+    ['() (seq)]))
+
+(define (compile-prefab-values values c)
+  (match values
+    [(cons e1 values)
+     (seq (compile-e e1 c)
+          (Push rax)
+          (compile-prefab-values values (cons #f c)))]
+    ['() (seq)]))
+     
 ;; Id [Listof Expr] CEnv -> Asm
 ;; Here's why this code is so gross: you have to align the stack for the call
 ;; but you have to do it *before* evaluating the arguments es, because you need

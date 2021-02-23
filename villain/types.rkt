@@ -1,16 +1,5 @@
 #lang racket
 (provide (all-defined-out))
-
-<<<<<<< HEAD
-(define imm-shift          3)
-(define imm-mask       #b111)
-(define ptr-mask       #b111)
-(define type-box       #b001)
-(define type-cons      #b010)
-(define type-string    #b011)  
-(define type-symbol    #b100)
-(define type-prefab    #b101)
-=======
 (define imm-shift           3)
 (define imm-mask        #b111)
 (define ptr-mask        #b111)
@@ -18,7 +7,7 @@
 (define type-cons       #b010)
 (define type-string     #b011)  
 (define type-symbol     #b100)
->>>>>>> main
+(define type-prefab    #b101)
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
 (define type-int       #b0000)

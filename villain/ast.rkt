@@ -49,8 +49,7 @@
 ;;           | (Box Id)
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
-;; type Prefab-Key = (Listof Prefab-Key-Entries)
-;; type Prefab-Key-Entries = Symbol | Integer | (Pairof Integer Expr) | (Listof Integer)
+;; type Prefab-Key = (Symbol Integer (Pairof Integer Expr) (Listof Integer))
 
 (struct Eof   ()           #:prefab)
 (struct Empty ()           #:prefab)

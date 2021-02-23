@@ -1,2 +1,2 @@
 #lang racket
-(make-prefab-struct 'clown (cons 1 (cons 2 '())))
+(make-prefab-struct 'sprout 1 2)
