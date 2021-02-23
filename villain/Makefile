@@ -28,13 +28,13 @@ symbol.o: str.h
 	gcc formdps.c -o formdps
 	./formdps make $@
 
-%.run2: %.o runtime.o 
-	gcc runtime.o $< -o $@ $(libs) -lm
+%.run2: %.o runtime.o $(shell cat modulefiles)
+	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) -lm
 	./formdps mv $@
-	rm -f formdps runtime.o $(shell cat modulefiles) modulefiles *.s
+	rm -f formdps $(shell cat modulefiles) modulefiles *.s
 
 runtime.o: $(objs) $(shell cat modulefiles)
-	ld -r $(shell cat modulefiles) $(objs) -o runtime.o
+	ld -r $(objs) -o runtime.o
 
 .SUFFIXES: .c .s .o .rkt
 .c.o:
