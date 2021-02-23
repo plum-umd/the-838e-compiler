@@ -1,5 +1,5 @@
 #lang racket
-(provide read)
+(provide read read-all)
 
 ;; Port -> Any
 ;; Read an s-expression from given port
@@ -10,6 +10,13 @@
         r)))
 
 (struct err (port msg) #:prefab)
+
+;; Read all s-expressions until eof
+(define (read-all [p (current-input-port)])
+  (let ((r (read p)))
+    (if (eof-object? r)
+        '()
+        (cons r (read-all p)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

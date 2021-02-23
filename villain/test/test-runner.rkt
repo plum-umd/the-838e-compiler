@@ -305,7 +305,6 @@
                                (even? (sub1 x))))
                          (even? 101)))
                 #f)
-
   (check-equal? (run
                  '(begin (define (map-add1 xs)
                            (if (empty? xs)
@@ -351,13 +350,19 @@
     ;; Testing floats
   (check-equal? (run 4.2) 4.2)
   (check-equal? (run -4.2) -4.2)
-  
   (check-equal? (run 3.3333) 3.3333)
   (check-equal? (run 790.321) 790.321)
   (check-equal? (run -8990.32) -8990.32)
   (check-equal? (run -9999999) -9999999)
   (check-equal? (run .9999999) .9999999)
+  (check-equal? (run -9999999.9999999) -9999999.9999999)
+  (check-equal? (run '(fl+ -7.5 2.33)) -5.17)
+  (check-equal? (run '(fl- 7.5 2.33)) 5.17)
+  (check-equal? (run '(fl- -7.5 2.33)) -9.83)
+  (check-equal? (run '(fl= -7.5 2.33)) #f)
+  (check-equal? (run '(fl= 2.2 2.2)) #t)
 
+  
   ;; Errors and stack alignment
   (define (check-err e)
     ;; check error in both aligned and unaligned config
@@ -512,7 +517,31 @@
   (check-equal? (run '(not #t)) #f)
   (check-equal? (run '(not #f)) #t)
   (check-equal? (run '(not 0)) #f)
-  
+
+  ; Standard library: math.rkt
+  (check-equal? (run '(* 1 2 3 4)) 24)
+  (check-equal? (run '(* 1 (* 2 1) 2 2)) 8)
+  (check-equal? (run '(let ((x (+ 1 2)))
+                      (let ((z (* 1 x)))
+                        (* x z)))) 9)
+
+  ; Standard library: string.rkt
+  (check-equal? (run '(string)) "")
+  (check-equal? (run '(string #\a #\b #\c)) "abc")
+  (check-equal? (run '(string-append "" "")) "")
+  (check-equal? (run '(string-append "asdf" "")) "asdf")
+  (check-equal? (run '(string-append "" "qwerty")) "qwerty")
+  (check-equal? (run '(string-append "asdf" "qwerty")) "asdfqwerty")
+  (check-equal? (run '(let ((s (string #\A #\p #\p #\l #\e)))
+                        (begin (begin (string-copy! s 4 "y")
+                                      (string-copy! s 0 s 3 4))
+                               s)))
+                "lpply")
+  (check-equal? (run '(string->list "")) '())
+  (check-equal? (run '(string->list "abc")) '(#\a #\b #\c))
+  (check-equal? (run '(list->string '())) "")
+  (check-equal? (run '(list->string (list #\a #\b #\c))) "abc")
+
   ;; n-ary let
   (check-equal? (run '(let () 4)) 4)
   (check-equal? (run '(let ((x 4)) 3)) 3)
@@ -549,6 +578,11 @@
                         (begin (vector-set! x 2 3)
                                (vector-ref x 2))))
                 3)
+
+  ;; apply
+  (check-equal? (run '(apply * (list))) 1)
+  (check-equal? (run '(apply * (list 1 2 3))) 6)
+  (check-equal? (run '(apply * (list 4 3 2 1))) 24)
 
   ;; Ports
   (define (run-with-file rkt file-contents)
@@ -685,7 +719,4 @@
   (check-equal? (run '(write-char #\文) "") (cons (void) "文"))
   (check-equal? (run '(list (read-char) (read-char)) "文斈") (cons '(#\文 #\斈) ""))
   (check-equal? (run '(list (peek-char) (read-char) (read-char)) "文斈") (cons '(#\文 #\文 #\斈) ""))
-  
-
-
   )

@@ -9,12 +9,8 @@ else
   libs='-l:libunistring.a'
 endif
 
-objs_lib = \
-	bool.o \
-	math.o \
-	list.o
 objs = \
-	$(objs_lib) \
+	$(patsubst %.rkt,%.o,$(wildcard lib/*rkt)) \
 	main.o \
 	char.o \
 	io.o \
@@ -42,9 +38,13 @@ runtime.o: $(objs)
 .s.o:
 	nasm -f $(format) -o $@ $<
 
+lib/%.s: lib/%.rkt
+	racket -t compile-library.rkt -m $< > $@
+
 .rkt.s:
 	racket -t compile-file.rkt -m $< > $@
 
 clean:
-	rm -f *.o *.s
-	find . -name "*.run" -delete
+	find .  -name "*.o" -delete -or \
+		-name "*.s" -delete -or \
+		-name "*.run" -delete
