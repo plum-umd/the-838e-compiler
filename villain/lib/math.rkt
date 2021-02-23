@@ -15,7 +15,7 @@
   (match xs
     ['() 1]
     [(cons x xs)
-     (* x (apply * xs))]))
+     (multiply x (apply * xs))]))
 
 (define (= . xs)
   (match xs
