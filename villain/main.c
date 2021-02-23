@@ -17,6 +17,7 @@ int64_t *heap;
 
 void print_result(int64_t);
 void print_str(int64_t *);
+void print_prefab(int64_t *);
 
 void error_exit() {
   printf("err\n");
@@ -78,7 +79,9 @@ void print_result(int64_t result) {
     printf("'");
     print_str((int64_t *)(result ^ symbol_type_tag));
   } else if (prefab_type_tag == (ptr_type_mask & result)) {
-    printf("Hello");	 
+    printf("#s(");
+    print_prefab((int64_t*)(result ^ prefab_type_tag));
+    printf(")");	 
   } else {
     switch (result) {
     case val_true:
@@ -92,6 +95,53 @@ void print_result(int64_t result) {
     case val_void:
       /* nothing */ break;
     }
+  }
+}
+
+void print_prefab(int64_t* value) {
+	
+  int64_t keyLength = *value;
+
+  //Print all the key data
+  print_result(*(value + 2)); //Print the symbol
+  
+  int64_t n1 =  (*(value + 3) >> int_shift);
+  if(n1 > 0) {
+    printf(" %" PRId64, n1); //The number of non automatic values
+  }
+
+  int64_t first_aut = *(value + 4);
+  int64_t second_aut = *(value + 5);
+
+  if((first_aut >> int_shift) != 0) {
+    //A list of size 2 where the first thing is the number of automatic values
+    //an the second thing is an arbitrary value for them
+    printf(" ");
+    printf("(");
+    print_result(first_aut);
+    printf(" ");
+    print_result(second_aut);
+    printf(")");
+  }
+
+
+  int i = 0;
+  if(keyLength - 4 != 0) {
+    printf(" #(");
+    for(i = 0; i < (keyLength - 4); i++) {
+      //A list of integers representing the mutable fields in the struct
+      print_result(*(value + 6 + i));
+      if(i != (keyLength - 4 - 1)) {
+	      printf(" ");
+      }
+    }
+    printf(")");
+  }
+  
+  //The fields of the struct
+  for(i = 0; i < *(value + 1); i++) {
+	printf(" ");
+	print_result(*(value + 6 + (keyLength - 4)  + i));
   }
 }
 

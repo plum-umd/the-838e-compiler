@@ -89,16 +89,15 @@
                (auto (list (parse-e 0) (parse-e #f)))
                (mut '()))
            (Prefab-Key s n1 auto mut))]
-    [(list (cons 'quote (list (? symbol? s))) (? exact-nonnegative-integer? n1) ...
-           (list (? exact-nonnegative-integer? n2) v2) ...
-           (? list? l)...)
-     (if (and (<= (length n1) 1) (<= (length n2) 1) (<= (length v2) 1) (<= (length l) 1))
-         (let ((s (parse-e (cons 'quote (list s))))
-               (n1 (if (= (length n1) 1) (parse-e (car n1)) (parse-e 0)))
-               (auto (if (and (= (length n2) 1) (= (length v2) 1)) (list (parse-e (car n2)) (parse-e (car v2))) (list (parse-e 0) (parse-e #f))))
-               (mut (if (= (length l) 1) (map parse-e (car l)) '())))
-           (Prefab-Key s n1 auto mut))
-         (error "invalid prefab key"))]))
+    [(list (cons 'quote (list (? symbol? s))) (? exact-nonnegative-integer? n1) 
+           (list (? exact-nonnegative-integer? n2) v2)
+           (? list? l))
+     (let ((s (parse-e (cons 'quote (list s))))
+           (n1 (parse-e n1))
+           (auto (list (parse-e n2) (parse-e v2)))
+           (mut (map parse-e l)))
+       (Prefab-Key s n1 auto mut))]
+    [_ (error "invalid prefab key")]))
     
 (define op0
   '(read-byte peek-byte read-char peek-char void gensym))

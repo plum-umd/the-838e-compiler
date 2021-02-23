@@ -519,7 +519,10 @@
 
          (Mov r8 keyLength)
          (Mov (Offset rbx 0) r8)
-         (Mov rax (* 8 (+ keyLength (length rest))))
+         (Mov r8 (length rest))
+         (Mov (Offset rbx 8) r8)
+         
+         (Mov rax (* 8 (add1 (+ keyLength (length rest)))))
 
          (Label buildPrefab)
          (Pop r8)
@@ -527,7 +530,7 @@
          (Add r9 rax)
          (Mov (Offset r9 0) r8)
          (Sub rax 8)
-         (Cmp rax 0)
+         (Cmp rax 8)
          (Je end)
          (Jmp buildPrefab)
          
