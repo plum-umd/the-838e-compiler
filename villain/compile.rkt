@@ -169,6 +169,7 @@
     [(Vec ds)           (compile-vector ds c)]    
     [(Var x)            (compile-variable x c)]
     [(App f es)         (compile-app f es c tail?)]
+    [(Apply f e)        (compile-apply f e c tail?)]
     [(Prim0 p)          (compile-prim0 p c)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
@@ -265,6 +266,49 @@
 (define (compile-variable x c)
   (let ((i (lookup x c)))
     (seq (Mov rax (Offset rsp i)))))
+
+;; Id Expr CEnv Boolean -> Asm
+(define (compile-apply f e c tail?)
+  (if tail?
+      (compile-tail-apply f e c)
+      (compile-nontail-apply f e c)))
+
+;; Id Expr CEnv -> Asm
+(define (compile-tail-apply f e c)
+  (seq (compile-e-nontail e c)
+       (Add rsp (* 8 (length c))) ; reset stack
+       (list->stack c)
+       (Jmp (symbol->label f))))
+
+;; Id Expr CEnv -> Asm
+(define (compile-nontail-apply f e c)
+  (let ((ret  (gensym 'ret)))
+    (seq (compile-e-nontail e c)
+         (pad-stack c)
+         (Lea r8 ret)
+         (Push r8)
+         (list->stack c)
+         (Jmp (symbol->label f))
+         (Label ret)
+         (unpad-stack c))))
+
+;; Traverse list in rax, pushing elements on to stack,
+;; calculating length in rcx
+(define (list->stack c)
+  (let ((done (gensym 'done))
+        (loop (gensym 'loop)))
+    (seq (Mov rcx (imm->bits 0))
+         (Label loop)
+         (Cmp rax (imm->bits '()))
+         (Je done)
+         (assert-cons rax c)
+         (Xor rax type-cons)
+         (Mov r8 (Offset rax 8))
+         (Push r8)
+         (Add rcx (imm->bits 1))
+         (Mov rax (Offset rax 0))
+         (Jmp loop)
+         (Label done))))
 
 ;; Op0 CEnv -> Asm
 (define (compile-prim0 p c)
@@ -866,7 +910,7 @@
 ;; arguments and return address is next frame
 (define (compile-nontail-app f es c)
   (let ((ret (gensym 'ret)))
-    (if (odd? (+ (length es) (length c)))
+    (if (odd? (length c))
         (seq (Lea r8 ret)
              (Push r8)
              (compile-es es (cons #f c))

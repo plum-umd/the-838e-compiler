@@ -35,6 +35,9 @@
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
+    [(Apply f e)
+     (append (externs-f f)
+             (externs-e e))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
