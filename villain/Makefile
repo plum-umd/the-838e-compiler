@@ -36,7 +36,7 @@ symbol.o: str.h
 %.run2: %.o runtime.o 
 	gcc runtime.o $< -o $@ $(libs) -lm
 	./formdps mv $@
-	rm -f modulefiles formdps
+	rm -f formdps runtime.o $(shell cat modulefiles) modulefiles *.s
 
 runtime.o: $(objs) $(shell cat modulefiles)
 	ld -r $(shell cat modulefiles) $(objs) -o runtime.o
