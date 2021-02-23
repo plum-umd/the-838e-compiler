@@ -452,12 +452,6 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
-         ['*
-          (seq (Pop r8)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (IMul rax r8)
-               (Sar rax int-shift))]
          ['quotient
           (seq (Mov r8 rax)
                (Pop rax)
