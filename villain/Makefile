@@ -33,7 +33,7 @@ symbol.o: str.h
 	./formdps mv $@
 	rm -f formdps $(shell cat modulefiles) modulefiles *.s
 
-runtime.o: $(objs) $(shell cat modulefiles)
+runtime.o: $(objs)
 	ld -r $(objs) -o runtime.o
 
 .SUFFIXES: .c .s .o .rkt
