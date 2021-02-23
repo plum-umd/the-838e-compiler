@@ -856,7 +856,7 @@
 ;; arguments and return address is next frame
 (define (compile-nontail-app f es c)
   (let ((ret (gensym 'ret)))
-    (if (odd? (+ (length es) (length c)))
+    (if (odd? (length c))
         (seq (Lea r8 ret)
              (Push r8)
              (compile-es es (cons #f c))
