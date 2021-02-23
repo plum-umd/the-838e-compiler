@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include "types.h"
 #include "utf8.h"
+#include "char.h"
 #include "stdlib.h"
 #include "stdio.h"
 
@@ -31,20 +32,9 @@ int utf8_encode_char(int64_t v, char *buffer) {
 
 void utf8_encode_string(int64_t *str, char *buffer) {
   int64_t len = (str[0] >> int_shift);
-  int temp;
-  int i, j;
-  int n = (len % 3 == 0) ? len / 3 : (len / 3 + 1);
-  for (i = 1; i < n; i++) {
-    for (j = 0; j < 3; j++) {
-      temp = str[i] >> (j * 21);
-      int codepoint_len = utf8_encode_char(temp, buffer);
-      buffer += codepoint_len;
-    }
-  }
-  i = (len % 3 == 0) ? 3 : (len % 3);
-  for (j = 0; j < i; j++){
-    temp = str[n] >> (j * 21);
-    int codepoint_len = utf8_encode_char(temp, buffer);
+  for (int64_t i = 0 ; i < len; i++) {
+    int32_t codepoint = get_str_codepoint(str, i);
+    int codepoint_len = utf8_encode_char(codepoint, buffer);
     buffer += codepoint_len;
   }
   *buffer = 0;

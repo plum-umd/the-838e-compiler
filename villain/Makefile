@@ -24,9 +24,9 @@ objs = \
 
 default: runtime.o
 
-main.o: types.h runtime.h
-char.o: types.h utf8.h
-io.o: runtime.h utf8.h
+main.o: types.h runtime.h char.h
+char.o: types.h utf8.h char.h
+io.o: runtime.h utf8.h char.h
 symbol.o: str.h
 
 %.run: %.o runtime.o
