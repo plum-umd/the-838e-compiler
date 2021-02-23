@@ -535,6 +535,26 @@
                (IDiv r8)
                (Mov rax rdx)
                )]
+         ['>
+          (let ((gt-true (gensym 'gt)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jg gt-true)
+                 (Mov rax (imm->bits #f))
+                 (Label gt-true)))]
+         ['<
+          (let ((lt-true (gensym 'lt)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jl lt-true)
+                 (Mov rax (imm->bits #f))
+                 (Label lt-true)))]
          ['<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
@@ -545,6 +565,16 @@
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
                  (Label leq-true)))]
+         ['>=
+          (let ((geq-true (gensym 'geq)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jge geq-true)
+                 (Mov rax (imm->bits #f))
+                 (Label geq-true)))]
          ['eq?
           (let ((l (gensym)))
             (seq (Pop r8)

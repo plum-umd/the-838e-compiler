@@ -1,5 +1,5 @@
 #lang racket
-(provide = * byte?)
+(provide = * byte? abs max min)
 
 ;; not exactly the right place, but fine for now
 (define (byte? b)
@@ -11,7 +11,7 @@
           #f)
       #f))
 
- ; multiplication
+; multiplication
 (define (*/2 x y)
   (if (zero? y)
       0
@@ -35,3 +35,22 @@
      (if (eq? x y)
          (=/a y xs)
          #f)]))
+
+(define (abs x)
+  (if (>= x 0) x (- 0 x)))
+
+(define (max/2 x y)
+  (if (> x y) x y))
+
+(define (min/2 x y)
+  (if (< x y) x y))
+
+(define (max . xs)
+  (match xs
+    ['() -576460752303423488] ; int_min
+    [(cons y ys) (max/2 y (apply max ys))]))
+
+(define (min . xs)
+  (match xs
+    ['() 576460752303423487] ; int_max
+    [(cons y ys) (min/2 y (apply min ys))]))
