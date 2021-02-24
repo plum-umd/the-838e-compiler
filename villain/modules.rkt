@@ -104,10 +104,14 @@
   (with-output-to-file "modulefiles"
      #:exists 'truncate
      (λ ()
-       (displayln (string-append (foldr (λ (x acc) (string-append x " " acc)) ""
-                         (remove-duplicates 
+       (displayln (let ((lst (remove-duplicates 
             (map (λ (x) (string-append (string-trim x ".rkt") ".o"))
-                           mlist))) "\n")))))
+                           mlist))))
+                    ;(if (zero? (length lst))
+                     ;   "n \n"
+                        (string-append
+                                (foldr (λ (x acc) (string-append x " " acc)) ""
+                         lst) "\n"))))))
 
 ;(define (write-mgraph-to-file mgraph)
 ;  (with-output-to-file "modulesgraph"

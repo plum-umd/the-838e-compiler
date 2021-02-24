@@ -8,9 +8,9 @@ int main (int argc, char *argv[]) {
 	char * makerun2;
         char * tmp;
         char * mvrun2;
-        char mmfiles[1006];
+        char * mmfiles;
         char * mfiles;
-        FILE * fp;
+        // FILE * fp;
         int len;
         if (strcmp(argv[1], "mv") == 0){
            len = strlen(argv[2]);
@@ -32,6 +32,25 @@ int main (int argc, char *argv[]) {
            // printf("%s\n", mvrun2);
            system(mvrun2);
         } else {
+           /* fp = fopen("modulefiles", "r+");
+           if (fgetc(fp) == 'y') {
+              if (!(mfiles = malloc(1000))) {
+                 printf("malloc error");
+              }
+              if (!(mmfiles = malloc(1006))) {
+                 printf("malloc error");
+              }
+              fgets(mfiles, 999, fp);
+              strcpy(mmfiles, "make ");
+              strcat(mmfiles, mfiles);
+              // printf("%s\n", mmfiles);
+              system(mmfiles);           
+              // system("bash < modulefiles");
+           }
+           rewind(fp);
+           fputc(' ', fp);
+           fclose(fp); */
+
            len = strlen(argv[2]);
            if (!(makerun2 = malloc (len + 7))){
               printf("malloc error");
@@ -41,16 +60,7 @@ int main (int argc, char *argv[]) {
 	   strcat(makerun2, argv[2]);
 	   strcat(makerun2, two);
 	   // printf("%s\n", makerun2);
-           if (!(mfiles = malloc (1000))) {
-              printf("malloc error");
-           }
-           fp = fopen("modulefiles", "r");
-           fgets(mfiles, 1000, fp);
-           strcpy(mmfiles, "make ");
-           strcat(mmfiles, mfiles);
-           // printf("%s\n", mmfiles);
-           system(mmfiles);           
-           // system("bash < modulefiles");
+
 	   system(makerun2);
         }
 }

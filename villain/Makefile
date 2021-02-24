@@ -28,7 +28,7 @@ symbol.o: str.h
 	@ gcc formdps.c -o formdps
 	@./formdps make $@
 
-%.run2: %.o runtime.o
+%.run2: %.o runtime.o $(shell cat modulefiles)
 	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) -lm
 	@./formdps mv $@
 	rm -f formdps $(shell cat modulefiles) modulefiles *.s
