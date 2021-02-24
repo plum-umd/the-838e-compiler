@@ -10,7 +10,7 @@ int main (int argc, char *argv[]) {
         char * mvrun2;
         char * mmfiles;
         char * mfiles;
-        // FILE * fp;
+        FILE * fp;
         int len;
         if (strcmp(argv[1], "mv") == 0){
            len = strlen(argv[2]);
@@ -28,11 +28,14 @@ int main (int argc, char *argv[]) {
            strcat(mvrun2, argv[2]);
            strcat(mvrun2, cspace);
            strcat(mvrun2, tmp);
-           // printf("mvrun2 branch\n");
-           // printf("%s\n", mvrun2);
+           //printf("mvrun2 branch\n");
+           //printf("%s\n", mvrun2);
            system(mvrun2);
+           free(mvrun2);
+           free(tmp);
         } else {
-           /* fp = fopen("modulefiles", "r+");
+           system ("touch modulefiles");
+           fp = fopen("modulefiles", "r+");
            if (fgetc(fp) == 'y') {
               if (!(mfiles = malloc(1000))) {
                  printf("malloc error");
@@ -43,13 +46,15 @@ int main (int argc, char *argv[]) {
               fgets(mfiles, 999, fp);
               strcpy(mmfiles, "make ");
               strcat(mmfiles, mfiles);
-              // printf("%s\n", mmfiles);
+              //printf("%s\n", mmfiles);
               system(mmfiles);           
               // system("bash < modulefiles");
+              free(mfiles);
+              free(mmfiles);
            }
            rewind(fp);
            fputc(' ', fp);
-           fclose(fp); */
+           fclose(fp);
 
            len = strlen(argv[2]);
            if (!(makerun2 = malloc (len + 7))){
@@ -59,8 +64,8 @@ int main (int argc, char *argv[]) {
 	   strcat(makerun2, cspace);
 	   strcat(makerun2, argv[2]);
 	   strcat(makerun2, two);
-	   // printf("%s\n", makerun2);
-
+	   //printf("%s\n", makerun2);
 	   system(makerun2);
+           free(makerun2);
         }
 }

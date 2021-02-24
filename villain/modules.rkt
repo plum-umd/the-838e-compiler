@@ -11,11 +11,7 @@
 ;; Expr -> CMod (Struct)
 (define (build-mgraph fn pvs rqs ds e)
   (build-mgraph-aux fn pvs rqs ds e '())
-  (match rqs
-    ['() (void)]
-    [(cons rq rqs)
-     (let ((Mn-list (findf (λ (x) (equal? (Mnode-file (car x)) rq)) mgraph)))
-       (write-s-files Mn-list))])
+  (write-s-files mgraph fn)
   (write-obj-file-list mlist)
   ;(write-mgraph-to-file mgraph)
   (let ((rqs-Mn-lists (Mnode-adjacency-list-pairs rqs)))
@@ -32,7 +28,7 @@
 ;         (display "anscestors: ") (displayln anscestors)
 ;         (display "pvs: ") (displayln pvs)))
   (set! mlist (append rqs mlist))
-  (set! mgraph (cons (cons (Mnode file pvs ds e) rqs) mgraph))
+  (set! mgraph (remove-duplicates (cons (cons (Mnode file pvs ds e) rqs) mgraph)))
   (build-next-layer rqs (cons file anscestors)))
 
 
@@ -43,35 +39,37 @@
   (match rqs
     ['() (void)]
     [(cons rq rqs)
-;     (with-output-to-file "debug"
-;       #:exists 'append
-;       (λ ()
-;         (display "build-next-layer rq: ") (displayln rq)
-;         (display "anscestors: ") (displayln anscestors)))
      (if (member rq anscestors)
          (error (format "There is a cycle in the dependency graph of modules"))
          (let ((p (open-input-file rq)))
            (begin (read-line p)
-                 ;(displayln (read p))
-                  (match (parse (read p))
-                    [(Mod pvs new-rqs ds e)
-                     (begin
-                       (build-mgraph-aux rq pvs new-rqs ds e anscestors)
-                       (build-next-layer rqs anscestors))]
-                    [_ (error (format "the file ~a required is not a module" p))])
-                  (close-input-port p))))]))
+                  (let ((s (parse (read p))))
+                    (match s
+                      [(Mod pvs new-rqs ds e)
+                       (begin
+                         (build-mgraph-aux rq pvs new-rqs ds e anscestors)
+                         (build-next-layer rqs anscestors))]
+                      [_ (error (format "the file ~a required is not a module" p))]))
+                    (close-input-port p))))]))
 
 ; [PairOf Mnode [ListOf Strings (of filenames)]] -> Void
 ;; Takes Mn-list which is an element of the mgraph list. Each element is a pair
 ;; of an Mnode struct and a list of strings of filenames representing the
 ;; adacency list of required files in the modules graph.
-;; Side effect: traverses the mgraph list by recursion and compiles the module
+;; Side effect: traverses the mgraph list and compiles the module
 ;; file in each element of the list to the corresponding assembly file.
-(define (write-s-files Mn-list)
+(define (write-s-files lst rootfile)
+  (match lst
+    ['() (void)]
+    [(cons x xs)
+     (begin (if (equal? (Mnode-file (car x)) rootfile) (void) (write-s-files-aux x))
+            (write-s-files xs rootfile))]))
+
+(define (write-s-files-aux Mn-list)
   (let ((rqs (cdr Mn-list)))
     (let ((rqs-Mn-lists (Mnode-adjacency-list-pairs rqs)))
       (let ((pv-exts (provided-functions-by-required-modules rqs-Mn-lists)))
-        (begin 
+        (begin
           (with-output-to-file
               (path-replace-extension(Mnode-file (car Mn-list)) #".s")
             #:exists 'truncate
@@ -80,8 +78,7 @@
                (displayln (asm-string (compile-module
                                         (CMod pv-exts (Mnode-pvs (car Mn-list))
                                               (Mnode-ds (car Mn-list))
-                                             (Mnode-e (car Mn-list))) #f))))))
-          (for-each (λ (x) (write-s-files x)) rqs-Mn-lists))))))
+                                             (Mnode-e (car Mn-list))) #f)))))))))))
 
 ;; [Listof String(of filenams)] -> [Listof [Pairof Mnode [Listof String(of filenames)]]
 ;; Auxilliary function that takes a list of module filenames and returns
@@ -107,11 +104,11 @@
        (displayln (let ((lst (remove-duplicates 
             (map (λ (x) (string-append (string-trim x ".rkt") ".o"))
                            mlist))))
-                    ;(if (zero? (length lst))
-                     ;   "n \n"
-                        (string-append
+                    (if (zero? (length lst))
+                        "n \n"
+                        (string-append "y"
                                 (foldr (λ (x acc) (string-append x " " acc)) ""
-                         lst) "\n"))))))
+                         lst) "\n")))))))
 
 ;(define (write-mgraph-to-file mgraph)
 ;  (with-output-to-file "modulesgraph"

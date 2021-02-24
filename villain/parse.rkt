@@ -13,19 +13,34 @@
   (match s
     [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
            (and ds (list 'define _ _)) ...)
-     (Mod pvs rqs (map parse-d ds) (parse-e '(void)))]
-    [(list 'begin (list 'require rqs ...)
-           (and ds (list 'define _ _)) ...)
-     (Mod '() rqs (map parse-d ds) (parse-e '(void)))]
+     (parse-mod pvs rqs ds '(void))]
+    [(list 'begin (list 'require rqs ...) (and ds (list 'define _ _)) ...)
+     (parse-mod '() rqs ds '(void))]
+    [(list 'begin (list 'provide pvs ...) (and ds (list 'define _ _)) ...)
+     (parse-mod pvs '() ds '(void))]
     [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
            (and ds (list 'define _ _)) ... e)
-     (Mod pvs rqs (map parse-d ds) (parse-e e))]
-    [(list 'begin (list 'require rqs ...)
-           (and ds (list 'define _ _)) ... e)
-     (Mod '() rqs (map parse-d ds) (parse-e e))]
+     (parse-mod pvs rqs ds e)]
+    [(list 'begin (list 'require rqs ...) (and ds (list 'define _ _)) ... e)
+     (parse-mod '() rqs ds e)]
+    [(list 'begin (list 'provide pvs ...) (and ds (list 'define _ _)) ... e)
+     (parse-mod pvs '() ds e)]
     [(list 'begin (and ds (list-rest 'define _ _)) ... e)
      (Prog (map parse-d ds) (parse-e e))]
     [e (Prog '() (parse-e e))]))
+
+(define (parse-mod pvs rqs ds e)
+  (let ((pvs2 (if (equal? pvs '((all-defined-out)))
+                  (parse-all-defined-out ds)
+                   pvs)))
+    (Mod pvs2 rqs (map parse-d ds) (parse-e e))))
+                 
+
+(define (parse-all-defined-out ds)
+   (match ds
+     [(list (list 'define fs _) ...) (map car fs)]
+     [_ (error "parse-all-defined-out")]))
+  
 
 ;; S-Expr -> Defn
 (define (parse-d s)
