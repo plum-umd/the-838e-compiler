@@ -1,113 +1,123 @@
 #include <stdio.h>
-#include <inttypes.h>
 #include <wchar.h>
-#include "types.h"
+#include <limits.h>
+#include "villain.h"
 #include "runtime.h"
 #include "utf8.h"
 
-#define untag_port(p) ((int64_t*) (p ^ port_type_tag))
-#define port_file(p) ((FILE*) p[0])
-#define port_buffer_len(p) (((int8_t*)(p + 1))[0])
-#define port_buffer_offset(p) (((int8_t*)(p + 1))[1])
-#define port_closed(p) (((int8_t*)(p + 1))[2])
-#define port_buffer(p) (((int8_t*)(p + 1)) + 3)
 #define port_buffer_bytes 8
 
-FILE *open_input_file(int64_t untagged_str, char *buffer) {
-  // Str is untagged in asm prior to calling here. Very confusing. Might be
-  // worth an extra or and xor just to avoid this.
-  utf8_encode_string((int64_t *) untagged_str,  buffer);
-  FILE *f = fopen(buffer, "r");
-  if (f == NULL) {
+FILE* open_input_file(vl_val filename)
+{
+  static char buf[PATH_MAX];
+  FILE *f;
+  vl_str *s = vl_unwrap_str(filename);
+
+  if ((s->len*4)+1 > PATH_MAX) /* path too long */
     error_handler();
-  }
+
+  utf8_encode_string(vl_unwrap_str(filename), buf);
+
+  f = fopen(buf, "rb");
+  if (!f)
+    error_handler();
+
   return f;
 }
 
-void close_input_port(int64_t port_val) {
-  int64_t *port = untag_port(port_val);
-  if (!port_closed(port)) {
-    FILE *f = port_file(port);
-    fclose(f);
-    port_closed(port) = 1;
+void close_input_port(vl_val port)
+{
+  vl_port *p = vl_unwrap_port(port);
+
+  if (!p->closed) {
+    fclose(p->fp);
+    p->closed = 1;
   }
 }
 
-int populate_buffer(int64_t *port) {
-  if (port_buffer_offset(port) >= port_buffer_len(port)) {
-    int64_t num_read = fread(port_buffer(port), sizeof(int8_t), port_buffer_bytes, port_file(port));
-    port_buffer_len(port) = num_read;
-    port_buffer_offset(port) = 0;
-    return num_read > 0;
-  }
-  return 1;
+static int
+populate_buffer(vl_port *p)
+{
+  if (p->offset < p->len)
+    return 1;
+
+  p->len = fread(p->buf, 1, port_buffer_bytes, p->fp);
+  p->offset = 0;
+
+  return p->len > 0;
 }
 
-int64_t read_byte_port(int64_t port_val) {
-  int64_t *port = untag_port(port_val);
-  if (port_closed(port)) {
+vl_val read_byte_port(vl_val port)
+{
+  int has_bytes;
+  char c;
+  vl_port *p = vl_unwrap_port(port);
+
+  if (p->closed)
     error_handler();
-  }
-  int has_bytes = populate_buffer(port);
-  if (has_bytes) {
-    int8_t byte = port_buffer(port)[port_buffer_offset(port)];
-    port_buffer_offset(port)++;
-    return (byte << int_shift);
-  }
-  return val_eof;
+
+  has_bytes = populate_buffer(p);
+  if (!has_bytes)
+    return vl_wrap_eof();
+
+  c = p->buf[p->offset];
+  p->offset++;
+
+  return vl_wrap_int(c);
 }
 
-int64_t peek_byte_port(int64_t port_val) {
-  int64_t *port = untag_port(port_val);
-  if (port_closed(port)) {
+vl_val peek_byte_port(vl_val port)
+{
+  int has_bytes;
+  char c;
+  vl_port *p = vl_unwrap_port(port);
+
+  if (p->closed)
     error_handler();
-  }
-  int has_bytes = populate_buffer(port);
-  if (has_bytes) {
-    int8_t byte = port_buffer(port)[port_buffer_offset(port)];
-    return (byte << int_shift);
-  }
-  return val_eof;
+
+  has_bytes = populate_buffer(p);
+  if (!has_bytes)
+    return vl_wrap_eof();
+
+  c = p->buf[p->offset];
+
+  return vl_wrap_int(c);
 }
 
-int64_t read_byte(void) {
+vl_val read_byte(void)
+{
   char c = getc(in);
-  return (c == EOF) ?
-    val_eof :
-    (int64_t)(c << int_shift);
+  return (c == EOF) ? vl_wrap_eof() : vl_wrap_int(c);
 }
 
-int64_t peek_byte(void) {
+vl_val peek_byte(void)
+{
   char c = getc(in);
   ungetc(c, in);
-  return (c == EOF) ?
-    val_eof :
-    (int64_t)(c << int_shift);
+  return (c == EOF) ? vl_wrap_eof() : vl_wrap_int(c);
 }
 
-int64_t write_byte(int64_t c) {
-  int64_t codepoint = c >> int_shift;
-  putc((char) codepoint, out);
-  return 0;
+vl_val write_byte(vl_val c)
+{
+  putc((char) vl_unwrap_int(c), out);
+  return vl_wrap_void();
 }
 
-int64_t read_char(void) {
+vl_val read_char(void)
+{
   wchar_t c = getwc(in);
-  return (c == WEOF) ?
-    val_eof :
-    (int64_t)(c << char_shift | char_type_tag);
+  return (c == WEOF) ? vl_wrap_eof() : vl_wrap_char(c);
 }
 
-int64_t peek_char(void) {
+vl_val peek_char(void)
+{
   wchar_t c = getwc(in);
   ungetwc(c, in);
-  return (c == WEOF) ?
-    val_eof :
-    (int64_t)(c << char_shift | char_type_tag);
+  return (c == WEOF) ? vl_wrap_eof() : vl_wrap_char(c);
 }
 
-int64_t write_char(int64_t c) {
-  int64_t codepoint = c >> char_shift;
-  putwc((wchar_t) codepoint, out);
-  return 0;
+vl_val write_char(vl_val c)
+{
+  putwc((wchar_t) vl_unwrap_char(c), out);
+  return vl_wrap_void();
 }

@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <inttypes.h>
-#include "types.h"
+#include "villain.h"
 #include "utf8.h"
 #include "char.h"
 
-void print_char (int64_t v) {
-  int64_t codepoint = v >> char_shift;
+void print_char (vl_char codepoint) {
   printf("#\\");
   switch (codepoint) {
   case 0:
@@ -27,35 +26,22 @@ void print_char (int64_t v) {
   case 127:
     printf("rubout"); break;
   default:
-    print_codepoint(v);
+    print_codepoint(codepoint);
   }
 }
 
-int32_t get_str_codepoint(int64_t *str, int64_t codepoint_idx) {
-  int i = 1 + codepoint_idx / 3;
-  int j = codepoint_idx % 3;
-  return 0x1FFFFF & (str[i] >> (j * 21));
+void print_str_char_u(vl_char c) {
+  printf("\\u%04X", c);
 }
 
-void print_str(int64_t *str) {
-  int64_t len = (str[0] >> int_shift);
-  for (int64_t i = 0 ; i < len; i++) {
-    print_str_char(get_str_codepoint(str, i));
-  }
+void print_str_char_U(vl_char c) {
+  printf("\\U%08X", c);
 }
 
-void print_str_char_u(int64_t v) {
-  printf("\\u%04X", (int)(v >> char_shift));
-}
-
-void print_str_char_U(int64_t v) {
-  printf("\\U%08X", (int)(v >> char_shift));
-}
-
-void print_str_char(int64_t v) {
-  switch (v >> char_shift) {
+void print_str_char(vl_char c) {
+  switch (c) {
   case 0 ... 6:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 7:
     printf("\\a");
@@ -79,13 +65,13 @@ void print_str_char(int64_t v) {
     printf("\\r");
     break;
   case 14 ... 26:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 27:
     printf("\\e");
     break;
   case 28 ... 31:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 34:
     printf("\\\"");
@@ -469,7 +455,7 @@ void print_str_char(int64_t v) {
   case 65511 ... 65511:
   case 65519 ... 65531:
   case 65534 ... 65535:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 65548 ... 65548:
   case 65575 ... 65575:
@@ -701,11 +687,16 @@ void print_str_char(int64_t v) {
   case 178206 ... 194559:
   case 195102 ... 917759:
   case 918000 ... 1114110:
-    print_str_char_U(v);
+    print_str_char_U(c);
     break;
   default:
-    print_codepoint(v);
+    print_codepoint(c);
     break;
   }
 }
 
+void print_str(vl_str *str) {
+  uint64_t i;
+  for (i = 0; i < str->len; ++i)
+    print_str_char(str->buf[i]);
+}
