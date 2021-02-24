@@ -1,6 +1,4 @@
-#include <inttypes.h>
 #include <string.h>
-#include <stdlib.h>
 #include "types.h"
 #include "villain.h"
 
@@ -10,8 +8,7 @@ int64_t *str_dup(const int64_t *s)
   int n = (len % 3 == 0) ? len / 3 : (len / 3 + 1);
   int64_t *d;
 
-  // TODO need a way to clean up memory
-  d = calloc(1+n, sizeof(int64_t));
+  d = vl_calloc(1+n, sizeof(int64_t));
   if (!d)
     return NULL;
 
@@ -46,8 +43,7 @@ int64_t *str_from_cstr(const char *s)
   int i, j, remain;
   size_t pos = 0;
 
-  // TODO need a way to clean up memory
-  vs = calloc(1+n, sizeof(int64_t));
+  vs = vl_calloc(1+n, sizeof(int64_t));
   if (!vs)
     return NULL;
 

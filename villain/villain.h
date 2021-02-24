@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* any abstract villain value */
 typedef int64_t vl_val;
@@ -45,8 +46,8 @@ typedef struct vl_str {
 typedef vl_str* vl_symbol;
 typedef struct vl_port {
   FILE *fp;
-  int8_t len;
-  int8_t offset;
+  uint8_t len;
+  uint8_t offset;
   int8_t closed;
   char buf[];
 } vl_port;

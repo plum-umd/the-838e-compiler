@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <inttypes.h>
-#include <stdlib.h>
 #include "villain.h"
 #include "runtime.h"
 
@@ -90,7 +89,7 @@ void print_vector(vl_vec *v)
   uint64_t i;
 
   printf("'#(");
-  for (int i = 0; i < v->len; ++i) {
+  for (i = 0; i < v->len; ++i) {
     print_result(v->buf[i]);
 
     if (i < v->len - 1)
@@ -125,7 +124,7 @@ int main(int argc, char** argv)
   in = stdin;
   out = stdout;
   error_handler = &error_exit;
-  heap = malloc(8 * heap_size);
+  heap = vl_calloc(8 * heap_size, 1);
 
   result = entry(heap);
 
