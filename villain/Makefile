@@ -15,21 +15,25 @@ objs = \
 	char.o \
 	io.o \
 	symbol.o \
-	str.o
+	str.o \
+	wrap.o \
+	utf8.o
 
 default: runtime.o
 
-main.o: types.h runtime.h
-char.o: types.h
-io.o: runtime.h
-symbol.o: str.h
+main.o: villain.h runtime.h
+wrap.o: villain.h types.h
+char.o: villain.h utf8.h char.h
+io.o: runtime.h villain.h utf8.h
+symbol.o: str.h types.h villain.h
+str.o: types.h villain.h
 
 %.run:  %.o
 	@ gcc formdps.c -o formdps
 	@./formdps make $@
 
 %.run2: %.o runtime.o 
-	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) -lm
+	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) # -lm
 	@./formdps mv $@
 	rm -f formdps $(shell cat modulefiles) modulefiles *.s
 
@@ -38,7 +42,7 @@ runtime.o: $(objs)
 
 .SUFFIXES: .c .s .o .rkt
 .c.o:
-	gcc -fPIC -c -o $@ $< 
+	gcc -fPIC -c -o $@ $<
 
 .s.o:
 	nasm -f $(format) -o $@ $<

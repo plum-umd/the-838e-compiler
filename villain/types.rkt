@@ -8,7 +8,8 @@
 (define type-cons       #b010)
 (define type-string     #b011)  
 (define type-symbol     #b100)
-(define type-vector     #b101)
+(define type-port       #b101)
+(define type-vector     #b110)
 (define type-flonum     #b111)
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
@@ -21,6 +22,10 @@
 (define val-eof     #b1011000)
 (define val-void    #b1111000)
 (define val-empty  #b10011000)
+
+;; Buffer size will get padded so that port structure aligns to 8 byte
+;; boundary. Kept low intentionally to test buffering code.
+(define port-buffer-bytes 8)
 
 (define (bits->imm b)
   (cond [(= type-int (bitwise-and b mask-int))
@@ -143,6 +148,9 @@
 
 (define (symbol-bits? v)
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-symbol)))
+
+(define (port-bits? v)
+  (zero? (bitwise-xor (bitwise-and v imm-mask) type-port)))
 
 (define (vector-bits? v)
   (zero? (bitwise-xor (bitwise-and v imm-mask) type-vector)))

@@ -29,7 +29,7 @@
           (let ((str-chars (string-loop length i)))
             (list->string (reverse str-chars)))))]
     [(? vector-bits? i)
-        (let ((length (unload-value (heap-ref i))))
+        (let ((length (heap-ref i)))
           (let ((elems (vector-loop length i)))
             (list->vector (reverse elems))))]
     [(? flonum-bits? i)
@@ -86,8 +86,7 @@
   (λ (n i)
     (match n
       [0 '()]
-      [n (cons (unload-value (heap-ref (+ i (arithmetic-shift n imm-shift)))) (vector-loop (- n 1) i))]
-      )
-  ))
-       
-                      
+      [n (cons (unload-value (heap-ref (+ i (arithmetic-shift n imm-shift))))
+               (vector-loop (- n 1) i))])))
+
+
