@@ -7,6 +7,8 @@
 (struct Lib  (xs ds) #:prefab)
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
+;;           | (struct Id (Listof Id) #:prefab)
+
 (struct Defn (f xs e) #:prefab) 
 
 ;; type Defn* = (Defn* Id (Listof Id) Id Expr)

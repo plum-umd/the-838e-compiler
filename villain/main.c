@@ -79,7 +79,7 @@ void print_result(int64_t result) {
     printf("'");
     print_str((int64_t *)(result ^ symbol_type_tag));
   } else if (prefab_type_tag == (ptr_type_mask & result)) {
-    printf("#s(");
+    printf("'#s(");
     print_prefab((int64_t*)(result ^ prefab_type_tag));
     printf(")");	 
   } else {
@@ -103,7 +103,7 @@ void print_prefab(int64_t* value) {
   int64_t keyLength = *value;
 
   //Print all the key data
-  print_result(*(value + 2)); //Print the symbol
+  print_str((int64_t *)(*(value + 2) ^ symbol_type_tag)); //Print the symbol
   
   int64_t n1 =  (*(value + 3) >> int_shift);
   if(n1 > 0) {

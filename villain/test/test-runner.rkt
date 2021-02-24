@@ -346,7 +346,7 @@
   (check-equal? (run '(eq? (gensym) (gensym)))
                 #f)
   (check-equal? (run '(let ([x (gensym)]) (eq? x x)))
-                #t))
+                #t)
   
     ;; Testing floats
   (check-equal? (run 4.2) 4.2)
