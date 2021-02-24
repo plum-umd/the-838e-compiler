@@ -10,18 +10,20 @@
 
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
-                  ; compile-define
+                  ; compile-define, open-input-file
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, compile-define, compile-fl+
                   ; compile-vector, vector-set!, vector-ref
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
-(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define, compile-fl+
-                  ; compile-vector, vector-set!
+(define rsi 'rsi) ; arg2
+(define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
+                  ; compile-define, compile-fl+
 (define r11 'r11) ; scratch in compile-fl+
 (define r12 'r12) ; scratch in compile-fl+
 (define r13 'r13) ; scratch in compile-fl+
 (define rcx 'rcx) ; arity indicator
+(define al  'al)  ; low byte of rax ; open-input-file
 
 ;; type CEnv = [Listof Variable]
 
@@ -426,6 +428,64 @@
          ['symbol?
           (type-pred ptr-mask type-symbol)]
          ['empty? (eq-imm val-empty)]
+         ['port?
+           (type-pred ptr-mask type-port)]
+         ['open-input-file
+           (seq
+             (assert-string rax c)
+
+             ;; Call to C function that opens file
+             (pad-stack c)
+             (Mov rdi rax)
+             (Call 'open_input_file)
+             (unpad-stack c)
+             ;; rax now contains a FILE *
+
+             ;; struct Port {
+             ;;   FILE *file;
+             ;;   int8_t buffer_len;
+             ;;   int8_t buffer_offset;
+             ;;   int8_t buffer_closed;
+             ;;   int8_t buffer[port-buffer-bytes];
+             ;; };
+             (Mov r8 rbx)
+             (Mov (Offset rbx 0) rax) ;; Store file pointer on heap
+             (Xor al al)
+             (Mov (Offset rbx 8) al)  ;; Store offset into buffer
+             (Mov (Offset rbx 9) al)  ;; Store number of buffered bytes
+             (Mov (Offset rbx 10) al) ;; Store "closed" flag
+             ;; Advance heap pointer, allocating space for a buffer
+             ;; Choose actual space allocated based on declared
+             ;; port-buffer-size and bytes used by rest of structure to maintain
+             ;; heap alignment.
+             (Add rbx (+ (- 8 (modulo (+ 11 port-buffer-bytes) 8)) 11
+                         port-buffer-bytes))
+             (Mov rax r8)
+             (Or rax type-port))]
+         ['close-input-port
+           (seq
+             (assert-port rax c)
+             (pad-stack c)
+             (Mov rdi rax)
+             (Call 'close_input_port)
+             (unpad-stack c)
+             (Mov rax val-void))]
+         ['read-byte
+          (seq
+            (assert-port rax c)
+            (pad-stack c)
+            (Mov rdi rax)
+            (Call 'read_byte_port)
+            (unpad-stack c)
+            )]
+         ['peek-byte
+         (seq
+           (assert-port rax c)
+           (pad-stack c)
+           (Mov rdi rax)
+           (Call 'peek_byte_port)
+           (unpad-stack c)
+           )]
          ['vector? (type-pred ptr-mask type-vector)]
          ['vector-length
           (seq (assert-vector rax c)
@@ -453,6 +513,28 @@
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
+         ['quotient
+          (seq (Mov r8 rax)
+               (Pop rax)
+               (assert-integer r8 c)
+               (assert-integer rax c)
+               (Cmp r8 (imm->bits 0))
+               (Je (error-label c))
+               (Cqo)
+               (IDiv r8)
+               (Sal rax int-shift)
+               )]
+         ['remainder
+          (seq (Mov r8 rax)
+               (Pop rax)
+               (assert-integer r8 c)
+               (assert-integer rax c)
+               (Cmp r8 (imm->bits 0))
+               (Je (error-label c))
+               (Cqo)
+               (IDiv r8)
+               (Mov rax rdx)
+               )]
          ['<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
@@ -1071,6 +1153,8 @@
   (assert-type ptr-mask type-string))
 (define assert-symbol
   (assert-type ptr-mask type-symbol))
+(define assert-port
+  (assert-type ptr-mask type-port))
 (define assert-vector
   (assert-type ptr-mask type-vector))
 

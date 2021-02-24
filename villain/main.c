@@ -75,6 +75,9 @@ void print_result(vl_val x)
   case VL_FLONUM:
     printf("%f", vl_unwrap_flonum(x));
     break;
+  case VL_PORT:
+    printf("#<input-port>");
+    break;
   case VL_INVALID:
   default:
     error_exit();

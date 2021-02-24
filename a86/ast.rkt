@@ -146,6 +146,8 @@
 (instruct Mov    (dst src) check:src-dest)
 (instruct Add    (dst src) check:arith)
 (instruct Sub    (dst src) check:arith)
+(instruct IMul   (dst src) check:arith)
+(instruct IDiv   (dst)     check:arith-div)
 (instruct Div    (dst)     check:arith-div)
 (instruct Cmp    (a1 a2)   check:src-dest)
 (instruct Jmp    (x)       check:target)
@@ -164,6 +166,7 @@
 (instruct Pop    (a1)      check:register)
 (instruct Lea    (dst x)   check:lea)
 (instruct Bsr    (dst src) check:src-dest)
+(instruct Cqo    ()        check:none)
 
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
@@ -173,7 +176,7 @@
 (define offset? Offset?)
 
 (define (register? x)
-  (and (memq x '(rax rbx rcx rdx rbp rsp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15))
+  (and (memq x '(rax rbx rcx rdx rbp rsp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15 al))
        #t))
 
 (define (label? x)
@@ -191,6 +194,9 @@
       (Mov? x)
       (Add? x)
       (Sub? x)
+      (IMul? x)
+      (IDiv? x)
+      (Cqo? x)
       (Div? x)
       (Cmp? x)
       (Jmp? x)

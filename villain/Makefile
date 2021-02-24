@@ -16,14 +16,15 @@ objs = \
 	io.o \
 	symbol.o \
 	str.o \
-	wrap.o
+	wrap.o \
+	utf8.o
 
 default: runtime.o
 
 main.o: villain.h runtime.h
 wrap.o: villain.h types.h
-char.o: villain.h
-io.o: runtime.h villain.h
+char.o: villain.h utf8.h char.h
+io.o: runtime.h villain.h utf8.h
 symbol.o: str.h types.h villain.h
 str.o: types.h villain.h
 

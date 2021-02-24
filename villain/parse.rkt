@@ -118,9 +118,12 @@
          string-length string? integer?
          flonum?
          symbol->string string->symbol symbol?
-         vector? vector-length))
+         vector? vector-length
+         string-length string?
+         close-input-port open-input-file port? read-byte peek-byte))
+
 (define op2
-  '(+ - eq? cons string-ref make-string <=
+  '(+ - quotient remainder eq? cons string-ref make-string <=
       make-vector vector-ref
       fl+ fl- fl<= fl=))
 

@@ -169,6 +169,15 @@ vl_val vl_wrap_symbol(vl_symbol s)
   return ((vl_val)s) | symbol_type_tag;
 }
 
+vl_port* vl_unwrap_port(vl_val x)
+{
+  return (vl_port *)(x ^ port_type_tag);
+}
+vl_val vl_wrap_port(vl_port *p)
+{
+  return ((vl_val)p) | port_type_tag;
+}
+
 vl_val vl_wrap_eof(void)
 {
   return val_eof;

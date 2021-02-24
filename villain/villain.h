@@ -2,6 +2,7 @@
 #define VILLAIN_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 /* any abstract villain value */
 typedef int64_t vl_val;
@@ -22,6 +23,7 @@ typedef enum vl_type {
   VL_SYMBOL,
   VL_VEC,
   VL_FLONUM,
+  VL_PORT
 } vl_type;
 
 typedef struct {
@@ -41,6 +43,13 @@ typedef struct vl_str {
   vl_char buf[];
 } vl_str;
 typedef vl_str* vl_symbol;
+typedef struct vl_port {
+  FILE *fp;
+  int8_t len;
+  int8_t offset;
+  int8_t closed;
+  char buf[];
+} vl_port;
 
 /* return the type of x */
 vl_type vl_typeof(vl_val x);
@@ -76,6 +85,9 @@ vl_val vl_wrap_cons(vl_cons* c);
 
 vl_symbol vl_unwrap_symbol(vl_val x);
 vl_val vl_wrap_symbol(vl_symbol s);
+
+vl_port* vl_unwrap_port(vl_val x);
+vl_val vl_wrap_port(vl_port *p);
 
 vl_val vl_wrap_eof(void);
 vl_val vl_wrap_empty(void);
