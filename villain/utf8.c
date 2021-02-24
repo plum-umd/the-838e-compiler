@@ -11,19 +11,19 @@ int utf8_encode_char(vl_char c, char *buffer)
     buffer[0] = (char) c;
     return 1;
   } else if (c < 2048) {
-    buffer[0] = (char)(c >> 6) | 192;
-    buffer[1] = ((char)c & 63) | 128;
+    buffer[0] =  (char)(c >> 6)       | 192;
+    buffer[1] = ((char)       c & 63) | 128;
     return 2;
   } else if (c < 65536) {
-    buffer[0] = (char)(c >> 12) | 224;
+    buffer[0] =  (char)(c >> 12)      | 224;
     buffer[1] = ((char)(c >> 6) & 63) | 128;
-    buffer[2] = ((char)c & 63) | 128;
+    buffer[2] = ((char)       c & 63) | 128;
     return 3;
   } else {
-    buffer[0] = (char)(c >> 18) | 240;
+    buffer[0] =  (char)(c >> 18)       | 240;
     buffer[1] = ((char)(c >> 12) & 63) | 128;
-    buffer[2] = ((char)(c >> 6) & 63) | 128;
-    buffer[3] = ((char)c & 63) | 128;
+    buffer[2] = ((char)(c >>  6) & 63) | 128;
+    buffer[3] = ((char)        c & 63) | 128;
     return 4;
   }
 }

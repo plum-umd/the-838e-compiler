@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "types.h"
 #include "villain.h"
 
@@ -48,10 +46,12 @@ vl_val vl_wrap_int(int64_t i)
   return (i << int_shift) | int_type_tag;
 }
 
-int vl_unwrap_bool(vl_val x){
+int vl_unwrap_bool(vl_val x)
+{
   return x == val_true;
 }
-vl_val vl_wrap_bool(int b){
+vl_val vl_wrap_bool(int b)
+{
   return b ? val_true : val_false;
 }
 
@@ -99,7 +99,7 @@ vl_val vl_wrap_str(vl_str *s)
   int n = (s->len % 3 == 0) ? s->len / 3 : (s->len / 3 + 1);
   int64_t *vs = NULL;
 
-  vs = calloc(1+n, sizeof(int64_t));
+  vs = vl_calloc(1+n, sizeof(int64_t));
   vs[0] = vl_wrap_int(s->len);
 
   for (n = 0; n < s->len; ++n) {
@@ -111,7 +111,8 @@ vl_val vl_wrap_str(vl_str *s)
   return ((vl_val)vs) | str_type_tag;
 }
 
-double vl_unwrap_flonum(vl_val x){
+double vl_unwrap_flonum(vl_val x)
+{
   int64_t f = *((int64_t *)(x ^ flonum_type_tag));
 
   int sign= 1 & (f >> 63) ? -1 : 1;
@@ -128,9 +129,14 @@ double vl_unwrap_flonum(vl_val x){
 
   return sign * (1<<(exp - 0x3ff)) * (1 + dec_man);
 }
-vl_val vl_wrap_flonum(double f){
+vl_val vl_wrap_flonum(double f)
+{
+  double *p = vl_calloc(sizeof(double), 1);
+
+  *p = f;
+
   // let's just see how it goes
-  return *(vl_val *)&f;
+  return ((vl_val)p) | flonum_type_tag;
 }
 
 vl_box vl_unwrap_box(vl_val x)

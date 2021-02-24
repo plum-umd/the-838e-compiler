@@ -9,19 +9,21 @@
 
 FILE* open_input_file(vl_val filename)
 {
-  static char buf[PATH_MAX];
+  char *buf;
   FILE *f;
   vl_str *s = vl_unwrap_str(filename);
 
-  if ((s->len*4)+1 > PATH_MAX) /* path too long */
+  buf = vl_calloc((s->len*4)+1, 1);
+  if (!buf)
     error_handler();
 
-  utf8_encode_string(vl_unwrap_str(filename), buf);
+  utf8_encode_string(s, buf);
 
   f = fopen(buf, "rb");
   if (!f)
     error_handler();
 
+  vl_free(buf);
   return f;
 }
 

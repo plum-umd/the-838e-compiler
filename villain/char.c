@@ -1,12 +1,12 @@
 #include <stdio.h>
-#include <inttypes.h>
 #include "villain.h"
 #include "utf8.h"
 #include "char.h"
 
-void print_char (vl_char codepoint) {
+void print_char(vl_char c)
+{
   printf("#\\");
-  switch (codepoint) {
+  switch (c) {
   case 0:
     printf("nul"); break;
   case 8:
@@ -26,19 +26,22 @@ void print_char (vl_char codepoint) {
   case 127:
     printf("rubout"); break;
   default:
-    print_codepoint(codepoint);
+    print_codepoint(c);
   }
 }
 
-void print_str_char_u(vl_char c) {
+void print_str_char_u(vl_char c)
+{
   printf("\\u%04X", c);
 }
 
-void print_str_char_U(vl_char c) {
+void print_str_char_U(vl_char c)
+{
   printf("\\U%08X", c);
 }
 
-void print_str_char(vl_char c) {
+void print_str_char(vl_char c)
+{
   switch (c) {
   case 0 ... 6:
     print_str_char_u(c);
@@ -695,7 +698,8 @@ void print_str_char(vl_char c) {
   }
 }
 
-void print_str(vl_str *str) {
+void print_str(vl_str *str)
+{
   uint64_t i;
   for (i = 0; i < str->len; ++i)
     print_str_char(str->buf[i]);
