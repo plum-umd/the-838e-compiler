@@ -21,10 +21,11 @@ objs = \
 default: runtime.o
 
 main.o: villain.h runtime.h
+wrap.o: villain.h types.h
 char.o: villain.h
 io.o: runtime.h villain.h
-symbol.o: str.h
-wrap.o: villain.h types.h
+symbol.o: str.h types.h villain.h
+str.o: types.h villain.h
 
 %.run: %.o runtime.o
 	gcc runtime.o $< -o $@ $(libs)

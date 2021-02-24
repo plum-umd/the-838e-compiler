@@ -69,6 +69,10 @@ vl_str* vl_unwrap_str(vl_val x)
 {
   return (vl_str *)(x ^ str_type_tag);
 }
+vl_val vl_wrap_str(vl_str *s)
+{
+  return ((vl_val)s) | str_type_tag;
+}
 */
 vl_str* vl_unwrap_str(vl_val x)
 {
@@ -86,35 +90,47 @@ vl_str* vl_unwrap_str(vl_val x)
   for (n = 0; n < len; ++n) {
     uint64_t i = n/3 + 1;
     uint64_t j = n % 3;
-    str->buf[n] = (0x1FFFFF & (s[i] >> (j*21))) >> char_shift;
+    str->buf[n] = vl_unwrap_char(0x1FFFFF & (s[i] >> (j*21)));
   }
   return str;
 }
 vl_val vl_wrap_str(vl_str *s)
 {
-  return ((vl_val)s) | str_type_tag;
+  int n = (s->len % 3 == 0) ? s->len / 3 : (s->len / 3 + 1);
+  int64_t *vs = NULL;
+
+  vs = calloc(1+n, sizeof(int64_t));
+  vs[0] = vl_wrap_int(s->len);
+
+  for (n = 0; n < s->len; ++n) {
+    uint64_t i = n/3 + 1;
+    uint64_t j = n % 3;
+    vs[i] |= vl_wrap_char(s->buf[n]) << (j*21);
+  }
+
+  return ((vl_val)vs) | str_type_tag;
 }
 
 double vl_unwrap_flonum(vl_val x){
   int64_t f = *((int64_t *)(x ^ flonum_type_tag));
 
-  int64_t sign= 1 & (f >> 63) ? -1 : 1;
+  int sign= 1 & (f >> 63) ? -1 : 1;
   int64_t exp = (((1 << 11) - 1) & (f >> 52));
   int64_t mantissa = (((int64_t)1 << 52) - 1) & f;
-  double dec_man= 0;
+  double dec_man = 0;
 
   for (int i = -52; i < 0; i++) {
     if (1 == (1 & mantissa)) {
       dec_man += 1 << i;
     }
-    mantissa = mantissa>>1;
+    mantissa >>= 1;
   }
 
-  return sign * (1<<(exp - 1023)) * (1 + dec_man);
+  return sign * (1<<(exp - 0x3ff)) * (1 + dec_man);
 }
 vl_val vl_wrap_flonum(double f){
-  // TODO
-  return 0;
+  // let's just see how it goes
+  return *(vl_val *)&f;
 }
 
 vl_box vl_unwrap_box(vl_val x)
@@ -144,30 +160,9 @@ vl_val vl_wrap_cons(vl_cons *c)
   return ((vl_val)c) | cons_type_tag;
 }
 
-/* we need a UTF32 string representation
 vl_symbol vl_unwrap_symbol(vl_val x)
 {
   return (vl_symbol)(x ^ symbol_type_tag);
-} */
-vl_symbol vl_unwrap_symbol(vl_val x)
-{
-  int64_t *s = (int64_t *)(x ^ symbol_type_tag);
-  uint64_t len;
-  uint64_t n;
-
-  len = (s[0] >> int_shift);
-
-  vl_str *str = vl_calloc(1, sizeof(vl_str) + len*sizeof(vl_char));
-  if (!str)
-    return NULL;
-
-  str->len = len;
-  for (n = 0; n < len; ++n) {
-    uint64_t i = n/3 + 1;
-    uint64_t j = n % 3;
-    str->buf[n] = (0x1FFFFF & (s[i] >> (j*21))) >> char_shift;
-  }
-  return str;
 }
 vl_val vl_wrap_symbol(vl_symbol s)
 {

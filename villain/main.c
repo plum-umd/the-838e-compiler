@@ -24,6 +24,7 @@ void print_str(vl_str *);
 void print_char(vl_char);
 void print_cons(vl_cons *);
 void print_vector(vl_vec *);
+vl_str *symbol_to_str(vl_symbol s);
 
 void print_result(vl_val x)
 {
@@ -64,7 +65,9 @@ void print_result(vl_val x)
     break;
   case VL_SYMBOL:
     putchar('\'');
-    print_str((vl_str *)vl_unwrap_symbol(x));
+    /* after we have UTF32 string
+     * print_str((vl_str *)vl_unwrap_symbol(x)); */
+    print_str(symbol_to_str(vl_unwrap_symbol(x)));
     break;
   case VL_VEC:
     print_vector(vl_unwrap_vec(x));
