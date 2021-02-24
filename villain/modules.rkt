@@ -17,7 +17,7 @@
      (let ((Mn-list (findf (λ (x) (equal? (Mnode-file (car x)) rq)) mgraph)))
        (write-s-files Mn-list))])
   (write-obj-file-list mlist)
-  (write-mgraph-to-file mgraph)
+  ;(write-mgraph-to-file mgraph)
   (let ((rqs-Mn-lists (Mnode-adjacency-list-pairs rqs)))
     (let ((pv-exts (provided-functions-by-required-modules rqs-Mn-lists)))
       (CMod pv-exts pvs ds e))))
@@ -104,17 +104,17 @@
   (with-output-to-file "modulefiles"
      #:exists 'truncate
      (λ ()
-       (displayln (foldr (λ (x acc) (string-append x " " acc)) ""
+       (displayln (string-append (foldr (λ (x acc) (string-append x " " acc)) ""
                          (remove-duplicates 
             (map (λ (x) (string-append (string-trim x ".rkt") ".o"))
-                           mlist)))))))
+                           mlist))) "\n")))))
 
-(define (write-mgraph-to-file mgraph)
-  (with-output-to-file "modulesgraph"
-     #:exists 'truncate
-     (λ ()
-       (displayln (foldr (λ (x acc) (string-append (format "~a \n" x) acc))
-                         "" mgraph)))))
+;(define (write-mgraph-to-file mgraph)
+;  (with-output-to-file "modulesgraph"
+;     #:exists 'truncate
+;     (λ ()
+;       (displayln (foldr (λ (x acc) (string-append (format "~a \n" x) acc))
+;                         "" mgraph)))))
 
 
                           
