@@ -431,7 +431,8 @@
           (seq (assert-vector rax c)
                (Xor rax type-vector)
                (Mov rax (Offset rax 0))
-               (Sal rax int-shift))]
+               (Sal rax int-shift)
+               (Or rax type-int))]
          ['flonum?
           (type-pred ptr-mask type-flonum)])))
 
@@ -502,6 +503,7 @@
                 (l2 (gensym 'loop_end) ))
             (seq (Pop r8)
                  (assert-integer r8 c)              ; r8 = int arg = length
+                 (Sar r8 int-shift)                 ; unwrap length
                  (Cmp r8 0)
                  (Jl (error-label c))
                  (Mov r10 rbx)                      ; saves heap pointer in r10
@@ -513,7 +515,7 @@
                  (Je l2)                           ;(While r8 > 0){
                  (Mov (Offset rbx 0) rax) ;;should rax         ;Copies the value into the spot on the heap
                  (Add rbx 8)
-                 (Sub r8 (imm->bits 1))                         ;r8--;
+                 (Sub r8 1)                         ;r8--;
                  (Jmp l1)                           ;}
                  (Label l2)                         ;done writing
                  (Mov rax r10)
@@ -522,15 +524,16 @@
           (seq (Pop r8)
                (assert-vector r8 c)         ; r8 = vector pointer
                (assert-integer rax c)       ; rax = index
+               (Sar rax int-shift)          ; unwrap index
                (Cmp rax 0)
                (Jl (error-label c))
                (Xor r8 type-vector)
                (Mov r9 (Offset r8 0))       ; r9 = length
                (Add r8 8)                   ; r8 will now be pointing to the first element
-               (Sub r9 (imm->bits 1))       ; 0-indexing
+               (Sub r9 1)                   ; 0-indexing
                (Cmp rax r9)
                (Jg (error-label c))
-               (Sar rax 1)                  ;Shift the index 1 to the right
+               (Sal rax 3)                  ; index*=8
                (Add r8 rax)
                (Mov rax (Offset r8 0)))]      ;Accounting for 0-indexing, we need to shift one more spot over
          ['make-string
@@ -831,18 +834,20 @@
                  (Mov rax val-void)))]
         ['vector-set!
          (seq (Pop r10)                    ; r10 = index
-              (Pop r8)
-              (assert-vector r8 c)         ; r8 = vector pointer
-              (assert-integer r10 c)       ; rax = some value
+              (Pop r8)                     ; r8 = vector pointer
+                                           ; rax = some value
+              (assert-vector r8 c)
+              (assert-integer r10 c)
+              (Sar r10 int-shift)          ; unwrap index
               (Cmp r10 0)
               (Jl (error-label c))
               (Xor r8 type-vector)
               (Mov r9 (Offset r8 0))       ; r9 = length
               (Add r8 8)                   ; r8 will now be pointing to the first element
-              (Sub r9 (imm->bits 1))       ; 0-indexing
+              (Sub r9 1)                   ; 0-indexing
               (Cmp r10 r9)
               (Jg (error-label c))
-              (Sar r10 1)
+              (Sal r10 3)                  ; index*=8
               (Add r8 r10)
               (Mov (Offset r8 0) rax)
               (Mov rax val-void))])))
