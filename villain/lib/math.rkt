@@ -39,18 +39,24 @@
 (define (abs x)
   (if (>= x 0) x (- 0 x)))
 
-(define (max/2 x y)
-  (if (> x y) x y))
+(define (max x . xs)
+  (max/acc x xs))
 
-(define (min/2 x y)
-  (if (< x y) x y))
-
-(define (max . xs)
+(define (max/acc x xs)
   (match xs
-    ['() -576460752303423488] ; int_min
-    [(cons y ys) (max/2 y (apply max ys))]))
+    ['() x]
+    [(cons y xs)
+     (if (> y x)
+         (max/acc y xs)
+         (max/acc x xs))]))
 
-(define (min . xs)
+(define (min x . xs)
+  (min/acc x xs))
+
+(define (min/acc x xs)
   (match xs
-    ['() 576460752303423487] ; int_max
-    [(cons y ys) (min/2 y (apply min ys))]))
+    ['() x]
+    [(cons y xs)
+     (if (< y x)
+         (min/acc y xs)
+         (min/acc x xs))]))
