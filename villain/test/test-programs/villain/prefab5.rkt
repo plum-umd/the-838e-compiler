@@ -3,4 +3,4 @@
 (begin
   (struct sprout (x y) #:prefab)
 
-  (sprout-x (sprout 1 2)))
+  (sprout-y (sprout 1 2)))

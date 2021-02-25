@@ -154,7 +154,7 @@
             (Label end)
             (Mov rax rbx)
             (Or rax type-prefab)
-            (Add rbx (* 8 (+ 1 (length xs))))
+            (Add rbx (* 8 (+ 2 (length xs))))
              ; return
             (Pop r8) ; save rp
             (Add rsp (* 8 (length xs))) ; pop args
@@ -168,7 +168,8 @@
             (Mov r8 (Offset rsp 8)) ;;Get the argument
             (And r8 ptr-mask)
             (Cmp r8 type-prefab)
-            (Jne (error-label (list #f #f)))
+            (Mov rax val-false)
+            (Jne end2)
             (compile-e (Symbol s) (parity (list #f #f)))
             (Mov r8 (Offset rsp 8))
             (Xor r8 type-prefab)
@@ -637,7 +638,8 @@
          
          (Label end)
          (Mov rax rbx)
-         (Or rax type-prefab)))]))
+         (Or rax type-prefab)
+         (Add rbx (* 8 (+ 2 (length rest))))))]))
 
 ;;CEnv integer -> CEnv
 ;;Given a compile time environment and a size, add size number of #f to the environment.

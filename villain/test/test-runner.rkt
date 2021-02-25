@@ -293,6 +293,112 @@
   (check-equal? (run '(integer-length  16)) 5)
   (check-equal? (run '(integer-length -16)) 4)
 
+  ;;Prefab structure tests
+  (check-equal? (run '(make-prefab-struct 'coord 4 5)) (make-prefab-struct 'coord 4 5))
+  (check-equal? (run '(make-prefab-struct 'empty)) (make-prefab-struct 'empty))
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (extract-x (coord (box 1) (box 2)))))
+                (box 1))
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (struct empt () #:prefab)
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (extract-y (coord (box 1) (box 2)))))
+                (box 2))
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+                        (struct empt () #:prefab)
+                        (let ((c (coord (cons 1 (cons 2 '())) (cons 1 (cons 2 '())))))
+                          (coord? c))))
+                #t)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (let ((c (coord (cons 1 (cons 2 '())) (cons 1 (cons 2 '()))))
+                              (e (empt)))
+                          (coord? e))))
+                #f)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (let ((c (coord (cons 1 (cons 2 '())) (cons 1 (cons 2 '()))))
+                              (e (empt)))
+                          (empt? e))))
+                #t)
+  
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord? (box 1))))
+                #f)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord-x (box 1))))
+                'err)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord? (make-prefab-struct 'coord 1 2 3))))
+                #f)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord? (make-prefab-struct 'coord 1 2))))
+                #t)
+  
+  
 #|
   (check-equal? (run
                  '(begin (define (even? x)
