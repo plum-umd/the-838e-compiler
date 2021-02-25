@@ -527,6 +527,12 @@
                         (* x z)))) 9)
   (check-equal? (run '(quotient -6 3)) -2)
   (check-equal? (run '(remainder -11 3)) -2)
+  (check-equal? (run '(max 1)) 1)
+  (check-equal? (run '(min 1)) 1)
+  (check-equal? (run '(max -1 3 4)) 4)
+  (check-equal? (run '(min -10 -2 -5)) -10)
+  (check-equal? (run '(abs -2)) 2)
+  (check-equal? (run '(abs 2)) 2)
 
   ; Standard library: string.rkt
   (check-equal? (run '(string)) "")
