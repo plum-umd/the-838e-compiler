@@ -27,7 +27,14 @@
      (string->symbol
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
-            (list->string (reverse str-chars)))))]))
+            (list->string (reverse str-chars)))))]
+    [(? prefab-bits? i)
+     (apply make-prefab-struct
+            (unload-value (heap-ref (+ i (arithmetic-shift 1 imm-shift))))
+            (for/list ([k (in-range 2 (+ 2 (heap-ref i)) 1)])
+              (unload-value (heap-ref (+ i (arithmetic-shift k imm-shift))))))]))
+            
+                         
                      
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))
