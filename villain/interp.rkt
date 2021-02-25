@@ -62,6 +62,8 @@
              [v2 (match (interp-env e3 r ds)
                    ['err 'err]
                    [v3 (interp-prim3 p v1 v2 v3)])])])]
+    [(Mps (Prefab-Key (Symbol s) n1 (list n2 v2) muts) rest)
+     (apply make-prefab-struct s (map (λ (e) (interp-env e r ds)) rest))]
     [(If p e1 e2)
      (match (interp-env p r ds)
        ['err 'err]
