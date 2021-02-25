@@ -12,13 +12,13 @@
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
                   ; compile-define, open-input-file
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-define
+                  ; string-set!, make-string, compile-define, fl<=
                   ; compile-vector, vector-set!, vector-ref
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
-                  ; compile-define
+                  ; compile-define, fl<=
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
 (define xmm0 'xmm0) ; registers to hold double precision floating numbers
@@ -727,13 +727,11 @@
                  (Mov rax (Offset rax 0))
                  (Xor r8 type-flonum)
                  (Mov r8 (Offset r8 0))
-                 (Mov r9 rax)
-                 (Mov r11 (arithmetic-shift 1 63))
-                 (Xor r9 r11)
-                 (Mov r10 r8)
-                 (Mov r12 (arithmetic-shift 1 63))
-                 (Xor r10 r12)
-                 (Cmp r10 r9)
+                 (Mov r9 (arithmetic-shift 1 63))
+                 (Xor rax r9)
+                 (Mov r10 (arithmetic-shift 1 63))
+                 (Xor r8 r10)
+                 (Cmp r8 r9)
                  (Mov rax (imm->bits #t))
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
