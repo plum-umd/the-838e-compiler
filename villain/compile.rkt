@@ -12,19 +12,16 @@
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
                   ; compile-define, open-input-file
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
-                  ; string-set!, make-string, compile-define, compile-fl+
+                  ; string-set!, make-string, compile-define
                   ; compile-vector, vector-set!, vector-ref
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
-                  ; compile-define, compile-fl+
-(define r11 'r11) ; scratch in compile-fl+
-(define r12 'r12) ; scratch in compile-fl+
-(define r13 'r13) ; scratch in compile-fl+
+                  ; compile-define
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
-(define xmm0 'xmm0)
+(define xmm0 'xmm0) ; registers to hold double precision floating numbers
 
 ;; type CEnv = [Listof Variable]
 
