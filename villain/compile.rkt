@@ -718,11 +718,11 @@
                  (Label eq-true)))]
 
 
-             ['fl<=
+         ['fl<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
                  (assert-flonum r8 c)
-               (assert-flonum rax c)
+                 (assert-flonum rax c)
                  (Xor rax type-flonum)
                  (Mov rax (Offset rax 0))
                  (Xor r8 type-flonum)
@@ -731,7 +731,7 @@
                  (Xor rax r9)
                  (Mov r10 (arithmetic-shift 1 63))
                  (Xor r8 r10)
-                 (Cmp r8 r9)
+                 (Cmp r8 rax)
                  (Mov rax (imm->bits #t))
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
