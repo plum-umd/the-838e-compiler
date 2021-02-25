@@ -113,21 +113,8 @@ vl_val vl_wrap_str(vl_str *s)
 
 double vl_unwrap_flonum(vl_val x)
 {
-  int64_t f = *((int64_t *)(x ^ flonum_type_tag));
+ return *((double *)(x ^ flonum_type_tag));
 
-  int sign= 1 & (f >> 63) ? -1 : 1;
-  int64_t exp = (((1 << 11) - 1) & (f >> 52));
-  int64_t mantissa = (((int64_t)1 << 52) - 1) & f;
-  double dec_man = 0;
-
-  for (int i = -52; i < 0; i++) {
-    if (1 == (1 & mantissa)) {
-      dec_man += 1 << i;
-    }
-    mantissa >>= 1;
-  }
-
-  return sign * (1<<(exp - 0x3ff)) * (1 + dec_man);
 }
 vl_val vl_wrap_flonum(double f)
 {
