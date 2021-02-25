@@ -24,6 +24,7 @@
 (define r13 'r13) ; scratch in compile-fl+
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
+(define xmm0 'xmm0)
 
 ;; type CEnv = [Listof Variable]
 
@@ -677,28 +678,31 @@
                (Pop r8)
                (assert-flonum r8 c)
                (assert-flonum rax c)
-               (Xor rax type-flonum)
-               (Mov rax (Offset rax 0))
+               (Xor rax type-flonum)              
                (Xor r8 type-flonum)
-               (Mov r8 (Offset r8 0))
-               (compile-fl+)
-               )]
-         ['fl-
-
-          ;; e1 - e2 = e1 + (-e2)
-           (seq
+               (Movapd xmm0 (Offset r8 0))
+               (Addsd xmm0 (Offset rax 0))              
+               (Movapd (Offset rbx 0) xmm0)
+               (Mov rax rbx)
+               (Or rax type-flonum)
+               (Add rbx 8)
+               )
+               ]
+         ['fl- (seq
                (Pop r8)
                (assert-flonum r8 c)
                (assert-flonum rax c)
                (Xor rax type-flonum)
-               (Mov rax (Offset rax 0))
-               (Mov r11 (arithmetic-shift 1 63))
-               (Xor rax r11)
+              
                (Xor r8 type-flonum)
-               (Mov r8 (Offset r8 0))
-               (compile-fl+)
-
-          )    ]
+               (Movapd xmm0 (Offset r8 0))
+               (Subsd xmm0 (Offset rax 0))               
+               (Movapd (Offset rbx 0) xmm0)
+               (Mov rax rbx)
+               (Or rax type-flonum)
+               (Add rbx 8)
+               )
+               ]
 
 
          ['fl=
@@ -739,132 +743,6 @@
                  (Label leq-true)))]
 
           )))
-
-(define (compile-fl+)
-  (let ((l1 (gensym)) (l2 (gensym)) (l3 (gensym)) (l4 (gensym))
-                              (l5 (gensym)) (l6 (gensym)) (l7 (gensym)))
-
-
-          (seq
-
-               ;; e1 (the bigger flonum) will be contained in r8
-               ;; and e2 will be contained in rax
-               (Mov r9 rax)
-               (Mov r11 (- (arithmetic-shift 1 63) 1))
-               (And r9 r11)
-               (Mov r10 r8)
-               (Mov r12 (- (arithmetic-shift 1 63) 1))
-               (And r10 r12)
-               (Cmp r9 r10)
-
-               (Jl l1)
-               (Mov r9 rax)
-               (Mov rax r8)
-               (Mov r8 r9)
-               (Label l1)
-
-
-               ;; e2's mantissa with a 1 to the left of it
-               ;; stored in r9
-               (Mov r9 rax)
-               (Mov r11 (- (arithmetic-shift 1 52) 1))
-               (And r9 r11)
-               (Mov r12 (arithmetic-shift 1 52))
-               (Add r9 r12)
-
-               ;; e1's mantissa with a 1 to the left of it
-               ;; stored in r10
-               (Mov r10 r8)
-               (And r10 r11)
-               (Mov r12 (arithmetic-shift 1 52))
-               (Add r10 r12)
-
-               ;; e2's expt
-               ;; stored in r12
-               (Mov r12 rax)
-               (Sar r12 52)
-               (And r12 (- (arithmetic-shift 1 11) 1))
-
-               ;; e1's expt
-               ;; stored in r11
-               (Mov r11 r8)
-               (Sar r11 52)
-               (And r11 (- (arithmetic-shift 1 11) 1))
-
-               ;; makes e2's expt the same size of e1
-               ;; and shifts e2's mantissa in this loop
-               (Label l2)
-               (Cmp r12 r11)
-               (Je l3)
-               (Sar r9 1)
-               (Add r12 1)
-               (Jmp l2)
-               (Label l3)
-
-               ;; e2's sign. stored in r13
-               (Mov r13 rax)
-               (Sar r13 63)
-
-               ;; e1's sign. stored in r12
-               (Mov r12 r8)
-               (Sar r12 63)
-
-                ;; if e1 and e2 are different signs, m1 - m2,
-               (Cmp r13 r12)
-               (Je l4)
-               (Sub r10 r9)
-
-               ;; r9 and r13 can be used as tempory registers now
-               ;; if mantissa does not start with 1, sub exponent by 1,
-               ;; shift mantissa left by 1 and loop
-               (Label l6)
-               (Mov r9 (arithmetic-shift 1 52))
-               (Mov r13 r10)
-               (And r13 r9)
-               (Cmp r9 r13)
-               (Je l5)
-               (Sal r10 1)
-               (Sub r11 1)
-               (Jmp l6)
-
-               ;; else m1 + m2
-               (Label l4)
-               (Add r10 r9)
-
-               ;; if mantissa oveflows, add exponent by 1,
-               ;; shift mantissa right by 1 and round
-               (Mov r9 (- (arithmetic-shift 1 53) 1))
-               (Cmp r9 r10)
-               (Jg l5)
-               (Add r11 1)
-               (Mov r9 r10)
-               (Sar r10 1)
-               (And r9 1)
-               (Mov r13 0)
-               (Cmp r9 r13)
-               (Je l5)
-               (Add r10 1)
-
-               (Label l5)
-
-               ;; adjusts the mantissa
-               (Mov r9 (arithmetic-shift 1 52))
-               (Sub r10 r9 )
-
-               ;; Construction of the final result
-               (Label l7)
-
-               (Mov rax r12)
-               (Sal rax 11)
-               (Add rax r11)
-               (Sal rax 52)
-               (Add rax r10)
-               (Mov (Offset rbx 0) rax)
-               (Mov rax rbx)
-               (Or rax type-flonum)
-               (Add rbx 8)
-
-      )))
 
 ;; Op3 Expr Expr Expr CEnv -> Asm
 (define (compile-prim3 p e1 e2 e3 c)
