@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "types.h"
+#include "villain.h"
 
 int64_t *str_dup(const int64_t *s)
 {
@@ -37,11 +38,6 @@ int64_t str_cmp(const int64_t *s1, const int64_t *s2)
     return s2[i+1];
 }
 
-static int64_t char_to_bits (char c)
-{
-  return ((int64_t)c << char_shift) | char_type_tag;
-}
-
 int64_t *str_from_cstr(const char *s)
 {
   int64_t len = strlen(s);
@@ -55,17 +51,17 @@ int64_t *str_from_cstr(const char *s)
   if (!vs)
     return NULL;
 
-  vs[0] = len << int_shift;
+  vs[0] = vl_wrap_int(len);
 
   // the inverse of print_str
   for (i = 1; i < n; i++) {
     for (j = 0; j < 3; j++) {
-      vs[i] |= char_to_bits(s[pos++]) << (j * 21);
+      vs[i] |= vl_wrap_char(s[pos++]) << (j * 21);
     }
   }
   remain = (len % 3 == 0) ? 3 : (len % 3);
   for (j = 0; j < remain; j++){
-    vs[i] |= char_to_bits(s[pos++]) << (j * 21);
+    vs[i] |= vl_wrap_char(s[pos++]) << (j * 21);
   }
   return vs;
 }
