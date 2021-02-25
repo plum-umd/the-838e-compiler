@@ -186,7 +186,45 @@
             (Pop r8) ; save rp
             (Add rsp 8) ; pop args
             (Push r8) ; replace rp
-            (Ret)))]))
+            (Ret)
+
+            (compile-struct-accessors s xs 0)))]))
+
+;;Symbol [Listof Symbol] -> Asm
+(define (compile-struct-accessors s xs i)
+  (match xs
+    ['() (seq)]
+    [(cons x rest)
+     (let ((end (gensym 'end))
+           (accessor (string-append (symbol->string s) "-" (symbol->string x))))
+       (seq
+        (%% (string-append "Struct accessor for " accessor))
+        (Label (symbol->label (string->symbol accessor)))
+        (Cmp rcx (imm->bits 1)) ;arity check
+        (Jne (error-label (list #f #f)))
+        (Mov r8 (Offset rsp 8)) ;;Get the argument
+        (And r8 ptr-mask)
+        (Cmp r8 type-prefab)
+        (Jne (error-label (list #f #f)))
+        (compile-e (Symbol s) (parity (list #f #f)))
+        (Mov r8 (Offset rsp 8))
+        (Xor r8 type-prefab)
+        (Mov r9 (Offset r8 8))
+        (Cmp r9 rax)
+        (Jne (error-label (list #f #f)))
+        (Mov r9 (Offset r8 0))
+        (Cmp r9 (+ i (length xs)))
+        (Jne (error-label (list #f #f)))
+        (Mov rax (Offset r8 (* 8 (+ 2 i))))
+
+        (Label end)
+         ; return
+        (Pop r8) ; save rp
+        (Add rsp 8) ; pop args
+        (Push r8) ; replace rp
+        (Ret)
+
+        (compile-struct-accessors s rest (add1 i))))]))
 
 (define (parity c)
   (if (even? (length c))
