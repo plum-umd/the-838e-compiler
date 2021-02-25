@@ -119,6 +119,73 @@
             (Pop r10)  ; save rp
             (Add rsp (* 8 (add1 (length xs)))) ; pop args
             (Push r10) ; replace rp
+            (Ret)))]
+    [(Struct s xs)
+     (let ((loop (gensym 'loop))
+           (end (gensym 'end))
+           (end2 (gensym 'end)))
+       (seq
+            (%% "Struct Constructor Function")
+            (Label (symbol->label s)) 
+            (Cmp rcx (imm->bits (length xs))) ; arity check
+            (Jne (error-label (cons #f (reverse xs))))
+            (compile-e (Symbol s) (parity (cons #f (reverse xs))))
+            (Mov r8 (length xs))
+            (Mov (Offset rbx 0) r8);;Store the number of fields
+            (Mov (Offset rbx 8) rax) ;;Store the key i.e the symbol
+
+            (Mov r8 rbx)
+            (Mov r9 rsp)
+            (Add r9 (* 8 (length xs)))
+            (Mov r10 0)
+            
+            (Add r8 16) ;;Skip the number of fields and the key
+            
+            (Label loop)
+            (Cmp r10 (length xs))
+            (Je end) ;;No more args
+            (Mov rax (Offset r9 0))
+            (Mov (Offset r8 0) rax)
+            (Add r8 8)
+            (Sub r9 8)
+            (Add r10 1)
+            (Jmp loop)
+
+            (Label end)
+            (Mov rax rbx)
+            (Or rax type-prefab)
+            (Add rbx (* 8 (+ 1 (length xs))))
+             ; return
+            (Pop r8) ; save rp
+            (Add rsp (* 8 (length xs))) ; pop args
+            (Push r8) ; replace rp
+            (Ret)
+            
+            (%% "Struct Predicate")
+            (Label (symbol->label (string->symbol (string-append (symbol->string s) "?"))))
+            (Cmp rcx (imm->bits 1)) ;arity check
+            (Jne (error-label (list #f #f)))
+            (Mov r8 (Offset rsp 8)) ;;Get the argument
+            (And r8 ptr-mask)
+            (Cmp r8 type-prefab)
+            (Jne (error-label (list #f #f)))
+            (compile-e (Symbol s) (parity (list #f #f)))
+            (Mov r8 (Offset rsp 8))
+            (Xor r8 type-prefab)
+            (Mov r9 (Offset r8 8))
+            (Cmp r9 rax)
+            (Mov rax val-false)
+            (Jne end2)
+            (Mov r9 (Offset r8 0))
+            (Cmp r9 (length xs))
+            (Jne end2)
+            (Mov rax val-true)
+            
+            (Label end2)
+            ; return
+            (Pop r8) ; save rp
+            (Add rsp 8) ; pop args
+            (Push r8) ; replace rp
             (Ret)))]))
 
 (define (parity c)
@@ -510,19 +577,15 @@
   (match prefab-key
      [(Prefab-Key s n1 (list n2 v2) muts)
       (let ((buildPrefab (gensym "buildPrefab"))
-            (end (gensym "end"))
-            (keyLength (+ 4 (length muts))))
+            (end (gensym "end")))
         (seq
          (compile-prefab-key prefab-key c) ;;Place all the prefab key values on the stack
-         (compile-prefab-values rest (extend c (+ 4 (length muts)))) ;;Place all the struct values on the stack
+         (compile-prefab-values rest (cons #f c)) ;;Place all the struct values on the stack
 
-
-         (Mov r8 keyLength)
-         (Mov (Offset rbx 0) r8)
          (Mov r8 (length rest))
-         (Mov (Offset rbx 8) r8)
+         (Mov (Offset rbx 0) r8) ;;The number of fields
          
-         (Mov rax (* 8 (add1 (+ keyLength (length rest)))))
+         (Mov rax (* 8 (+ 1 (length rest))))
 
          (Label buildPrefab)
          (Pop r8)
@@ -530,7 +593,7 @@
          (Add r9 rax)
          (Mov (Offset r9 0) r8)
          (Sub rax 8)
-         (Cmp rax 8)
+         (Cmp rax 0)
          (Je end)
          (Jmp buildPrefab)
          
@@ -552,14 +615,15 @@
      (seq
       (compile-e s c)
       (Push rax)
-      (compile-e n1 (cons #f c))
+      ;;Ignore the rest of the key for now
+      #|(compile-e n1 (cons #f c))
       (Push rax)
       (compile-e n2 (cons #f (cons #f c)))
       (Push rax)
       (compile-e v2 (cons #f (cons #f (cons #f c))))
       (Push rax)
               
-      (compile-prefab-muts muts (cons #f (cons #f (cons #f (cons #f c))))))]))
+      (compile-prefab-muts muts (cons #f (cons #f (cons #f (cons #f c))))|#)]))
 
 ;;[Listof Integer] CEnv -> Asm
 (define (compile-prefab-muts muts c)

@@ -7,7 +7,7 @@
   (match s
     [(list 'begin (list 'provide xs ...) (and ds (list 'define _ _)) ...)
      (Lib xs (map parse-d ds))]
-    [(list 'begin (and ds (list 'define _ _)) ... e)
+    [(list 'begin (and ds (or (list 'define _ _) (list 'struct _ _ _))) ... e)
      (Prog (map parse-d ds) (parse-e e))]
     [e (Prog '() (parse-e e))]))
 
@@ -18,6 +18,8 @@
      (Defn f xs (parse-e e))] 
     [(list 'define (list-rest (? symbol? f) (? symbol? xs) ... (? symbol? xs*)) e) 
      (Defn* f xs xs* (parse-e e))]
+    [(list 'struct (? symbol? s) (list (? symbol? xs) ...) #:prefab)
+     (Struct s xs)]
     [_ (error "Parse defn error" s)]))
 
 ;; S-Expr -> Expr
