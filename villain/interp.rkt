@@ -26,7 +26,7 @@
 (define (interp p)
   (match p
     [(Prog ds e)
-     (interp-env e '() (append ds stdlib))]))
+     (interp-env e '() (append (interp-structs ds) stdlib))]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -135,6 +135,20 @@
      (match (interp-env e r ds)
        ['err 'err]
        [v (cons v (interp-env* es r ds))])]))
+
+;; Defns -> Defns
+(define (interp-structs ds)
+  (match ds
+   ['() '()]
+   [(cons (Struct s xs) l) ((cons (create-struct-bindings s xs) (interp-structs t)))]
+   [(cons h t) (cons h (interp-structs t))]
+   ))
+
+;;Symbol (Listof Symbol) -> Defns
+(define (create-struct-bindings s xs)
+  ;;TODO
+  
+  )
 
 ;; Defns Symbol -> Defn
 (define (defns-lookup ds f)
