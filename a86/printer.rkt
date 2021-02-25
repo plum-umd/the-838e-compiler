@@ -148,7 +148,25 @@
       [(Bsr a1 a2)
        (string-append tab "bsr "
                       (arg->string a1) ", "
-                      (arg->string a2))]))
+                      (arg->string a2))]
+
+       [(Addsd a1 a2)
+       (string-append tab "addsd "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+
+       [(Subsd a1 a2)
+       (string-append tab "subsd "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+
+      [(Movapd a1 a2)
+       (string-append tab "movapd "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+
+      
+      ))
 
 
   (define (comment->string c)
