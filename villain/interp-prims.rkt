@@ -27,6 +27,17 @@
     [(list 'string->symbol (? string?))   (string->symbol v)]
     [(list 'symbol->string (? symbol?))   (symbol->string v)]
     [(list 'symbol? v)                    (symbol? v)]
+    [(list 'port? v)                      (port? v)]
+    [(list 'open-input-file (? string?))  (with-handlers
+                                            ([exn:fail:filesystem:errno? (λ (_) 'err)])
+                                            (open-input-file v))]
+    [(list 'close-input-port (? port?))   (close-input-port v)]
+    [(list 'read-byte
+           (and (? port?)
+                (not (? port-closed?))))  (read-byte v)]
+    [(list 'peek-byte
+           (and (? port?)
+                (not (? port-closed?))))  (peek-byte v)]
     [(list 'flonum? v)                    (flonum? v)]
     [(list 'vector? v)                    (vector? v)]
     [(list 'vector-length v)              (vector-length v)]

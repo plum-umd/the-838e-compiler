@@ -82,18 +82,23 @@
 
 (define (externs-p p)
   (let ((r (op->extern p)))
-    (if r (list (Extern r)) '())))
+    (match r
+      [#f '()]
+      [(? list?) (map (λ (e) (Extern e)) r)]
+      [_ (list (Extern r))])))
 
 (define (op->extern o)
   (match o
-    ['peek-byte 'peek_byte]
+    ['peek-byte '(peek_byte peek_byte_port)]
+    ['read-byte '(read_byte read_byte_port)]
     ['peek-char 'peek_char]
-    ['read-byte 'read_byte]
     ['read-char 'read_char]
     ['write-byte 'write_byte]
     ['write-char 'write_char]
     ['gensym 'gensym]
     #;['string->symbol 'str_to_symbol]  ;; always included now
+    ['open-input-file 'open_input_file]
+    ['close-input-port 'close_input_port]
     [_ (char-op->uc o)]))
 
 (define (char-op->uc o)
