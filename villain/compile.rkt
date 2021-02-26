@@ -19,6 +19,7 @@
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
                   ; compile-define, fl<=
+(define r15 'r15) ; Holds pointer to the end of the heap
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
 (define xmm0 'xmm0) ; registers to hold double precision floating numbers
@@ -38,6 +39,8 @@
            (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
+           (Mov r15 rsi) ; pointer to end of heap
+           (Mov rsi 0)
            (compile-e-tail e '())
            (Mov rdx rbx) ; return heap pointer in second return register
            (Ret)
@@ -45,6 +48,11 @@
            (Label 'raise_error_align)
            (Sub rsp 8)
            (Jmp 'raise_error))]))
+;; Asm
+(define check-heap-ptr
+  (seq
+   (Cmp rbx r15)
+   (Jg 'raise_error)))
 
 ;; Expr -> Asm
 (define (compile-library p)
@@ -110,6 +118,7 @@
             (Mov (Offset rbx 8) rax)
             (Mov rax rbx)
             (Add rbx 16)
+            check-heap-ptr
             (Or rax type-cons)
             (Sub rcx (imm->bits 1))
             (Jmp loop)
@@ -161,7 +170,8 @@
          (Mov (Offset rbx 0) rax)
                (Mov rax rbx)
                (Or rax type-flonum)
-               (Add rbx 8))
+               (Add rbx 8)
+               check-heap-ptr)
   )
 
 ;; String -> Asm
@@ -173,7 +183,8 @@
          (compile-str-chars (string->list s) 3 0 1)
          (Mov rax rbx)
          (Or rax type-string)
-         (Add rbx (* 8 (add1 (ceiling (/ len 3))))))))
+         (Add rbx (* 8 (add1 (ceiling (/ len 3)))))
+         check-heap-ptr)))
 
 ;; Vec CEnv -> Asm
 (define (compile-vector ds c)
@@ -182,8 +193,10 @@
          (Mov (Offset rbx 0) r9) ;;write length in first word, will also store rbx location
          (Mov r10 rbx)
          (Add rbx 8)
+         check-heap-ptr
          (Mov r9 rbx)    ;;r9 will be used in compile-vec-elems as a temporary heap pointer
          (Add rbx (* 8 len)) ;; rbx now points to next open space on heap for future calls
+         check-heap-ptr
          (compile-vec-elems ds c)
          (Mov rax r10)
          (Or rax type-vector))))
@@ -392,7 +405,8 @@
           (seq (Mov (Offset rbx 0) rax)
                (Mov rax rbx)
                (Or rax type-box)
-               (Add rbx 8))]
+               (Add rbx 8)
+               check-heap-ptr)]
          ['unbox
           (seq (assert-box rax c)
                (Xor rax type-box)
@@ -458,6 +472,7 @@
              ;; heap alignment.
              (Add rbx (+ (- 8 (modulo (+ 11 port-buffer-bytes) 8)) 11
                          port-buffer-bytes))
+             check-heap-ptr
              (Mov rax r8)
              (Or rax type-port))]
          ['close-input-port
@@ -620,11 +635,13 @@
                  (Mov (Offset rbx 0) r8) ;should r8
                  ;(Mov (Offset rbx 8) rax)
                  (Add rbx 8)                        ;advances heap pointer
+                 check-heap-ptr
                  (Label l1)
                  (Cmp r8 0)
                  (Je l2)                           ;(While r8 > 0){
                  (Mov (Offset rbx 0) rax) ;;should rax         ;Copies the value into the spot on the heap
                  (Add rbx 8)
+                 check-heap-ptr
                  (Sub r8 1)                         ;r8--;
                  (Jmp l1)                           ;}
                  (Label l2)                         ;done writing
@@ -657,6 +674,7 @@
                  (Mov r10 rbx)                ; save heap pointer
                  (Mov (Offset rbx 0) r8)      ; write length in word 0
                  (Add rbx 8)                  ; advance heap pointer
+                 check-heap-ptr
                  (Cmp r8 (imm->bits 1))
                  (Jl l3)
                  (Mov r9 rax)                ; r9 = char arg
@@ -675,6 +693,7 @@
                  (Je l4)
                  (Mov (Offset rbx 0) r8)
                  (Add rbx 8)                 ; advance the heap pointer
+                 check-heap-ptr
                  (Sub rax 1)
                  (Jmp l1)
                  (Label l4)
@@ -699,20 +718,22 @@
                (Mov (Offset rbx 8) rax)
                (Mov rax rbx)
                (Or rax type-cons)
-               (Add rbx 16))]
+               (Add rbx 16)
+               check-heap-ptr)]
 
          ['fl+ (seq
                (Pop r8)
                (assert-flonum r8 c)
                (assert-flonum rax c)
-               (Xor rax type-flonum)              
+               (Xor rax type-flonum)
                (Xor r8 type-flonum)
                (Movapd xmm0 (Offset r8 0))
-               (Addsd xmm0 (Offset rax 0))              
+               (Addsd xmm0 (Offset rax 0))
                (Movapd (Offset rbx 0) xmm0)
                (Mov rax rbx)
                (Or rax type-flonum)
                (Add rbx 8)
+               check-heap-ptr
                )
                ]
          ['fl- (seq
@@ -720,14 +741,15 @@
                (assert-flonum r8 c)
                (assert-flonum rax c)
                (Xor rax type-flonum)
-              
+
                (Xor r8 type-flonum)
                (Movapd xmm0 (Offset r8 0))
-               (Subsd xmm0 (Offset rax 0))               
+               (Subsd xmm0 (Offset rax 0))
                (Movapd (Offset rbx 0) xmm0)
                (Mov rax rbx)
                (Or rax type-flonum)
                (Add rbx 8)
+               check-heap-ptr
                )
                ]
 
