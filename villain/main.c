@@ -126,7 +126,8 @@ int main(int argc, char** argv)
   error_handler = &error_exit;
   heap = vl_calloc(8 * heap_size, 1);
 
-  result = entry(heap);
+  result = entry(heap, heap + (heap_size - heap_buffer));
+  // result = entry(heap);
 
   print_result(result);
   if (vl_typeof(result) != VL_VOID)
