@@ -72,7 +72,6 @@
                              acc
                              (+ twoExp 1)))]))
 
->>>>>>> main
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))
                     (integer-length ptr-mask)))
