@@ -2,6 +2,7 @@
 (provide interp interp-env interp-prim1)
 (require "ast.rkt"
          "env.rkt"
+         "parse.rkt"
          "interp-prims.rkt"
          "interp-stdlib.rkt")
 
@@ -98,7 +99,7 @@
      (match (interp-env e0 r ds)
        ['err 'err]
        [v (interp-match v cs r ds)])]
-    [_ 'err]))
+    ['err 'err])) ;; MAKE THIS ERR ERR))
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)
@@ -133,25 +134,60 @@
     ['() '()]
     [(cons e es)
      (match (interp-env e r ds)
-       ['err 'err]
+       ['err e]
        [v (cons v (interp-env* es r ds))])]))
 
 ;; Defns -> Defns
 (define (interp-structs ds)
   (match ds
    ['() '()]
-   [(cons (Struct s xs) l) ((cons (create-struct-bindings s xs) (interp-structs t)))]
+   [(cons (Struct s xs) l) (append (create-struct-bindings s xs) (interp-structs l))]
    [(cons h t) (cons h (interp-structs t))]
    ))
 
-;;Symbol (Listof Symbol) -> Defns
+;;Symbol (Listof Symbol) -> Defns ;; These only work with symbols as the 's'!  ;; Also, need to do arity checks
 (define (create-struct-bindings s xs)
-  ;;TODO
+  (let* ((constructor (create-constructor s xs))
+        (predicate   (create-predicate s xs))
+        (accessors   (create-accessors s xs)))
+        (append (list constructor predicate) accessors))
   
   )
+;;Symbol (Listof Symbol) -> Defn
+(define (create-constructor s xs)
+  (parse-d (list 'define (flatten (list s xs)) 
+                  (append (list 'make-prefab-struct
+                           (list 'quote s))   (flatten xs))))
+)
+
+
+
+;;Symbol (Listof Symbol) -> Defns
+(define (create-predicate s xs)
+  (parse-d (list 'define (list (string->symbol (string-append (symbol->string s) "?")) 'st)
+        '(eq? s (vector-ref (struct->vector st) 0)))) 
+) 
+
+;;Symbol  (Listof Symbol) -> (Symbol -> Defn)
+(define (create-accessor-lam s xs)
+  (lambda (x) (parse-d (list 'define
+                              (list (string->symbol (string-append (symbol->string s) "-" (symbol->string x))) 'st)
+              '( let ((l (vector->list (struct->vector 'st)))) ;;includes the name of the struct 
+                (list-ref l (index-of xs x) ))
+
+               )))        
+)
+;;Symbol (Listof Symbol) -> Defns
+(define (create-accessors s xs)
+   (map (create-accessor-lam s xs) xs)   
+)
+
+
 
 ;; Defns Symbol -> Defn
 (define (defns-lookup ds f)
+  (print ds)
+  (print f)
   (findf (match-lambda [(Defn g _ _) (eq? f g)] [(Defn* g _ _ _) (eq? f g)])
          ds))
 
