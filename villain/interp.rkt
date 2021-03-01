@@ -120,7 +120,7 @@
      (match (interp-env e0 r ds)
        ['err 'err]
        [v (interp-match v cs r ds)])]
-    ['err 'err])) ;; MAKE THIS ERR ERR))
+    ['err 'err])) 
 
 
 ;; Value (Listof Clause) Env Defs -> Answer
@@ -208,8 +208,7 @@
 
 ;; Defns Symbol -> Defn
 (define (defns-lookup ds f)
-  (print ds)
-  (print f)
+
   (findf (match-lambda [(Defn g _ _) (eq? f g)] [(Defn* g _ _ _) (eq? f g)])
          ds))
 
