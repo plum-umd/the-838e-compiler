@@ -28,14 +28,51 @@
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
             (list->string (reverse str-chars)))))]
+
     [(? prefab-bits? i)
      (apply make-prefab-struct
             (unload-value (heap-ref (+ i (arithmetic-shift 1 imm-shift))))
             (for/list ([k (in-range 2 (+ 2 (heap-ref i)) 1)])
-              (unload-value (heap-ref (+ i (arithmetic-shift k imm-shift))))))]))
-            
-                         
-                     
+              (unload-value (heap-ref (+ i (arithmetic-shift k imm-shift))))))]
+         
+    [(? vector-bits? i)
+        (let ((length (heap-ref i)))
+          (let ((elems (vector-loop length i)))
+            (list->vector (reverse elems))))]
+    [(? flonum-bits? i)
+     (bits->flonum (heap-ref i))]))
+
+(define (bits->flonum b)
+  (let (; the max decimal places to round to are the first non-zero bits
+        ;   (sig (arithmetic-shift b -64))
+        ; then is bit representing the sign (0 if positive, 1 if negative)
+        (sign (bitwise-and (arithmetic-shift b -63)
+                           1))
+        ; the next 11 bits are the exponential + 127
+        (exp (bitwise-and (- (arithmetic-shift 1 11) 1)
+                          (arithmetic-shift b -52)))
+        ;; the next 28 bits represent the mantissa
+        (mantissa (bitwise-and (- (arithmetic-shift 1 52) 1)
+                               b )))
+
+    ;; result is a rounded version of (-1)^sign * 2^(exp - 127) * (1 + .mantissa)
+    (let ((result (* (expt -1 sign) (expt 2 (- exp 1023))
+                     (+ 1 (binary->decimal mantissa 0 -52)))))
+      (exact->inexact result))))
+
+;; converts the binary of the mantissa to decimal with adding
+(define (binary->decimal bits acc twoExp)
+  (match twoExp
+    [0 acc]
+    [_  (if (= 1 (bitwise-and bits 1))
+            (binary->decimal (arithmetic-shift bits -1)
+                             (+ (expt 2 twoExp) acc)
+                             (+ twoExp 1))
+            (binary->decimal (arithmetic-shift bits -1)
+                             acc
+                             (+ twoExp 1)))]))
+
+>>>>>>> main
 (define (untag i)
   (arithmetic-shift (arithmetic-shift i (- (integer-length ptr-mask)))
                     (integer-length ptr-mask)))
@@ -52,5 +89,12 @@
                     (+ 1 (* 21 (- 2 (remainder (- n 1) 3))))))))
            (let ((v2 (arithmetic-shift v1 -43)))
              (cons (unload-value v2) (string-loop (- n 1) i))))])))
-       
-                      
+
+(define vector-loop
+  (λ (n i)
+    (match n
+      [0 '()]
+      [n (cons (unload-value (heap-ref (+ i (arithmetic-shift n imm-shift))))
+               (vector-loop (- n 1) i))])))
+
+

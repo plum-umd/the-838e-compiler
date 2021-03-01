@@ -1,7 +1,7 @@
 #include <inttypes.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "str.h"
+#include "types.h"
+#include "villain.h"
 
 // binary tree node
 struct Node {
@@ -30,13 +30,18 @@ int64_t *str_to_symbol(const int64_t *str)
   }
 
   // wasn't found, so insert it
-  // TODO: clean up memory
 
-  *curr = calloc(1, sizeof(struct Node));
+  *curr = vl_calloc(1, sizeof(struct Node));
+
   struct Node* t = *curr;
   t->elem = str_dup(str);
 
   return t->elem;
+}
+
+vl_str *symbol_to_str(vl_symbol s)
+{
+  return vl_unwrap_str((vl_val)s | str_type_tag);
 }
 
 int64_t *gensym(void)
@@ -66,7 +71,7 @@ int main(void)
   assert(str_to_symbol(foo1) != str_to_symbol(fo));
 
   assert(gensym() != gensym());
-  
+
   return 0;
 }
 #endif
