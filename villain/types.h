@@ -42,12 +42,9 @@
 #define val_eof   ((2 << char_shift) | nonchar_type_tag)
 #define val_void  ((3 << char_shift) | nonchar_type_tag)
 #define val_empty ((4 << char_shift) | nonchar_type_tag)
-<<<<<<< HEAD
 #define float_type_tag ((7 << char_shift) | nonchar_type_tag)
 #define float_shift         (5 + imm_shift)
 #define float_type_mask       ((1 << 8 )-1)
  
-=======
 
->>>>>>> main
 #endif
