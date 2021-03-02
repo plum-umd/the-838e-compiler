@@ -148,31 +148,31 @@
   (seq (Mov rax (imm->bits v))))
 
 ;; String -> Asm
+
+;; TODO !!! store as unsigned integer, keep the sign in the length (i.e. | - 2  |  first word  | second word |)
 (define (compile-bignum i c)
-  (let ((length (ceiling (/ (integer-length i) 64))))
-    (seq (Mov r9 length)
+  (let ((length (ceiling (/ (integer-length (abs i)) 64)))
+        (sign (if (>= i 0) 1 -1)))
+    (seq (Mov r9 (* sign length))
          (Mov (Offset rbx 0) r9)          ;; write length in word 0
          (Mov r9 0)
-         (compile-bignum-words (reverse (bignum->list i)) 1)
+         (compile-bignum-words (bignum->list (abs i)) 1)
          (Mov rax rbx)                    ;; bignum is on heap
          (Add rbx (* 8 (add1 length)))
          (Or rax type-bignum))))   
 
 ;; Integer -> (Listof Integers)
-;; Breaks an integer down into 64 bit chunks, returned in reverse order
+;; Breaks an integer down into 64 bit chunks
+;; input should always be positive
 (define (bignum->list i)
-  (if (>= i 0)
-    (if (< i (arithmetic-shift 1 63)) ;; 63 because signed (TODO: check correct bounds)
-        (list i) 
-        (cons (bitwise-and i (sub1 (arithmetic-shift 1 64))) 
-              (bignum->list (arithmetic-shift i -64))))
-    (if (>= i (arithmetic-shift -1 63)) ;; 63 because signed
-        (list i) 
-        (cons (bitwise-and i (sub1 (arithmetic-shift 1 64))) 
-              (bignum->list (arithmetic-shift i -64))))))
+  (if (< i (arithmetic-shift 1 64))
+    (list i) 
+    (cons (bitwise-and i (sub1 (arithmetic-shift 1 64))) 
+          (bignum->list (arithmetic-shift i -64)))))
 
 ;; (Listof Integers) Integer -> Asm
 ;; Takes list of 64-bit integers and places them on the heap
+;; Note: least significant 64-bit integers are placed first
 (define (compile-bignum-words ws n)
   (match ws
     ['()  (seq)]

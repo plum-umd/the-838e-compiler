@@ -18,23 +18,33 @@ void print_bignum(int64_t *h) {
   int i;
   mpz_t integ;
 
+  printf("Bignum: ");
+
+  if(len < 0) { // if sign is negative, negate length and print negative sign
+    len = - len;
+    printf("-");
+  }
+
   mpz_init(integ); // initialize with value 0
 
   for(i = 1; i <= len ; i++) {
     unsigned long shifter = 64;
     int j;
-    long int t_raw = (long int) h[i];
+    unsigned long int t_raw = (unsigned long int) h[i];
     mpz_t t;
-    mpz_init_set_si(t, t_raw);
+    mpz_init_set_ui(t, t_raw);
 
-    for(j = 0; j < len - i; j++) {
+    for(j = 1; j < i; j++) {
       mpz_mul_2exp(t,t,(mp_bitcnt_t) shifter);
     }
 
     mpz_add(integ,integ,t);
+    mpz_clear(t);
   }
   
   mpz_out_str(stdout,10,integ);
+
+  mpz_clear(integ);
 }
 
 
