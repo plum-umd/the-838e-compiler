@@ -31,6 +31,7 @@
 (define (interp-env e r ds)
   (match e
     [(Int i)  i]
+    [(Bignum i) i]
     [(Bool b) b]
     [(Char c) c]
     [(Float f) f]
