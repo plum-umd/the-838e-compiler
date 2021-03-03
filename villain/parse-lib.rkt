@@ -1,5 +1,5 @@
 #lang racket
-(provide parse parse-e)
+(provide parse-library)
 (require "ast.rkt")
 
 ;; S-Expr -> Library
@@ -7,13 +7,6 @@
   (match s
     [(list (list 'provide xs ...) (and ds (list 'define _ _)) ...)
      (Lib xs (map parse-d ds))]))
-
-;; S-Expr -> Prog
-(define (parse s)
-  (match s
-    [(list 'begin (and ds (list-rest 'define _ _)) ... e)
-     (Prog (map parse-d ds) (parse-e e))]
-    [e (Prog '() (parse-e e))]))
 
 ;; S-Expr -> Defn
 (define (parse-d s)
@@ -69,8 +62,8 @@
     [(or (list-rest 'lambda (list-rest (? symbol? xs) ... (? symbol? xs*)) e es)
          (list-rest 'λ (list-rest (? symbol? xs) ... (? symbol? xs*)) e es))
      (Lam* xs xs* (parse-seq e es))]
-    [(cons e es)
-     (LCall (parse-e e) (map parse-e es))]
+;    [(cons e es)
+ ;    (LCall (parse-e e) (map parse-e es))]
     [(cons (? symbol? f) es)
      (App f (map parse-e es))]
     [_ (error "Parse error" s)]))

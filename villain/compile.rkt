@@ -29,7 +29,8 @@
 (define (compile p)
   (match p
     [(Prog ds e)
-     (prog (Global 'entry)
+     (let ((le (label-λ (desugar-prog p))))
+       (prog (Global 'entry)
            (Default 'rel)
            (Section '.text)
            (externs p)
@@ -38,13 +39,15 @@
            (Extern 'str_to_symbol)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
-           (compile-e-tail e '())
+      ;     (compile-e-tail e '())
+           (compile-e-tail le '())
            (Mov rdx rbx) ; return heap pointer in second return register
            (Ret)
-           (compile-defines ds)
+      ;     (compile-defines ds)
+           (compile-λ-definitions (λs le))
            (Label 'raise_error_align)
            (Sub rsp 8)
-           (Jmp 'raise_error))]))
+           (Jmp 'raise_error)))]))
 
 ;; Expr -> Asm
 (define (compile-library p)
@@ -58,6 +61,9 @@
            (Extern 'raise_error_align)
            (Extern 'str_to_symbol)
            (compile-defines ds))]))
+;           (compile-λ-definitions (λs
+;            (label-λ (let ((bs (map desugar-def ds)))
+ ;                      (Letrec (map car bs) (map cdr bs) (void))))))
 
 ;; [Listof Id] -> Asm
 (define (compile-provides xs)
@@ -72,6 +78,370 @@
   (if (even? (length c))
       'raise_error
       'raise_error_align))
+
+;; Expr CEnv Boolean -> Asm
+(define (compile-e e c tail?)
+  (match e
+    [(Int i)            (compile-value i)]
+    [(Bool b)           (compile-value b)]
+    [(Char c)           (compile-value c)]
+    [(Flonum f)         (compile-flonum f)]
+    [(Eof)              (compile-value eof)]
+    [(Empty)            (compile-value '())]
+    [(String s)         (compile-string s)]
+    [(Symbol s)         (compile-symbol s c)]
+    [(Vec ds)           (compile-vector ds c)]
+    [(Var x)            (compile-variable x c)]
+    [(LCall e es)       (if (and (Var? e) (memq (Var-x e) stdlib-ids))
+                            (compile-app (Var-x e) es c tail?)
+                            (compile-call e es c tail?))]
+    [(App f es)         (compile-app f es c tail?)]
+    [(Apply f e)        (compile-apply f e c tail?)]
+    [(Prim0 p)          (compile-prim0 p c)]
+    [(Prim1 p e)        (compile-prim1 p e c)]
+    [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
+    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]
+    [(If e1 e2 e3)      (compile-if e1 e2 e3 c tail?)]
+    [(Begin e1 e2)      (compile-begin e1 e2 c tail?)]
+    [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
+    [(Letrec xs es e)   (compile-letrec xs es e c tail?)]
+    [(Lam-l l xs e0)     (compile-λ l (fvs e) c)]
+    [(Lam*-l l xs xs* e0) (compile-λ l (fvs e) c)]
+    [(Match e0 cs)      (compile-match e0 cs c tail?)]))
+
+(define (compile-e-tail e c)
+  (compile-e e c #t))
+(define (compile-e-nontail e c)
+  (compile-e e c #f))
+
+(define (desugar-prog p)
+  (match p
+    [(Prog ds e)
+     (let ((bs (map desugar-def ds)))
+       (Letrec (map car bs) (map cdr bs) (desugar e)))]))
+
+(define (desugar-def d)
+  (match d
+    [(Defn f xs e) (cons f (Lam xs (desugar e)))]
+    [(Defn* f xs xs* e) (cons f (Lam* xs xs* (desugar e)))]))
+
+(define (desugar e)
+  (match e
+    [(Prog ds e)
+     (let ((bs (map desugar-def ds)))
+       (Letrec (map car bs) (map cdr bs) (desugar e)))] ;; TODO: combine with desugar-prog
+    [(Int i)            e]
+    [(Bool b)           e]
+    [(Char c)           e]
+    [(Flonum f)         e]
+    [(Eof)              e]
+    [(Empty)            e]
+    [(String s)         e]
+    [(Symbol s)         e]
+    [(Vec ds)           e]
+    [(Var x)            e]
+    [(LCall e es)       (LCall (desugar e) (map desugar es))]
+    [(App f es)         (App f (map desugar es))]
+    [(Apply f e)        (Apply f (desugar e))]
+    [(Prim0 p)          e]
+    [(Prim1 p e)        (Prim1 p (desugar e))]
+    [(Prim2 p e1 e2)    (Prim2 p (desugar e1) (desugar e2))]
+    [(Prim3 p e1 e2 e3) (Prim3 p (desugar e1) (desugar e2) (desugar e3))]
+    [(If e1 e2 e3)      (If (desugar e1) (desugar e2) (desugar e3))]
+    [(Begin e1 e2)      (Begin (desugar e1) (desugar e2))]
+    [(Let x e1 e2)      (Let x (map desugar e1) (desugar e2))]
+    [(Letrec xs es e)   (Letrec xs (map desugar es) (desugar e))]
+    [(Lam xs e)         (Lam xs (desugar e))]
+    [(Lam* xs xs* e)    (Lam* xs xs* (desugar e))]
+    [(Match e0 cs)      (Match (desugar e0) cs)]))  ;; TODO: desugar cs
+
+(define (label-λ e)
+  (match e
+    [(Int i)            e]
+    [(Bool b)           e]
+    [(Char c)           e]
+    [(Flonum f)         e]
+    [(Eof)              e]
+    [(Empty)            e]
+    [(String s)         e]
+    [(Symbol s)         e]
+    [(Vec ds)           e]
+    [(Var x)            e]
+    [(LCall e es)       (LCall (label-λ e) (map label-λ es))]
+    [(App f es)         (App f (map label-λ es))]
+    [(Apply f e)        (Apply f (label-λ e))]
+    [(Prim0 p)          e]
+    [(Prim1 p e)        (Prim1 p (label-λ e))]
+    [(Prim2 p e1 e2)    (Prim2 p (label-λ e1) (label-λ e2))]
+    [(Prim3 p e1 e2 e3) (Prim3 p (label-λ e1) (label-λ e2) (label-λ e3))]
+    [(If e1 e2 e3)      (If (label-λ e1) (label-λ e2) (label-λ e3))]
+    [(Begin e1 e2)      (Begin (label-λ e1) (label-λ e2))]
+    [(Let x e1 e2)      (Let x (map label-λ e1) (label-λ e2))]
+    [(Letrec xs es e)   (Letrec xs (map label-λ es) (label-λ e))]
+    [(Lam xs e)         (Lam-l (gensym) xs (label-λ e))]
+    [(Lam* xs xs* e)    (Lam*-l (gensym) xs xs* (label-λ e))]
+    [(Match e0 cs)      (Match (label-λ e0) cs)]))  ;; TODO:  label-λ cs
+
+(define (fvs e)
+ (begin
+  (define (fvs e)
+    (match e
+      [(Int i)            '()]
+      [(Bool b)           '()]
+      [(Char c)           '()]
+      [(Flonum f)         '()]
+      [(Eof)              '()]
+      [(Empty)            '()]
+      [(String s)         '()]
+      [(Symbol s)         '()]
+      [(Vec ds)           '()]
+      [(Var x)            (list x)]
+      [(LCall e es)       (append (if (and (Var? e) (memq (Var-x e) stdlib-ids))
+                                      '()
+                                      (fvs e)) (apply append (map fvs es)))]
+      [(App f es)         (apply append (map fvs es))]
+      [(Apply f e)        (append (fvs f) (fvs e))]
+      [(Prim0 p)          '()]
+      [(Prim1 p e)        (fvs e)]
+      [(Prim2 p e1 e2)    (append (fvs e1) (fvs e2))]
+      [(Prim3 p e1 e2 e3) (append (fvs e1) (fvs e2) (fvs e3))]
+      [(If e1 e2 e3)      (append (fvs e1) (fvs e2) (fvs e3))]
+      [(Begin e1 e2)      (append (fvs e1) (fvs e2))]
+      [(Let x e1 e2)      (append (apply append (map fvs e1))
+                                (remq* x (fvs e2)))]
+      [(Letrec xs es e)   (remq* xs (apply append (fvs e) (map fvs es)))]
+      [(Lam-l l xs e)     (remq* xs (fvs e))]
+      [(Lam*-l l xs xs* e) (remq* (cons xs* xs) (fvs e))]
+      [(Match e0 cs)
+       (append (fvs e0) (apply append (map (λ (c) (remq*
+                (match-p-fvs (Clause-p c)) (fvs (Clause-e c)))) cs)))])) 
+  (remove-duplicates (fvs e))))
+
+(define (match-p-fvs p)
+  (match p
+    [(Wild) '()]
+    [(Var x) (list x)]
+    [(Lit l) '()]
+    [(Sym s) '()]
+    [(Box x) (list x)]
+    [(Cons x1 x2) (list x1 x2)]))
+
+
+
+(define (λs e)
+  (match e
+    [(Int i)            '()]
+    [(Bool b)           '()]
+    [(Char c)           '()]
+    [(Flonum f)         '()]
+    [(Eof)              '()]
+    [(Empty)            '()]
+    [(String s)         '()]
+    [(Symbol s)         '()]
+    [(Vec ds)           '()]
+    [(Var x)            '()]
+    [(LCall e es)       (append (λs e) (apply append (map λs es)))]
+    [(App f es)         (apply append (map λs es))]
+    [(Apply f e)        (append (λs f) (λs e))]
+    [(Prim0 p)          '()]
+    [(Prim1 p e)        (λs e)]
+    [(Prim2 p e1 e2)    (append (λs e1) (λs e2))]
+    [(Prim3 p e1 e2 e3) (append (λs e1) (λs e2) (λs e3))]
+    [(If e1 e2 e3)      (append (λs e1) (λs e2) (λs e3))]
+    [(Begin e1 e2)      (append (λs e1) (λs e2))]
+    [(Let x e1 e2)      (append (apply append (map λs e1)) (λs e2))]
+    [(Letrec xs es e)   (append (apply append (map λs es)) (λs e))]
+    [(Lam-l l xs e0)    (cons e (λs e0))]
+    [(Lam*-l l xs xs* e0) (cons e (λs e0))]
+    [(Match e0 cs)      (λs e0)]  ;; TODO: (λs cs)
+[_  '()]))   ;      for '*  
+
+(define (compile-λ-definitions ls)
+  (match ls
+    ['() (seq)]
+    [(cons l ls)
+     (seq (compile-λ-definition l)
+          (compile-λ-definitions ls))]))
+
+(define (compile-λ-definition l)
+  (match l
+    [(Lam-l f xs e0)
+     (seq (%% "compile-λ-definition ")
+          (Label f)          
+          (Cmp rcx (imm->bits (length xs))) ; arity check
+          (Jne 'raise_error)
+
+          (compile-e-tail e0 (reverse (append xs (fvs l))))
+          ; return
+          (Add rsp (* 8 (+ (length xs) (length (fvs l))))) ; pop args & fvs
+          (Mov rdx rbx)
+          (Ret))]
+    [(Lam*-l f xs xs* e0)
+     (let ((loop (gensym 'loop))
+           (end (gensym 'end))
+           (skip (gensym 'skip)))
+
+       (seq (%% "compile-λ-definition variable-arity")
+            (Label f)                        
+            (Cmp rcx (imm->bits (length xs)))
+            (Jl 'raise_error)
+            (Mov rax (imm->bits '()))         ; initialize rest arg
+            (Sub rcx (imm->bits (length xs))) ; # of things to pop off of stack
+
+            ;TODO: Move rsp to correct position
+            (Add rsp (* 8 (length (fvs l))))
+                           ; align stack pointer to where the last arg is
+            (Mov r10 rsp)  ; r10 points to last arg (before the first free var)
+
+            (Label loop) ; at each step, rax <- cons pop rax
+            (Cmp rcx 0)
+            (Je end)
+            (Mov (Offset rbx 0) rax)
+            (Pop rax)
+            (Mov (Offset rbx 8) rax)
+            (Mov rax rbx)
+            (Add rbx 16)
+            (Or rax type-cons)
+            (Sub rcx (imm->bits 1))   
+            (Jmp loop)
+            (Label end)
+
+            (Cmp rsp r10)
+            (Je skip)
+            ;TODO: Move env vars to correct position
+            (%% "reposition env vars ")
+            (reposition-env-vars (length (fvs l)))
+            (Label skip)
+            
+            (%% "push the rest list (xs*)")
+            (Push rax) ; push the rest list
+            (compile-e-tail e0 (cons xs* (reverse (append xs (fvs l)))))
+            ; return
+            (Add rsp (* 8 (add1 (+ (length xs) (length (fvs l)))))) ; pop args
+            (Ret)))]))
+
+(define (reposition-env-vars n)
+  (match n
+    [0 (seq)]
+    [n (seq (Sub rsp 8)
+            (Sub r10 8)
+            (Mov rdx (Offset r10 0))
+            (Mov (Offset rsp 0) rdx)
+            (reposition-env-vars (sub1 n)))]))
+
+(define (compile-λ l fvs c)
+  (seq (%% "compile-λ ")
+       (Lea rax l)                  ;; address of function label
+       (Mov (Offset rbx 0) rax)     ;; write this address on heap
+       (Mov r8 (length fvs))
+       (Mov (Offset rbx 8) r8)      ;; number of free vars
+       (Mov r9 rbx)
+       (Add r9 16)
+       (%% "copy-env-to-heap ")
+       (copy-env-to-heap fvs c 0)
+       (%% "copy-env-to-heap-done ")
+       (Mov rax rbx)
+       (Or rax type-proc)
+       (Add rbx (* 8 (+ 2 (length fvs))))
+       (%% "compile-λ done ")))
+
+(define (copy-env-to-heap fvs c i)
+  (match fvs
+    ['() (seq)]
+    [(cons x fvs)
+     (seq (Mov r8 (Offset rsp (lookup x c)))
+          (Mov (Offset r9 (* 8 i)) r8)
+          (copy-env-to-heap fvs c (add1 i)))]))
+
+;; Id [Listof Expr] CEnv Boolean -> Asm
+(define (compile-call f es c tail?)
+  (if tail?
+      (compile-tail-call f es c)
+      (compile-nontail-call f es c)))
+
+;; Id [Listof Expr] CEnv -> Asm
+(define (compile-tail-call f es c)
+  (seq (%% "compile-tail-call ")
+       (compile-e-nontail f c)       
+       (Push rax)
+       (compile-es es (cons #f c))
+       (Mov rax (Offset rsp (* 8 (length es))))
+       (assert-proc rax c)
+       (Xor rax type-proc)
+       (%% "move args for tail call")
+       (move-args (add1 (length c)) (length es))
+       (Add rsp (* 8 (add1 (length c))))
+       (copy-closure-env-to-stack)
+       (Mov rcx (imm->bits (length es)))
+       (Mov rdx (Offset rax 0))
+       (Jmp rdx)))  ;; (Offset rax 0)
+
+
+;; Integer Integer -> Asm
+(define (move-args c-ct i)
+  (cond [(zero? c-ct) (seq (%% "already in place for tail call"))]
+        [(zero? i)    (seq (%% "done moving args for tail call"))]
+        [else
+         (seq (Mov r8 (Offset rsp (* 8 (sub1 i))))
+              (Mov (Offset rsp (* 8 (+ c-ct (sub1 i)))) r8)
+              (move-args c-ct (sub1 i)))]))
+
+;; Id [Listof Expr] CEnv -> Asm
+;; The return address is placed above the arguments, so callee pops
+;; arguments and return address is next frame
+(define (compile-nontail-call f es c)
+  (let ((ret (gensym 'ret)))
+    (if (even? (+ (length c) (length es)))
+        (seq (%% "compile-nontail-call")
+             (compile-e-nontail f c)
+             (Push rax)
+             (Lea r8 ret)
+             (Push r8)
+             (compile-es es (cons #f (cons #f c)))
+             (Mov rax (Offset rsp (* 8 (add1 (length es)))))
+             (assert-proc rax c)
+             (Xor rax type-proc)
+             (copy-closure-env-to-stack)
+             (Mov rcx (imm->bits (length es)))
+             (Mov rdx (Offset rax 0))
+             (Jmp rdx)  ; (Offset rax 0)
+             (Label ret)
+             (Add rsp 8))
+        (seq (%% "compile-nontail-call")
+             (Sub rsp 8)
+             (compile-e-nontail f (cons #f c))
+             (Push rax)
+             (Lea r8 ret)
+             (Push r8)
+             (compile-es es (cons #f (cons #f (cons #f c))))
+             (Mov rax (Offset rsp (* 8 (add1 (length es)))))
+             (assert-proc rax c)
+             (Xor rax type-proc)
+             (copy-closure-env-to-stack)
+             (Mov rcx (imm->bits (length es)))
+             (Mov rdx (Offset rax 0))
+             (Jmp rdx) ; (Offset rax 0)
+             (Label ret)
+             (Add rsp 16)))))
+
+(define (copy-closure-env-to-stack)
+  (let ((loop (gensym 'copy_closure))
+        (done (gensym 'copy_done)))
+    (seq (%% "copy-closure-env-to-stack")
+         (Mov r8 (Offset rax 8))    ; number of env vars
+         (Mov r9 rax)               
+         (Add r9 16)                ; start of env
+;         (Mov r10 rbx)             ; start of stack
+         (Label loop)
+         (Cmp r8 0)
+         (Je done)
+         (Sub rsp 8)                ; Increment stack pointer
+         (Mov rdx (Offset r9 0))
+         (Mov (Offset rsp 0) rdx)   ; write env var on stack
+         (Sub r8 1)
+         (Add r9 8)              
+         (Jmp loop)
+         (Label done))))  
 
 ;; [Listof Defn] -> Asm
 (define (compile-defines ds)
@@ -120,35 +490,6 @@
             ; return
             (Add rsp (* 8 (add1 (length xs)))) ; pop args
             (Ret)))]))
-
-;; Expr CEnv Boolean -> Asm
-(define (compile-e e c tail?)
-  (match e
-    [(Int i)            (compile-value i)]
-    [(Bool b)           (compile-value b)]
-    [(Char c)           (compile-value c)]
-    [(Flonum f)         (compile-flonum f)]
-    [(Eof)              (compile-value eof)]
-    [(Empty)            (compile-value '())]
-    [(String s)         (compile-string s)]
-    [(Symbol s)         (compile-symbol s c)]
-    [(Vec ds)           (compile-vector ds c)]
-    [(Var x)            (compile-variable x c)]
-    [(App f es)         (compile-app f es c tail?)]
-    [(Apply f e)        (compile-apply f e c tail?)]
-    [(Prim0 p)          (compile-prim0 p c)]
-    [(Prim1 p e)        (compile-prim1 p e c)]
-    [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]
-    [(If e1 e2 e3)      (compile-if e1 e2 e3 c tail?)]
-    [(Begin e1 e2)      (compile-begin e1 e2 c tail?)]
-    [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
-    [(Match e0 cs)      (compile-match e0 cs c tail?)]))
-
-(define (compile-e-tail e c)
-  (compile-e e c #t))
-(define (compile-e-nontail e c)
-  (compile-e e c #f))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -429,6 +770,7 @@
          ['port?
            (type-pred ptr-mask type-port)]
          ['open-input-file
+          ; (displayln c)
            (seq
              (assert-string rax c)
 
@@ -853,13 +1195,13 @@
        (Jmp (symbol->label f))))
 
 ;; Integer Integer -> Asm
-(define (move-args c-ct i)
-  (cond [(zero? c-ct) (seq (%% "already in place for tail call"))]
-        [(zero? i)    (seq (%% "done moving args for tail call"))]
-        [else
-         (seq (Mov r8 (Offset rsp (* 8 (sub1 i))))
-              (Mov (Offset rsp (* 8 (+ c-ct (sub1 i)))) r8)
-              (move-args c-ct (sub1 i)))]))
+;(define (move-args c-ct i)
+;  (cond [(zero? c-ct) (seq (%% "already in place for tail call"))]
+;        [(zero? i)    (seq (%% "done moving args for tail call"))]
+;        [else
+;         (seq (Mov r8 (Offset rsp (* 8 (sub1 i))))
+;              (Mov (Offset rsp (* 8 (+ c-ct (sub1 i)))) r8)
+;              (move-args c-ct (sub1 i)))]))
 
 ;; Id [Listof Expr] CEnv -> Asm
 ;; The return address is placed above the arguments, so callee pops
@@ -920,9 +1262,59 @@
 
 ;; (Listof Id) (Listof Expr) Expr CEnv Boolean -> Asm
 (define (compile-let xs es e c tail?)
+ ; (displayln es)
+ ; (displayln c)
   (seq (compile-es es c)
        (compile-e e (append (reverse xs) c) tail?)
        (Add rsp (* 8 (length xs)))))
+
+(define (compile-letrec fs ls e c tail?)
+  (seq (%% "compile-letrec-λs")
+       (compile-letrec-λs ls c)
+       (%% "compile-letrec-init")
+       (compile-letrec-init fs ls (append (reverse fs) c))
+       (%% "compile-letrec-body")
+       (%% (format " fs + c: ~a " (append (reverse fs) c)))
+       (compile-e e (append (reverse fs) c) tail?)
+       (Add rsp (* 8 (length fs)))))
+
+(define (compile-letrec-λs ls c)
+  (match ls
+    ['() '()]
+    [(cons l ls)
+;     (display (format "free vars of l: ~v : \n\n" l)) (displayln (fvs l))
+;     (displayln "\n")
+     (let ((label (if (Lam-l? l)
+                      (Lam-l-l l)
+                      (if (Lam*-l? l)
+                          (Lam*-l-l l)
+                          (error "a right-hand-side in letrec not λ")))))
+       (let ((length-ys (length (fvs l))))
+         (seq (Lea rax label)
+              (Mov (Offset rbx 0) rax)
+              (Mov r8 length-ys)
+              (Mov (Offset rbx 8) r8)
+              (Mov rax rbx)
+              (Or rax type-proc)
+              (Add rbx (* 8 (+ 2 length-ys)))
+              (Push rax)
+              (compile-letrec-λs ls c))))]))
+
+(define (compile-letrec-init fs ls c)
+  (match fs
+    ['() '()]
+    [(cons f fs)
+;     (display (format "letrec-init of f: ~v \n\n" f))
+;     (display (format "(first ls): ~v \n\n" (first ls)))
+;     (display (format "fvs (first ls: ~v \n\n" (fvs (first ls))))
+     (let ((ys (fvs (first ls))))
+       (seq (Mov r9 (Offset rsp (lookup f c)))
+            (Xor r9 type-proc)
+            (Add r9 16)
+            (copy-env-to-heap ys c 0)
+            (compile-letrec-init fs (rest ls) c)))]))
+     
+         
 
 ;; Expr [Listof Clause] CEnv Boolean -> Asm
 (define (compile-match e0 cs c tail?)
@@ -1003,6 +1395,8 @@
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call
 (define (pad-stack c)
+ ; (displayln (length c))
+;  (displayln (format "environment c: ~v" c))
   (pad-stack-call c 0))
 
 ;; CEnv -> Asm
@@ -1060,6 +1454,8 @@
   (assert-type ptr-mask type-port))
 (define assert-vector
   (assert-type ptr-mask type-vector))
+(define assert-proc
+  (assert-type proc-mask type-proc))
 
 (define (assert-codepoint c)
   (let ((ok (gensym)))

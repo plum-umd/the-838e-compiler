@@ -51,3 +51,13 @@ clean:
 	find .  -name "*.o" -delete -or \
 		-name "*.s" -delete -or \
 		-name "*.run" -delete
+
+cl:
+	find .  -name "*.o" -not -name \
+		"runtime.o" -not -path \
+	        "./lib/*" -delete -or \
+		-name "*.s" -delete -or \
+		-name "*.run" -delete
+
+
+

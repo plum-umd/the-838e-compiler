@@ -1,7 +1,7 @@
 #lang racket
 (provide interp interp-env interp-prim1)
 (require "ast.rkt"
-         "env.rkt"
+         "env.rkt" "externs.rkt"
          "interp-prims.rkt"
          "interp-stdlib.rkt")
 
@@ -96,6 +96,21 @@
                           (list (list xs* (list-tail vs (length xs))))) ds)
                'err)])]
        [_ 'err])]
+    [(Lam xs e0)   (λ vs (if (= (length vs) (length xs))
+                             (interp-env e0 (append (zip xs vs) r))
+                             'err))]
+    [(Lam* xs xs* e0)  (λ vs (if (>= (length vs) (length xs))
+                             (interp-env e (append (zip xs (take vs (length xs)))
+                                   (list (list xs* (list-tail vs (length xs))))))
+                             'err))]
+    [(LCall e es)   (if (and (Var? e) (or (memq (Var-x e) stdlib-ids)
+                                          (defns-lookup ds (Var-x e))))                                          
+                             (interp-env (App (Var-x e) es) r ds)
+                             (match (interp-env* es r ds)
+                               [(list vs ...)
+                                (if (procedure? e)
+                                    (apply e vs)
+                                    'err)]))]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)

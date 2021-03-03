@@ -1,5 +1,5 @@
 #lang racket
-(provide externs char-op->uc symbol->label)
+(provide externs char-op->uc symbol->label stdlib-ids)
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
@@ -30,6 +30,8 @@
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
+    [(LCall e es)
+     (append (externs-e e) (externs-es es))]
     [(Apply f e)
      (append (externs-f f)
              (externs-e e))]
@@ -55,6 +57,7 @@
     [(Match e cs)
      (append (externs-e e)
              (externs-cs cs))]
+    [(Var x) (externs-f x)]
     [_ '()]))
 
 ;; [Listof Clause] -> [Listof Id]
