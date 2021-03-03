@@ -531,6 +531,12 @@
   (check-equal? (run '(cond (#f 2) (else 1))) 1)
   (check-equal? (run '(cond (#f 2) (else 1))) 1)
   (check-equal? (run '(cond (0 2) (else 1))) 2)
+
+  ;; Bignums
+  (check-equal? (run 18446744073709551615) 18446744073709551615)
+  (check-equal? (run -18446744073709551615) -18446744073709551615)
+  (check-equal? (run 18446744073709551616) 18446744073709551616)
+  (check-equal? (run -18446744073709551616) -18446744073709551616)
   )
 
 

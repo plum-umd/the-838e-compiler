@@ -148,12 +148,10 @@
   (seq (Mov rax (imm->bits v))))
 
 ;; String -> Asm
-
-;; TODO !!! store as unsigned integer, keep the sign in the length (i.e. | - 2  |  first word  | second word |)
 (define (compile-bignum i c)
   (let ((length (ceiling (/ (integer-length (abs i)) 64)))
         (sign (if (>= i 0) 1 -1)))
-    (seq (Mov r9 (* sign length))
+    (seq (Mov r9 (imm->bits (* sign length)))
          (Mov (Offset rbx 0) r9)          ;; write length in word 0
          (Mov r9 0)
          (compile-bignum-words (bignum->list (abs i)) 1)
@@ -252,13 +250,13 @@
 (define (compile-prim1 p e c)
   (seq (compile-e-nontail e c)
        (match p
-         ['add1
+         ['add1 ;; update for bignum
           (seq (assert-integer rax c)
                (Add rax (imm->bits 1)))]
-         ['sub1
+         ['sub1 ;; update for bignum
           (seq (assert-integer rax c)
                (Sub rax (imm->bits 1)))]         
-         ['zero?
+         ['zero? ;; update for bignum
           (let ((l1 (gensym)))
             (seq (assert-integer rax c)
                  (Cmp rax 0)
@@ -266,7 +264,7 @@
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
-         ['integer?
+         ['integer? ;; update for bignum
           (let ((l1 (gensym)))
             (seq (And rax mask-int)
                  (Xor rax type-int)
@@ -275,7 +273,7 @@
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
-         ['integer-length
+         ['integer-length ;; update for bignum
           (seq (assert-integer rax c)
                (Sar rax imm-shift)
                (Mov r8 rax)
@@ -384,18 +382,18 @@
        (Push rax)
        (compile-e-nontail e2 (cons #f c))
        (match p
-         ['+
+         ['+  ;; update for bignum
           (seq (Pop r8)
                (assert-integer r8 c)
                (assert-integer rax c)
                (Add rax r8))]
-         ['-
+         ['-  ;; update for bignum
           (seq (Pop r8)
                (assert-integer r8 c)
                (assert-integer rax c)
                (Sub r8 rax)
                (Mov rax r8))]
-         ['<=
+         ['<=  ;; update for bignum
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
                  (assert-integer r8 c)
@@ -405,7 +403,7 @@
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
                  (Label leq-true)))]
-         ['eq?
+         ['eq?  ;; update for bignum
           (let ((l (gensym)))
             (seq (Pop r8)
                  (Cmp rax r8)

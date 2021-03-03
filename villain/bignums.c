@@ -14,11 +14,11 @@ int64_t *heappointer = NULL;
 // void mpz_out_str(FILE *, int, mpz_t);
 
 void print_bignum(int64_t *h) {
-  int64_t len = h[0];
+  int64_t len = (h[0] >> int_shift);
   int i;
   mpz_t integ;
 
-  printf("Bignum: ");
+  // printf("Bignum: ");
 
   if(len < 0) { // if sign is negative, negate length and print negative sign
     len = - len;
