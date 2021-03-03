@@ -1,28 +1,29 @@
 #lang racket
 (provide (all-defined-out))
-(define imm-shift           4)
-(define imm-mask        #b0111)
-(define ptr-mask        #b0111)
-(define type-box        #b0001)
-(define type-cons       #b0010)
-(define type-string     #b0011)  
-(define type-symbol     #b0100)
-(define type-port       #b0101)
-(define type-vector     #b0110)
-(define type-flonum     #b0111)
-(define type-prefab     #b1000)
+
+(define imm-shift           3)
+(define imm-mask        #b111)
+(define ptr-mask        #x80000007)
+(define type-box        #x00000001)
+(define type-cons       #x00000002)
+(define type-string     #x00000003)  
+(define type-symbol     #x00000004)
+(define type-port       #x00000005)
+(define type-vector     #x00000006)
+(define type-flonum     #x00000007)
+(define type-prefab     #x80000001)
 
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
-(define type-int       #b00000)
-(define mask-int       #b11111)
-(define type-char     #b010000)
-(define mask-char      #b11111)
-(define val-true    #b00110000)
-(define val-false   #b01110000)
-(define val-eof     #b10110000)
-(define val-void    #b11110000)
-(define val-empty  #b100110000)
+(define type-int       #b0000)
+(define mask-int       #b1111)
+(define type-char     #b01000)
+(define mask-char     #b11111)
+(define val-true    #b0011000)
+(define val-false   #b0111000)
+(define val-eof     #b1011000)
+(define val-void    #b1111000)
+(define val-empty  #b10011000)
 
 ;; Buffer size will get padded so that port structure aligns to 8 byte
 ;; boundary. Kept low intentionally to test buffering code.
@@ -136,25 +137,25 @@
   (= type-char (bitwise-and v mask-char)))
 
 (define (flonum-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-flonum)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-flonum)))
 
 (define (cons-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-cons)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-cons)))
 
 (define (box-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-box)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-box)))
 
 (define (string-bits? v) 
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-string))) 
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-string))) 
 
 (define (symbol-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-symbol)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-symbol)))
 
 (define (prefab-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-prefab)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-prefab)))
 
 (define (port-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-port)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-port)))
 
 (define (vector-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-vector)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-vector)))

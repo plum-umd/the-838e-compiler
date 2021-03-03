@@ -1000,7 +1000,7 @@
   (match prefab-key
     [(Prefab-Key s n1 (list n2 v2) muts)
      (seq
-      (compile-e s c)
+      (compile-e s c #f)
       (Push rax)
       ;;Ignore the rest of the key for now
       #|(compile-e n1 (cons #f c))
@@ -1016,7 +1016,7 @@
 (define (compile-prefab-muts muts c)
   (match muts
     [(cons (Int i) muts)
-     (seq (compile-e (Int i) c)
+     (seq (compile-e (Int i) c #f)
           (Push rax)
           (compile-prefab-muts muts (cons #f c)))]
     ['() (seq)]))
@@ -1025,7 +1025,7 @@
 (define (compile-prefab-values values c)
   (match values
     [(cons e1 values)
-     (seq (compile-e e1 c)
+     (seq (compile-e e1 c #f)
           (Push rax)
           (compile-prefab-values values (cons #f c)))]
     ['() (seq)]))
