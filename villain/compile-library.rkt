@@ -1,6 +1,6 @@
 #lang racket
 (provide main)
-(require "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt"
+(require "parse-lib.rkt" "compile.rkt" "read.rkt" "ast.rkt"
          a86/printer (submod a86/printer private))
 
 ;; Emit relocatable assembly code
