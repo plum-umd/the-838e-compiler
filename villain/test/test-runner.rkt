@@ -651,7 +651,20 @@
   (check-equal? (run-with-file (λ (file)
                                   `(let ((port (open-input-file ,file)))
                                      (begin (close-input-port port) (close-input-port port)))) "")
-                (void)))
+                (void))
+
+ ;; Check (begin (define _ _) ..1 e ... es) -> letrec
+  (check-equal? (run '(begin
+                        (define (f1 x) (add1 x))
+                        (define (f2 x) (+ x 2))
+                        (define (f3 x) (- x 3))
+                        (let ((vec (make-vector 3 (cons 'x 'y))))
+                          (begin
+                            (define (g1 y) (sub1 y))
+                            (define (g2 y) (- y 1))
+                            (define (g3 y) (+ y 2))
+                            (vector-set! vec (f1 (f2 (f3 (g1 (g2 (g3 1)))))) (cons 'p 'q))
+                             vec))))  '#((x . y) (p . q) (x . y))))
 
 (define (test-runner-io run)
   ;; Evildoer examples

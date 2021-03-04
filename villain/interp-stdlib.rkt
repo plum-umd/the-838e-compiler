@@ -1,6 +1,6 @@
 #lang racket
 (provide stdlib)
-(require "parse.rkt" "parse-lib.rkt" "ast.rkt" "read.rkt")
+(require "parse.rkt" "ast.rkt" "read.rkt")
 
 (require racket/runtime-path)
 (define-runtime-path lib "lib/")

@@ -32,11 +32,14 @@
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
 ;;           | (Lam Formals Expr)
-;;           | (Lam* (Listof Id) Id Expr)
+;;           | (Lam-l Label Formals Expr)
+;;           | (Lam* Formals Formal Expr)
+;;           | (Lam*-l Label Formals Formal Expr)
 ;;           | (LCall Expr (Listof Expr))
-;;           | (Letrec (Lisof Id) (Listof Expr) Expr)
+;;           | (Letrec (Lisof Id) (Listof Lambda) Expr)
 
 ;; type Id   = Symbol
+;; type Label = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero? | 'integer?
 ;;           | 'char? | 'integer->char | 'char->integer
@@ -59,6 +62,16 @@
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
 ;; type Formals = (Listof Id)
+;; type Formal = Id
+;; type LExpr =
+;;           ...
+;;           | (Lam-l Label Formals Expr)
+;;           | (Lam*-l Label Formals Formal Expr)
+;; type Lambda = (Lam Formals Expr)
+;;           | (Lam* Formals Formal Expr)
+;; type LLambda = (Lam-l Label Formals Expr)
+;;           | (Lam*-l Label Formals Formal Expr)
+
 
 (struct Eof   ()              #:prefab)
 (struct Empty ()              #:prefab)

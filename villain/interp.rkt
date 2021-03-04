@@ -1,6 +1,6 @@
 #lang racket
 (provide interp interp-env interp-prim1)
-(require "ast.rkt"
+(require "ast.rkt" "parse.rkt"
          "env.rkt" "externs.rkt"
          "interp-prims.rkt"
          "interp-stdlib.rkt")
@@ -26,7 +26,7 @@
 (define (interp p)
   (match p
     [(Prog ds e)
-     (interp-env e '() (append ds stdlib))]))
+     (interp-env (desugar e) '() (append ds stdlib))]))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -80,6 +80,17 @@
      (match (interp-env* es r ds)
        ['err 'err]
        [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
+    [(Letrec xs es e)
+     (letrec ((r* (λ ()
+                    (append
+                     (zip xs
+                          ;; η-expansion to delay evaluating r*
+                          ;; relies on RHSs being functions
+                          ;; (ref: CMSC430 codes by Dr. Van Horn)
+                          (map (λ (l) (λ vs (apply (interp-env l (r*) ds) vs)))
+                               es))
+                      r))))
+       (interp-env e (r*) ds))]
     [(Apply f ex)
      (match (interp-env ex r ds)
        [(list vs ...)
@@ -97,19 +108,20 @@
                'err)])]
        [_ 'err])]
     [(Lam xs e0)   (λ vs (if (= (length vs) (length xs))
-                             (interp-env e0 (append (zip xs vs) r))
+                             (interp-env e0 (append (zip xs vs) r) ds)
                              'err))]
     [(Lam* xs xs* e0)  (λ vs (if (>= (length vs) (length xs))
                              (interp-env e (append (zip xs (take vs (length xs)))
-                                   (list (list xs* (list-tail vs (length xs))))))
+                                   (list (list xs* (list-tail vs (length xs)))))
+                                         ds)
                              'err))]
     [(LCall e es)   (if (and (Var? e) (or (memq (Var-x e) stdlib-ids)
                                           (defns-lookup ds (Var-x e))))                                          
                              (interp-env (App (Var-x e) es) r ds)
-                             (match (interp-env* es r ds)
-                               [(list vs ...)
-                                (if (procedure? e)
-                                    (apply e vs)
+                             (match (interp-env* (cons e es) r ds)
+                               [(list f vs ...)
+                                (if (procedure? f)
+                                    (apply f vs)
                                     'err)]))]
     [(App f es)
      (match (interp-env* es r ds)

@@ -1,5 +1,5 @@
 #lang racket
-(provide parse parse-e)
+(provide parse parse-library parse-e desugar-prog desugar)
 (require "ast.rkt")
 
 ;; S-Expr -> Library
@@ -44,9 +44,9 @@
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))]
     [(list 'begin)                 (Prim0 'void)]
-;    [(list-rest 'begin (and ds (list-rest 'define _ _)) ... e es)
- ;    (Prog (map parse-d ds) (parse-seq e es))]
-    [(list-rest 'begin e es)       (parse-seq e es)]
+    [(list 'begin (and ds (list-rest 'define _ _)) ..1 e es ...)
+     (Prog (map parse-d ds) (parse-seq e es))]
+    [(list-rest 'begin e es) (parse-seq e es)]
     [(list 'cond) (Prim0 'void)]
     [(list 'cond (list-rest 'else e es)) (parse-seq e es)]
     [(list 'cond (list-rest e1 e2 es) c ...)
@@ -151,3 +151,44 @@
   (λ (x)
     (and (symbol? x)
          (memq x ops))))
+
+(define (desugar-prog p)
+  (match p
+    [(Prog ds e)
+     (let ((bs (map desugar-def ds)))
+       (Letrec (map car bs) (map cdr bs) (desugar e)))]))
+
+(define (desugar-def d)
+  (match d
+    [(Defn f xs e) (cons f (Lam xs (desugar e)))]
+    [(Defn* f xs xs* e) (cons f (Lam* xs xs* (desugar e)))]))
+
+(define (desugar e)
+  (match e
+    [(Prog ds e)
+     (let ((bs (map desugar-def ds)))
+       (Letrec (map car bs) (map cdr bs) (desugar e)))] ;; TODO: combine with desugar-prog
+    [(Int i)            e]
+    [(Bool b)           e]
+    [(Char c)           e]
+    [(Flonum f)         e]
+    [(Eof)              e]
+    [(Empty)            e]
+    [(String s)         e]
+    [(Symbol s)         e]
+    [(Vec ds)           e]
+    [(Var x)            e]
+    [(LCall e es)       (LCall (desugar e) (map desugar es))]
+    [(App f es)         (App f (map desugar es))]
+    [(Apply f e)        (Apply f (desugar e))]
+    [(Prim0 p)          e]
+    [(Prim1 p e)        (Prim1 p (desugar e))]
+    [(Prim2 p e1 e2)    (Prim2 p (desugar e1) (desugar e2))]
+    [(Prim3 p e1 e2 e3) (Prim3 p (desugar e1) (desugar e2) (desugar e3))]
+    [(If e1 e2 e3)      (If (desugar e1) (desugar e2) (desugar e3))]
+    [(Begin e1 e2)      (Begin (desugar e1) (desugar e2))]
+    [(Let x e1 e2)      (Let x (map desugar e1) (desugar e2))]
+    [(Letrec xs es e)   (Letrec xs (map desugar es) (desugar e))]
+    [(Lam xs e)         (Lam xs (desugar e))]
+    [(Lam* xs xs* e)    (Lam* xs xs* (desugar e))]
+    [(Match e0 cs)      (Match (desugar e0) cs)]))  ;; TODO: desugar cs

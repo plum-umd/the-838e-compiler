@@ -1,6 +1,6 @@
 #lang racket
 (provide (all-defined-out))
-(require "ast.rkt" "types.rkt" "externs.rkt" a86/ast)
+(require "ast.rkt" "parse.rkt" "types.rkt" "externs.rkt" a86/ast)
 
 ;; Registers used
 (define rax 'rax) ; return  ; the dividend of div in string-ref and string-set!
@@ -114,47 +114,7 @@
 (define (compile-e-nontail e c)
   (compile-e e c #f))
 
-(define (desugar-prog p)
-  (match p
-    [(Prog ds e)
-     (let ((bs (map desugar-def ds)))
-       (Letrec (map car bs) (map cdr bs) (desugar e)))]))
-
-(define (desugar-def d)
-  (match d
-    [(Defn f xs e) (cons f (Lam xs (desugar e)))]
-    [(Defn* f xs xs* e) (cons f (Lam* xs xs* (desugar e)))]))
-
-(define (desugar e)
-  (match e
-    [(Prog ds e)
-     (let ((bs (map desugar-def ds)))
-       (Letrec (map car bs) (map cdr bs) (desugar e)))] ;; TODO: combine with desugar-prog
-    [(Int i)            e]
-    [(Bool b)           e]
-    [(Char c)           e]
-    [(Flonum f)         e]
-    [(Eof)              e]
-    [(Empty)            e]
-    [(String s)         e]
-    [(Symbol s)         e]
-    [(Vec ds)           e]
-    [(Var x)            e]
-    [(LCall e es)       (LCall (desugar e) (map desugar es))]
-    [(App f es)         (App f (map desugar es))]
-    [(Apply f e)        (Apply f (desugar e))]
-    [(Prim0 p)          e]
-    [(Prim1 p e)        (Prim1 p (desugar e))]
-    [(Prim2 p e1 e2)    (Prim2 p (desugar e1) (desugar e2))]
-    [(Prim3 p e1 e2 e3) (Prim3 p (desugar e1) (desugar e2) (desugar e3))]
-    [(If e1 e2 e3)      (If (desugar e1) (desugar e2) (desugar e3))]
-    [(Begin e1 e2)      (Begin (desugar e1) (desugar e2))]
-    [(Let x e1 e2)      (Let x (map desugar e1) (desugar e2))]
-    [(Letrec xs es e)   (Letrec xs (map desugar es) (desugar e))]
-    [(Lam xs e)         (Lam xs (desugar e))]
-    [(Lam* xs xs* e)    (Lam* xs xs* (desugar e))]
-    [(Match e0 cs)      (Match (desugar e0) cs)]))  ;; TODO: desugar cs
-
+;; Expr -> LExpr
 (define (label-λ e)
   (match e
     [(Int i)            e]
@@ -182,6 +142,7 @@
     [(Lam* xs xs* e)    (Lam*-l (gensym) xs xs* (label-λ e))]
     [(Match e0 cs)      (Match (label-λ e0) cs)]))  ;; TODO:  label-λ cs
 
+;; LExpr -> (Listof Id)
 (define (fvs e)
  (begin
   (define (fvs e)
@@ -217,6 +178,7 @@
                 (match-p-fvs (Clause-p c)) (fvs (Clause-e c)))) cs)))])) 
   (remove-duplicates (fvs e))))
 
+;; Pat -> [Listof Id]
 (define (match-p-fvs p)
   (match p
     [(Wild) '()]
@@ -227,7 +189,7 @@
     [(Cons x1 x2) (list x1 x2)]))
 
 
-
+;; LExpr -> [Listof LLambda]
 (define (λs e)
   (match e
     [(Int i)            '()]
@@ -253,9 +215,12 @@
     [(Letrec xs es e)   (append (apply append (map λs es)) (λs e))]
     [(Lam-l l xs e0)    (cons e (λs e0))]
     [(Lam*-l l xs xs* e0) (cons e (λs e0))]
+    [(Lam xs e)         (error "Unlabelled lambda")]
+    [(Lam* xs xs* e)    (error "Unlabelled lambda")]
     [(Match e0 cs)      (λs e0)]  ;; TODO: (λs cs)
-[_  '()]))   ;      for '*  
+    [_  '()]))   ;      for '*  
 
+;; [Listof LLambda] -> Asm
 (define (compile-λ-definitions ls)
   (match ls
     ['() (seq)]
@@ -263,6 +228,7 @@
      (seq (compile-λ-definition l)
           (compile-λ-definitions ls))]))
 
+;; LLambda -> Asm
 (define (compile-λ-definition l)
   (match l
     [(Lam-l f xs e0)
@@ -320,6 +286,7 @@
             (Add rsp (* 8 (add1 (+ (length xs) (length (fvs l)))))) ; pop args
             (Ret)))]))
 
+;; Integer -> Asm
 (define (reposition-env-vars n)
   (match n
     [0 (seq)]
@@ -329,6 +296,7 @@
             (Mov (Offset rsp 0) rdx)
             (reposition-env-vars (sub1 n)))]))
 
+;; LLambda [Listof Id] CEnv -> Asm
 (define (compile-λ l fvs c)
   (seq (%% "compile-λ ")
        (Lea rax l)                  ;; address of function label
@@ -345,6 +313,7 @@
        (Add rbx (* 8 (+ 2 (length fvs))))
        (%% "compile-λ done ")))
 
+;; [Listof Id] CEnv Integer -> Asm
 (define (copy-env-to-heap fvs c i)
   (match fvs
     ['() (seq)]
@@ -770,7 +739,6 @@
          ['port?
            (type-pred ptr-mask type-port)]
          ['open-input-file
-          ; (displayln c)
            (seq
              (assert-string rax c)
 
@@ -1262,28 +1230,25 @@
 
 ;; (Listof Id) (Listof Expr) Expr CEnv Boolean -> Asm
 (define (compile-let xs es e c tail?)
- ; (displayln es)
- ; (displayln c)
   (seq (compile-es es c)
        (compile-e e (append (reverse xs) c) tail?)
        (Add rsp (* 8 (length xs)))))
 
+;; [Listof Id] [Listof LLambda] LExpr CEnv Boolean -> Asm
 (define (compile-letrec fs ls e c tail?)
   (seq (%% "compile-letrec-λs")
        (compile-letrec-λs ls c)
        (%% "compile-letrec-init")
        (compile-letrec-init fs ls (append (reverse fs) c))
        (%% "compile-letrec-body")
-       (%% (format " fs + c: ~a " (append (reverse fs) c)))
        (compile-e e (append (reverse fs) c) tail?)
        (Add rsp (* 8 (length fs)))))
 
+;; [Listof LLambda] CEnv -> Asm
 (define (compile-letrec-λs ls c)
   (match ls
     ['() '()]
     [(cons l ls)
-;     (display (format "free vars of l: ~v : \n\n" l)) (displayln (fvs l))
-;     (displayln "\n")
      (let ((label (if (Lam-l? l)
                       (Lam-l-l l)
                       (if (Lam*-l? l)
@@ -1300,21 +1265,17 @@
               (Push rax)
               (compile-letrec-λs ls c))))]))
 
+;; [Listof Id] [Listof LLambda] CEnv -> Asm
 (define (compile-letrec-init fs ls c)
   (match fs
     ['() '()]
     [(cons f fs)
-;     (display (format "letrec-init of f: ~v \n\n" f))
-;     (display (format "(first ls): ~v \n\n" (first ls)))
-;     (display (format "fvs (first ls: ~v \n\n" (fvs (first ls))))
      (let ((ys (fvs (first ls))))
        (seq (Mov r9 (Offset rsp (lookup f c)))
             (Xor r9 type-proc)
             (Add r9 16)
             (copy-env-to-heap ys c 0)
-            (compile-letrec-init fs (rest ls) c)))]))
-     
-         
+            (compile-letrec-init fs (rest ls) c)))]))        
 
 ;; Expr [Listof Clause] CEnv Boolean -> Asm
 (define (compile-match e0 cs c tail?)
@@ -1395,8 +1356,6 @@
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call
 (define (pad-stack c)
- ; (displayln (length c))
-;  (displayln (format "environment c: ~v" c))
   (pad-stack-call c 0))
 
 ;; CEnv -> Asm
