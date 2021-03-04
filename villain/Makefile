@@ -28,8 +28,13 @@ io.o: runtime.h villain.h utf8.h
 symbol.o: str.h types.h villain.h
 str.o: types.h villain.h
 
-%.run: %.o runtime.o
-	gcc runtime.o $< -o $@ $(libs)
+%.run:  %.o
+	@ racket -t formdps.rkt -m make $@
+
+%.run2: %.o runtime.o 
+	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) # -lm
+	@ racket -t formdps.rkt -m mv $@
+	rm -f formdps $(shell cat modulefiles) modulefiles *.s
 
 runtime.o: $(objs)
 	ld -r $(objs) -o runtime.o
@@ -48,6 +53,7 @@ lib/%.s: lib/%.rkt
 	racket -t compile-file.rkt -m $< > $@
 
 clean:
+	rm -f modulefiles formdps
 	find .  -name "*.o" -delete -or \
 		-name "*.s" -delete -or \
 		-name "*.run" -delete
