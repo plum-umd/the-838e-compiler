@@ -36,7 +36,7 @@ runtime.o: $(objs)
 
 .SUFFIXES: .c .s .o .rkt
 .c.o:
-	gcc -fPIC -c -o $@ $<
+	gcc -fPIC -c -g -o $@ $<
 
 .s.o:
 	nasm -f $(format) -o $@ $<

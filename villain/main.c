@@ -24,6 +24,8 @@ void print_str(vl_str *);
 void print_char(vl_char);
 void print_cons(vl_cons *);
 void print_vector(vl_vec *);
+void print_prefab(vl_prefab *);
+
 vl_str *symbol_to_str(vl_symbol s);
 
 void print_result(vl_val x)
@@ -78,6 +80,11 @@ void print_result(vl_val x)
   case VL_PORT:
     printf("#<input-port>");
     break;
+  case VL_PREFAB:
+    printf("'#s(");
+    print_prefab(vl_unwrap_prefab(x));
+    printf(")");
+    break;
   case VL_INVALID:
   default:
     error_exit();
@@ -122,6 +129,19 @@ void print_cons(vl_cons *cons)
   }
 }
 
+void print_prefab(vl_prefab *prefab) {
+  print_str(symbol_to_str(vl_unwrap_symbol(prefab->key)));
+
+  int i = 0;
+
+  if((prefab -> numFields) > 0) {
+    for(i = 0; i < (prefab -> numFields); i++) {
+      printf(" ");
+      print_result((prefab -> fields)[i]);
+    }
+  }
+}
+
 int main(int argc, char** argv)
 {
   vl_val result;
@@ -139,4 +159,6 @@ int main(int argc, char** argv)
 
   free(heap);
   return 0;
+
+
 }

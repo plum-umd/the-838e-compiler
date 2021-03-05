@@ -759,6 +759,7 @@
                                      (begin (close-input-port port) (close-input-port port)))) "")
                 (void)))
 
+
 (define (test-runner-io run)
   ;; Evildoer examples
   (check-equal? (run 7 "") (cons 7 ""))

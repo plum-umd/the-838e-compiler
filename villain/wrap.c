@@ -16,6 +16,8 @@ vl_type vl_typeof(vl_val x)
     return VL_VEC;
   case flonum_type_tag:
     return VL_FLONUM;
+  case prefab_type_tag:
+    return VL_PREFAB;
   default:
     if ((int_type_mask & x) == int_type_tag)
       return VL_INT;
@@ -160,6 +162,15 @@ vl_symbol vl_unwrap_symbol(vl_val x)
 vl_val vl_wrap_symbol(vl_symbol s)
 {
   return ((vl_val)s) | symbol_type_tag;
+}
+
+vl_prefab *vl_unwrap_prefab(vl_val x)
+{
+  return (vl_prefab *)(x ^ prefab_type_tag);
+}
+
+vl_val vl_wrap_prefab(vl_prefab *p) {
+  return ((vl_val) p) | prefab_type_tag;
 }
 
 vl_port* vl_unwrap_port(vl_val x)
