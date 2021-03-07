@@ -31,10 +31,8 @@
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
-;;           | (Lam Formals Expr)
-;;           | (Lam-l Label Formals Expr)
-;;           | (Lam* Formals Formal Expr)
-;;           | (Lam*-l Label Formals Formal Expr)
+;;           | (Lam Label Formals Expr)
+;;           | (Lam* Label Formals Formal Expr)
 ;;           | (LCall Expr (Listof Expr))
 ;;           | (Letrec (Lisof Id) (Listof Lambda) Expr)
 
@@ -63,14 +61,10 @@
 ;; type Binding = (Binding Id Expr)
 ;; type Formals = (Listof Id)
 ;; type Formal = Id
-;; type LExpr =
-;;           ...
-;;           | (Lam-l Label Formals Expr)
-;;           | (Lam*-l Label Formals Formal Expr)
-;; type Lambda = (Lam Formals Expr)
-;;           | (Lam* Formals Formal Expr)
-;; type LLambda = (Lam-l Label Formals Expr)
-;;           | (Lam*-l Label Formals Formal Expr)
+;; type LExpr = Expr    
+;; type Lambda = (Lam Label Formals Expr)
+;;           | (Lam* Label Formals Formal Expr)
+;; type LabelledLambda = Lambda
 
 
 (struct Eof   ()              #:prefab)
@@ -95,10 +89,10 @@
 (struct Apply (f e)           #:prefab)
 (struct Match (e0 cs)         #:prefab)
 (struct Vec   (es)            #:prefab)
-(struct Lam   (xs e)          #:prefab)
-(struct Lam-l (l xs e)        #:prefab)
-(struct Lam*  (xs xs* e)      #:prefab)
-(struct Lam*-l (l xs xs* e)   #:prefab)
+(struct Lam   (l xs e)        #:prefab)
+;(struct Lam-l (l xs e)        #:prefab)
+(struct Lam*  (l xs xs* e)    #:prefab)
+;(struct Lam*-l (l xs xs* e)   #:prefab)
 (struct Letrec (xs es e)      #:prefab)
 
 ;; Match clause

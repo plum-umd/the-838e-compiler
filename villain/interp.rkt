@@ -22,11 +22,9 @@
 ;; type REnv = (Listof (List Id Value))
 ;; type Defns = (Listof Defn)
 
-;; Prog Defns -> Answer
+;; (Letrec (Lisof Id) (Listof Lambda) Expr) -> Answer
 (define (interp p)
-  (match p
-    [(Prog ds e)
-     (interp-env (desugar e) '() (append ds stdlib))]))
+  (interp-env p '() stdlib))
 
 ;; Expr Env Defns -> Answer
 (define (interp-env e r ds)
@@ -94,35 +92,43 @@
     [(Apply f ex)
      (match (interp-env ex r ds)
        [(list vs ...)
-        (match (defns-lookup ds f)
-          [(Defn f xs e)
-           ; check arity matches
-           (if (= (length xs) (length vs))
-               (interp-env e (zip xs vs) ds)
-               'err)] 
-          [(Defn* f xs xs* e) 
-           (if (>= (length vs) (length xs)) 
-               (interp-env e 
-                  (append (zip xs (take vs (length xs))) 
-                          (list (list xs* (list-tail vs (length xs))))) ds)
-               'err)])]
+        (if (or (and (Var? f) (memq (Var-x f) stdlib-ids))
+                (symbol? f))
+            (let ((f (if (symbol? f) f (Var-x f))))
+              (match (defns-lookup ds f)
+                [(Defn f xs e)
+                 ; check arity matches
+                 (if (= (length xs) (length vs))
+                     (interp-env e (zip xs vs) ds)
+                     'err)] 
+                [(Defn* f xs xs* e) 
+                 (if (>= (length vs) (length xs)) 
+                     (interp-env e 
+                        (append (zip xs (take vs (length xs))) 
+                                (list (list xs* (list-tail vs (length xs))))) ds)
+                     'err)]))
+            (match (interp-env f r ds)
+              [p (if (procedure? p)
+                     (apply p vs)
+                     'err)]))]
        [_ 'err])]
-    [(Lam xs e0)   (λ vs (if (= (length vs) (length xs))
-                             (interp-env e0 (append (zip xs vs) r) ds)
+    [(Lam l xs e0)   (λ vs (if (= (length vs) (length xs))
+                               (interp-env e0 (append (zip xs vs) r) ds)
+                               'err))]
+    [(Lam* l xs xs* e0)  (λ vs
+                           (if (>= (length vs) (length xs))
+                               (interp-env e0 (append
+                                     (zip xs (take vs (length xs)))
+                                     (list (list xs* (list-tail vs (length xs))))
+                                     r) ds)
                              'err))]
-    [(Lam* xs xs* e0)  (λ vs (if (>= (length vs) (length xs))
-                             (interp-env e (append (zip xs (take vs (length xs)))
-                                   (list (list xs* (list-tail vs (length xs)))))
-                                         ds)
-                             'err))]
-    [(LCall e es)   (if (and (Var? e) (or (memq (Var-x e) stdlib-ids)
-                                          (defns-lookup ds (Var-x e))))                                          
-                             (interp-env (App (Var-x e) es) r ds)
-                             (match (interp-env* (cons e es) r ds)
-                               [(list f vs ...)
-                                (if (procedure? f)
-                                    (apply f vs)
-                                    'err)]))]
+    [(LCall e es)   (if (and (Var? e) (memq (Var-x e) stdlib-ids))                                          
+                        (interp-env (App (Var-x e) es) r ds)
+                        (match (interp-env* (cons e es) r ds)
+                          [(list f vs ...)
+                           (if (procedure? f)
+                               (apply f vs)
+                               'err)]))]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)

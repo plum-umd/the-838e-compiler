@@ -588,12 +588,12 @@
                                (vector-ref x 2))))
                 3)
 
-  ;; apply
+  ; apply
   (check-equal? (run '(apply * (list))) 1)
   (check-equal? (run '(apply * (list 1 2 3))) 6)
   (check-equal? (run '(apply * (list 4 3 2 1))) 24)
 
-  ;; Ports
+  ; Ports
   (define (run-with-file rkt file-contents)
     (define file-path (make-temporary-file "input~a.txt"))
     (define file-port (open-output-file file-path #:exists 'truncate))
@@ -653,6 +653,12 @@
                                      (begin (close-input-port port) (close-input-port port)))) "")
                 (void))
 
+ ;; letrec examples
+
+ (check-equal? (run '(((letrec ((f (λ (z) (λ (x) (+ z x))))
+                                 (g (λ (y) (add1 (f y)))))
+                          f) 6) 5)) 11)
+
  ;; Check (begin (define _ _) ..1 e ... es) -> letrec
   (check-equal? (run '(begin
                         (define (f1 x) (add1 x))
@@ -664,7 +670,75 @@
                             (define (g2 y) (- y 1))
                             (define (g3 y) (+ y 2))
                             (vector-set! vec (f1 (f2 (f3 (g1 (g2 (g3 1)))))) (cons 'p 'q))
-                             vec))))  '#((x . y) (p . q) (x . y))))
+                             vec))))  '#((x . y) (p . q) (x . y)))
+
+  (check-equal? (run '(begin
+                        (define (g x y z . xs) (+ (+ x y) (car xs)))
+                        (g 2 3 4 5 6))) 10)
+                
+  (check-equal? (run '(begin
+                        (define (g x y z . xs) (+ (+ x y) (apply * xs)))
+                        (g 2 3 4 5 6))) 35)
+  
+  (check-equal? (run '(let ((z 1))
+                        (begin
+                          (define (f x) (add1 x))
+                          (define (g y) (add1 (f y)))
+                          (g 5)))) 7)
+
+  (check-equal? (run '(let ((add1 (λ (x) (add1 x))))
+                        (begin
+                          (define (map f xs)
+                            (match xs
+                              ['() '()]
+                              [(cons x xs)
+                               (cons (f x) (map f xs))]))
+                          (apply * (map add1 (list 1 2 3)))))) 24)
+  
+  (check-equal? (run '(begin
+                        (define (foldl+ f acc xs)
+                          (match xs
+                            ['() acc]
+                            [(cons x xs) (f x (foldl+ f acc xs))]))
+                        (foldl+ (λ (x acc) (+ x acc)) 0 (list 1 2 3)))) 6)
+
+  (check-equal? (run '(begin
+                        (define (foldr+ f acc xs)
+                          (match xs
+                            ['() acc]
+                            [(cons x xs) (foldr+ f (f x acc) xs)]))
+                        (foldr+ (λ (x acc) (+ x acc)) 0 (list 1 2 3)))) 6)
+  
+  (check-equal? (run '(begin
+                        (define (f x) (apply h (cons 1 x)))
+                        (define (h x y z) z)
+                        (f (cons 2 (cons 3 '()))))) 3)
+
+;; λ examples
+  (check-equal? (run '(let ((g (λ (x y z . xs) (+ (+ x y) (car xs)))))
+                        (g 2 3 4 5 6))) 10)
+  (check-equal? (run '(let ((g (λ (x y z . xs) (+ (+ x y) (apply * xs)))))
+                        (g 2 3 4 5 6))) 35)
+  (check-equal? (run '((λ (x) (string-append x "-")) "asdf")) "asdf-")
+  (check-equal? (run '(apply (λ (x y) (+ x y)) (list 1 2))) 3)
+  (check-equal? (run '(+ (apply (λ (x y) (* x y)) (list 1 2)) 5)) 7)
+  (check-equal? (run '((λ (x y) (+ (car x) y)) (list 3 4) 7)) 10)
+  (check-equal? (run '(let ((z 7)) ((λ x z)))) 7) 
+  (check-equal? (run '(let ((z 7) (t 8) (u 9)) ((λ x z t)))) 8)  
+  (check-equal? (run '(let ((z 7) (t 8) (u 9))
+                        ((λ (x1 x2 x3 . xs)
+                           (+ (+ x1 t) (+ (+ x2 z) (apply * xs))))
+                            1 2 3 4 5 6))) 138)  
+  (check-equal? (run '(apply (λ x x) (cons 1 '()))) '(1))
+  (check-equal? (run '(apply (λ (x) x) (cons 1 '()))) 1)             
+  (check-equal? (run '(apply (λ x x) '())) '())
+  (check-equal? (run '(let ((z 0)) (apply (λ (x) z) (cons 1 '())))) 0)
+  (check-equal? (run '(let ((z 0)) (apply (λ x z) (cons 1 '())))) 0)
+  (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)
+
+ ) 
+
+;; Variable
 
 (define (test-runner-io run)
   ;; Evildoer examples

@@ -11,7 +11,7 @@
     (begin
       (read-line p) ; ignore #lang racket line
       (displayln  (match (parse (read p))
-                    [(Prog ds e) (asm-string (compile (Prog ds e)))]
+                    [(Letrec fs ls e) (asm-string (compile (Letrec fs ls e)))]
                     [(Lib xs ds)
                      (parameterize ((current-shared? #t))
                        (asm-string (compile-library (Lib xs ds))))]))
