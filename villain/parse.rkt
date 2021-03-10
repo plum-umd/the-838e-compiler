@@ -45,7 +45,8 @@
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
-    [(list 'make-prefab-struct (? prefab-key? k) rest ...) (Mps (parse-prefab-key k) (map parse-e rest))]
+    [(list 'make-prefab-struct (? prefab-key? k) rest) (Mps (parse-prefab-key k) (map parse-e rest))] ;;Takes the fields as a list
+    [(list 'make-prefab-struct (? prefab-key? k) rest ...) (Mps (parse-prefab-key k) (map parse-e rest))] ;;Takes the fields individually
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin)                 (Prim0 'void)]
     [(list-rest 'begin e es) (parse-seq e es)]
@@ -92,6 +93,8 @@
      (Sym s)]
     [(list 'cons (? symbol? x1) (? symbol? x2))
      (Cons x1 x2)]
+    [(list 'struct (? symbol? s) (? symbol? xs))
+     (Strct s xs)]
     [(list 'box (? symbol? x1))
      (Box x1)]
     [_ (error "bad match pattern" s)]))

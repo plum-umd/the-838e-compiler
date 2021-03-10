@@ -55,6 +55,7 @@
 ;;           | (Sym Symbol)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
+;;           | (Struct s xs)
 
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
@@ -93,3 +94,4 @@
 (struct Sym (s)               #:prefab)
 (struct Cons (p1 p2)          #:prefab)
 (struct Box (p)               #:prefab)
+(struct Strct (s xs)          #:prefab)
