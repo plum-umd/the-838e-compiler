@@ -1,6 +1,6 @@
 #lang racket
-(provide externs char-op->uc symbol->label stdlib-ids)
-(require "ast.rkt" "parse.rkt" "externs-stdlib.rkt" a86/ast)
+(provide externs char-op->uc symbol->label stdlib-ids stdlib-defs)
+(require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
   (match p
@@ -84,7 +84,9 @@
              (externs-es es))]))
 
 (define (externs-f f)
-  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
+  (if (stdlib-def-id? f) (list (Extern (symbol->label f))) '()))
+   ; if it is one of the ids of std library function definitions
+;  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
 
 (define (externs-p p)
   (let ((r (op->extern p)))
@@ -120,6 +122,9 @@
 ;; Is x provided by a stdlib?
 (define (stdlib-provided? x)
   (memq x stdlib-ids))
+
+(define (stdlib-def-id? x)
+  (memq x stdlib-defs-ids))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label

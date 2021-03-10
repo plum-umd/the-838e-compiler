@@ -1,5 +1,5 @@
 #lang racket
-(provide parse parse-e desugar)
+(provide parse parse-e desugar desugar-def parse-library)
 (require "ast.rkt")
 
 ;; S-Expr -> (Letrec (Lisof Id) (Listof Lambda) Expr)
@@ -12,6 +12,12 @@
     [(list 'begin (and ds (list-rest 'define _ _)) ... e)
      (Prog (map parse-d ds) (parse-e e))]
     [e (Prog '() (parse-e e))]))
+
+;;; S-Expr -> Library
+(define (parse-library s)
+  (match s
+    [(list (list 'provide xs ...) (and ds (list 'define _ _)) ...)
+     (Lib xs (map parse-d ds))]))
 
 ;; S-Expr -> Defn
 (define (parse-d s)
@@ -67,8 +73,8 @@
      (Lam* (gensym) xs xs* (parse-seq e es))]
     [(cons e es)
      (LCall (parse-e e) (map parse-e es))]
-    [(cons (? symbol? f) es)
-     (App f (map parse-e es))]
+    ;[(cons (? symbol? f) es)
+     ;(App f (map parse-e es))]
     [_ (error "Parse error" s)]))
 
 (define (parse-seq e es)
@@ -169,7 +175,7 @@
     [(Vec ds)           e]
     [(Var x)            e]
     [(LCall e es)       (LCall (desugar e) (map desugar es))]
-    [(App f es)         (App f (map desugar es))]
+;    [(App f es)         (App f (map desugar es))]
     [(Apply f e)        (Apply (desugar f) (desugar e))]
     [(Prim0 p)          e]
     [(Prim1 p e)        (Prim1 p (desugar e))]
@@ -181,4 +187,5 @@
     [(Letrec xs es e)   (Letrec xs (map desugar es) (desugar e))]
     [(Lam l xs e)       (Lam l xs (desugar e))]
     [(Lam* l xs xs* e)  (Lam* l xs xs* (desugar e))]
-    [(Match e0 cs)      (Match (desugar e0) cs)]))  ;; TODO: desugar cs
+    [(Match e0 cs)
+     (Match (desugar e0) (map (λ (c) (Clause (Clause-p c) (desugar (Clause-e c)))) cs))]))  ;; TODO: desugar cs

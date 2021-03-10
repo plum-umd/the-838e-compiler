@@ -25,8 +25,17 @@
 
 ;; type CEnv = [Listof Variable]
 
-;; (Letrec (Lisof Id) (Listof Lambda) Expr) -> Asm
+
 (define (compile p)
+  (let ((bs (map desugar-def stdlib-defs)))
+    (compile-aux (Letrec (map car bs) (map cdr bs) p))))
+
+;(define (add-lib-fxs p)
+;  (let ((bs (map desugar-def stdlib-defs)))
+;      (Letrec (map car bs) (map cdr bs) p)))
+
+;; (Letrec (Lisof Id) (Listof Lambda) Expr) -> Asm
+(define (compile-aux p)
   (prog (Global 'entry)
         (Default 'rel)
         (Section '.text)
@@ -69,17 +78,6 @@
      (seq (Global (symbol->label x))
           (compile-provides xs))]))
 
-;; [Listof LLambda] -> Asm
-(define (compile-λ-labels ls)
-  (match ls
-    ['() (seq)]
-    [(cons l ls) (seq (Global (if (Lam? l)
-                                  (Lam-l l)
-                                  (if (Lam*? l)
-                                      (Lam*-l l)
-                                      (error "compile-λ-labels error\n"))))
-                       (compile-λ-labels ls))]))
-
 (define (error-label c)
   (if (even? (length c))
       'raise_error
@@ -98,15 +96,17 @@
     [(Symbol s)         (compile-symbol s c)]
     [(Vec ds)           (compile-vector ds c)]
     [(Var x)            (compile-variable x c)]
-    [(LCall e es)       (if (and (Var? e) (memq (Var-x e) stdlib-ids))
-                            (compile-app (Var-x e) es c tail?)
-                            (compile-call e es c tail?))]
+    [(LCall e es)       (compile-call e es c tail?)]
+;    [(LCall e es)       (if (and (Var? e) (memq (Var-x e) stdlib-ids))
+;                            (compile-app (Var-x e) es c tail?)
+;                            (compile-call e es c tail?))]
     [(App f es)         (compile-app f es c tail?)]
-    [(Apply e0 e1)      (if (and (Var? e0) (memq (Var-x e0) stdlib-ids))
-                            (compile-apply (Var-x e0) e1 c tail?)
-                            (if (symbol? e0)
-                                (compile-apply e0 e1 c tail?)
-                                (compile-applyL e0 e1 c tail?)))]
+    [(Apply e0 e1)      (compile-applyL e0 e1 c tail?)]
+;    [(Apply e0 e1)      (if (and (Var? e0) (memq (Var-x e0) stdlib-ids))
+;                            (compile-apply (Var-x e0) e1 c tail?)
+;                            (if (symbol? e0)
+;                                (compile-apply e0 e1 c tail?)
+;                                (compile-applyL e0 e1 c tail?)))]
     [(Prim0 p)          (compile-prim0 p c)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
@@ -140,10 +140,11 @@
       [(? symbol? s)      '()]  ;; for a library function label in (Apply f e)
       [(Vec ds)           '()]
       [(Var x)            (list x)]
-      [(LCall e es)       (append (if (and (Var? e) (memq (Var-x e) stdlib-ids))
-                                      '()
-                                      (fvs e)) (apply append (map fvs es)))]
-      [(App f es)         (apply append (map fvs es))]
+      [(LCall e es)       (append (fvs e) (apply append (map fvs es)))]
+;      [(LCall e es)       (append (if (and (Var? e) (memq (Var-x e) stdlib-ids))
+;                                      '()
+;                                      (fvs e)) (apply append (map fvs es)))]
+;     [(App f es)         (apply append (map fvs es))]
       [(Apply f e)        (append (fvs f) (fvs e))]
       [(Prim0 p)          '()]
       [(Prim1 p e)        (fvs e)]
@@ -158,8 +159,9 @@
       [(Lam* l xs xs* e)  (remq* (cons xs* xs) (fvs e))]
       [(Match e0 cs)
        (append (fvs e0) (apply append (map (λ (c) (remq*
-                (match-p-fvs (Clause-p c)) (fvs (Clause-e c)))) cs)))])) 
-  (remq* stdlib-ids (remove-duplicates (fvs e)))))
+                (match-p-fvs (Clause-p c)) (fvs (Clause-e c)))) cs)))]))
+  (remove-duplicates (fvs e))))
+;  (remq* stdlib-ids (remove-duplicates (fvs e)))))
 
 ;; Pat -> [Listof Id]
 (define (match-p-fvs p)
@@ -198,7 +200,8 @@
     [(Letrec xs es e)   (append (apply append (map λs es)) (λs e))]
     [(Lam  l xs e0)     (cons e (λs e0))]
     [(Lam* l xs xs* e0) (cons e (λs e0))]
-    [(Match e0 cs)      (λs e0)]  ;; TODO: (λs cs)
+    [(Match e0 cs)
+     (append (λs e0) (apply append (map (λ (c) (λs (Clause-e c))) cs)))]  ;; TODO: (λs cs)
     [_  '()]))   ;      for '*  
 
 ;; [Listof LLambda] -> Asm
@@ -573,19 +576,20 @@
 
 (define (compile-nontail-applyL e0 e1 c)
   (let ((ret (gensym 'ret)))
+        ;(display "length of C: ") (display (length c)) (display c) (display e0) (display e1)
         (seq (%% "compile nontail applyL")
-             (pad-stack c)             
+            ; (pad-stack c)             
              (Lea r8 ret)
              (Push r8)
              (compile-e-nontail e0 (cons #f c))
              (Push rax)                ; rax contains the pointer to λ closure
              (compile-e-nontail e1 (cons #f (cons #f c)))
-             (list->stack c)            ; copy arg list elements to stack         
+             (list->stack (cons #f (cons #f c))) ; copy arg list elements to stack         
              (Sar rcx (- int-shift 3))  ; rcx = # of elements * 8
              (Mov rdx rsp)               
              (Add rdx rcx)        ; rdx points to where ptr to λ is on the stack          
              (Mov rax (Offset rdx 0))
-             (assert-proc rax c)
+             (assert-proc rax (cons #f (cons #f (cons #f c))))
              (Mov r8 type-proc)
              (Xor rax r8)
              (Mov r8 (Offset rdx 8))   ; copy ret label address to one word 
@@ -595,33 +599,33 @@
              (Mov rdx (Offset rax 0))
              (Jmp rdx)    ; (Offset rax 0) contains the address of the λ label
              (Label ret)
-             (unpad-stack c)
-             (Add rsp 8))))  ; pop the initial copy of ret label address off the stack
+             (Add rsp 8))))   ; pop the initial copy of ret label address off the stack
+         ;    (unpad-stack c))))
 
-;; Id Expr CEnv Boolean -> Asm
-(define (compile-apply f e c tail?)
-  (if tail?
-      (compile-tail-apply f e c)
-      (compile-nontail-apply f e c)))
-
-;; Id Expr CEnv -> Asm
-(define (compile-tail-apply f e c)
-  (seq (compile-e-nontail e c)
-       (Add rsp (* 8 (length c))) ; reset stack
-       (list->stack c)
-       (Jmp (symbol->label f))))
-
-;; Id Expr CEnv -> Asm
-(define (compile-nontail-apply f e c)
-  (let ((ret  (gensym 'ret)))
-    (seq (compile-e-nontail e c)
-         (pad-stack c)
-         (Lea r8 ret)
-         (Push r8)
-         (list->stack c)
-         (Jmp (symbol->label f))
-         (Label ret)
-         (unpad-stack c))))
+;;; Id Expr CEnv Boolean -> Asm
+;(define (compile-apply f e c tail?)
+;  (if tail?
+;      (compile-tail-apply f e c)
+;      (compile-nontail-apply f e c)))
+;
+;;; Id Expr CEnv -> Asm
+;(define (compile-tail-apply f e c)
+;  (seq (compile-e-nontail e c)
+;       (Add rsp (* 8 (length c))) ; reset stack
+;       (list->stack c)
+;       (Jmp (symbol->label f))))
+;
+;;; Id Expr CEnv -> Asm
+;(define (compile-nontail-apply f e c)
+;  (let ((ret  (gensym 'ret)))
+;    (seq (compile-e-nontail e c)
+;         (pad-stack c)
+;         (Lea r8 ret)
+;         (Push r8)
+;         (list->stack c)
+;         (Jmp (symbol->label f))
+;         (Label ret)
+;         (unpad-stack c))))
 
 ;; Traverse list in rax, pushing elements on to stack,
 ;; calculating length in rcx
@@ -1302,6 +1306,7 @@
                       (if (Lam*? l)
                           (Lam*-l l)
                           (error "a right-hand-side in letrec not λ")))))
+     ;  (display l) (display "  fvs l:  ") (display (fvs l)) (display "\n\n")
        (let ((length-ys (length (fvs l))))
          (seq (Lea rax label)
               (Mov (Offset rbx 0) rax)
@@ -1431,29 +1436,29 @@
 
 (define (assert-type mask type)
   (λ (arg c)
-    (seq (Push r8)
+    (seq (Push rdx)
          (Push r9)
          (Mov r9 arg)
-         (Mov r8 mask)
-         (And r9 r8)
-         (Mov r8 type)
-         (Cmp r9 r8)
+         (Mov rdx mask)
+         (And r9 rdx)
+         (Mov rdx type)
+         (Cmp r9 rdx)
          (Pop r9)
-         (Pop r8)
+         (Pop rdx)
          (Jne (error-label c)))))
 
 (define (type-pred mask type)
   (let ((l (gensym)))
-    (seq (Push r8)
-         (Mov r8 mask)
-         (And rax r8)
-         (Mov r8 type)
-         (Cmp rax r8)
+    (seq (Push rdx)
+         (Mov rdx mask)
+         (And rax rdx)
+         (Mov rdx type)
+         (Cmp rax rdx)
          (Mov rax (imm->bits #t))
          (Je l)
          (Mov rax (imm->bits #f))
          (Label l)
-         (Pop r8))))
+         (Pop rdx))))
 
 (define assert-integer
   (assert-type mask-int type-int))

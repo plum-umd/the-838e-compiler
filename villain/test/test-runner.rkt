@@ -658,8 +658,27 @@
  (check-equal? (run '(((letrec ((f (λ (z) (λ (x) (+ z x))))
                                  (g (λ (y) (add1 (f y)))))
                           f) 6) 5)) 11)
+ (check-equal? (run '(begin
+                       (define (f x)
+                         (match x
+                           [z (letrec ((g1 (λ (x) (+ 1 (g2 x))))
+                                       (g2 (λ (y) (+ z y))))
+                                (+ z (g1 z)))]))
+                       (f 2))) 7)
+ (check-equal? (run '(letrec ((f (λ (x y z . t) (+ (+ x (apply (λ (a b) (+ a b)) (list y z)))
+                                                   (apply * t))))
+                              (g (λ (x) (x (x (x 1 2 3 4 5) 2 3 4 5) 3 4 5 6))))
+                       (g f))) 88)
 
  ;; Check (begin (define _ _) ..1 e ... es) -> letrec
+  (check-equal? (run '(begin
+                        (define (f x)
+                          (match x
+                            [z (begin
+                                 (define (g1 x) (+ 1 (g2 x)))
+                                 (define (g2 y) (+ z y))
+                                 (+ z (g1 z)))]))
+                        (f 2))) 7)
   (check-equal? (run '(begin
                         (define (f1 x) (add1 x))
                         (define (f2 x) (+ x 2))

@@ -10,7 +10,6 @@ else
 endif
 
 objs = \
-	$(patsubst %.rkt,%.o,$(wildcard lib/*rkt)) \
 	main.o \
 	char.o \
 	io.o \
@@ -18,6 +17,8 @@ objs = \
 	str.o \
 	wrap.o \
 	utf8.o
+
+# $(patsubst %.rkt,%.o,$(wildcard lib/*rkt)) \
 
 default: runtime.o
 
