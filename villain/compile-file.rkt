@@ -1,6 +1,6 @@
 #lang racket
 (provide main)
-(require "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt"
+(require "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt" "modules.rkt"
          a86/printer (submod a86/printer private))
 
 ;; String -> Void
@@ -11,7 +11,14 @@
     (begin
       (read-line p) ; ignore #lang racket line
       (displayln  (match (parse (read p))
+
                     [(Letrec fs ls e) (asm-string (compile (Letrec fs ls e)))]
+
+                    [(Mod pvs rqs fls e)
+                     (let ((CModstruct (build-mgraph fn pvs rqs fls e)))
+                       ;(let ((b (if (equal? e '#s(Prim0 void)) #f #t)))
+                         (asm-string (compile-module CModstruct #t)))]
+
                     [(Lib xs ds)
                      (parameterize ((current-shared? #t))
                        (asm-string (compile-library (Lib xs ds))))]))

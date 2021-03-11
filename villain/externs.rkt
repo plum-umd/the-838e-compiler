@@ -1,15 +1,23 @@
 #lang racket
-(provide externs char-op->uc symbol->label stdlib-ids stdlib-defs)
+(provide externs char-op->uc symbol->label stdlib-ids stdlib-defs externs-es)
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
   (match p
+    
      [(Letrec fs ls e)
         (remove-duplicates (append (externs-es ls)
                                    (externs-e e)))]
 ;    [(Prog ds e)
 ;     (remove-duplicates (append (externs-ds ds)
 ;                                (externs-e (desugar e))))]
+
+    [(CMod pv-exts pvs fs ls dfλs e)
+     (let ((exts (apply set (append (externs-es ls)
+                                    (externs-e e))))
+           (prvs (set))) ;(apply set (map Extern (map symbol->label pv-exts)))))
+       (set->list (set-subtract exts prvs)))]
+
     [(Lib ps ds)
      ; provided ids aren't external
      (let ((exts (apply set (externs-ds ds)))
@@ -30,9 +38,9 @@
 
 (define (externs-e e)
   (match e
-    [(App f es)
-     (append (externs-f f)
-             (externs-es es))]
+;    [(App f es)
+;     (append (externs-f f)
+;             (externs-es es))]
     [(LCall e es)
      (append (externs-e e) (externs-es es))]
     [(Apply f e)
@@ -65,7 +73,7 @@
              (externs-cs cs))]
     [(Lam l xs e) (externs-e e)]
     [(Lam* l xs xs* e) (externs-e e)]
-    [(Var x) (externs-f x)]
+    [(Var x) '()]  ;(externs-f x)]
     [_ '()]))
 
 ;; [Listof Clause] -> [Listof Id]

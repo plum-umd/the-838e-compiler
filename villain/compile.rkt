@@ -30,10 +30,6 @@
   (let ((bs (map desugar-def stdlib-defs)))
     (compile-aux (Letrec (map car bs) (map cdr bs) p))))
 
-;(define (add-lib-fxs p)
-;  (let ((bs (map desugar-def stdlib-defs)))
-;      (Letrec (map car bs) (map cdr bs) p)))
-
 ;; (Letrec (Lisof Id) (Listof Lambda) Expr) -> Asm
 (define (compile-aux p)
   (prog (Global 'entry)
@@ -77,6 +73,90 @@
     [(cons x xs)
      (seq (Global (symbol->label x))
           (compile-provides xs))]))
+
+;; [Listof Id] -> Asm
+(define (compile-module-provides ls)
+  (match ls
+    ['()
+     (seq)]
+    [(cons l ls)
+     (seq (Global (if (Lam? l)
+                      (Lam-l l)
+                      (if (Lam*? l)
+                          (Lam*-l l)
+                          (error "error in compile--module-provides"))))
+          (compile-module-provides ls))]))
+
+;; [Listof Id] -> Asm
+;(define (compile-module-provided-externs xs)
+;  (match xs
+;    ['()  (seq)]
+;    [(cons x xs)
+;     (seq (Extern (symbol->label x))
+;          (compile-module-provided-externs xs))]))
+
+(define (compile-module-externs ls)
+  (match ls
+    ['()  (seq)]
+    [(cons l ls)
+     (seq (Extern (if (Lam? l)
+                      (Lam-l l)
+                      (if (Lam*? l)
+                          (Lam*-l l)
+                          (error "error in compile-module-externs"))))
+          (compile-module-externs ls))]))
+
+(define (compile-module p root)
+  (if root
+      (let ((bs (map desugar-def stdlib-defs)))
+        (compile-mod-root (map car bs) (map cdr bs) p))
+      (compile-mod-not-root p)))
+
+;; Expr Boolean -> Asm
+(define (compile-mod-root fs+ ls+ p)
+  (match p
+    [(CMod pv-exts pvs fs ls dfλs e)
+     (prog (Global 'entry)
+       ;   (compile-provides pvs)
+           (compile-module-provides dfλs)
+           (Default 'rel)
+           (Section '.text)
+           (compile-module-externs (apply append (map λs (remq* dfλs ls))))
+       ;    (compile-module-provided-externs pv-exts)
+           (remove-duplicates (externs-es ls+))
+           (externs (CMod pv-exts pvs fs ls dfλs e))
+           (Extern 'raise_error)
+           (Global 'raise_error_align)
+           (Extern 'str_to_symbol)
+           (Label 'entry)
+           (Mov rbx rdi) ; recv heap pointer
+           (compile-e-tail (Letrec (append fs+ fs) (append ls+ ls) e) '())
+           (Mov rdx rbx) ; return heap pointer in second return register           
+           (Ret)
+           (Label 'raise_error_align)
+           (Sub rsp 8)
+           (Jmp 'raise_error)
+          ; (compile-defines ds)
+           (compile-λ-definitions (λs e))
+           (compile-λ-definitions (apply append (map λs ls+)))
+           (compile-λ-definitions (apply append (map λs dfλs))))]))
+
+;; Expr Boolean -> Asm
+(define (compile-mod-not-root p)
+  (match p
+    [(CMod pv-exts pvs fs ls dfλs e)
+     (prog (compile-module-provides dfλs)
+           ;(compile-provides pvs)
+           (Default 'rel)
+           (Section '.text)
+           (compile-module-externs (remq* dfλs ls))
+       ;    (compile-module-provided-externs pv-exts)
+           (externs p)
+           (Extern 'raise_error)
+           (Extern 'str_to_symbol)
+          ; (compile-defines ds)
+           (compile-λ-definitions dfλs)
+           )]))
 
 (define (error-label c)
   (if (even? (length c))
