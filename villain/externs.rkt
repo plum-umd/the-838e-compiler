@@ -4,7 +4,6 @@
 
 (define (externs p)
   (match p
-    
      [(Letrec fs ls e)
         (remove-duplicates (append (externs-es ls)
                                    (externs-e e)))]

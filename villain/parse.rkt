@@ -27,7 +27,6 @@
      (Prog (map parse-d ds) (parse-e e))]
     [e (Prog '() (parse-e e))]))
 
-
 ;;; S-Expr -> Library
 (define (parse-library s)
   (match s
@@ -219,7 +218,3 @@
     [(Match e0 cs)
      (Match (desugar e0) (map (λ (c) (Clause (Clause-p c) (desugar (Clause-e c)))) cs))]))
 
-;(define (desugar-mod-def d)
-;  (match d
-;    [(Defn f xs e) (Defn f xs (desugar e))]
-;    [(Defn* f xs xs* e) (Defn* f xs xs* (desugar e))]))
