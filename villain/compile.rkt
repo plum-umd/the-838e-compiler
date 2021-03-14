@@ -158,26 +158,28 @@
 ;; Expr CEnv Boolean -> Asm
 (define (compile-e e c tail?)
   (match e
-    [(Int i)            (compile-value i)]
-    [(Bool b)           (compile-value b)]
-    [(Char c)           (compile-value c)]
-    [(Flonum f)         (compile-flonum f)]
-    [(Eof)              (compile-value eof)]
-    [(Empty)            (compile-value '())]
-    [(String s)         (compile-string s)]
-    [(Symbol s)         (compile-symbol s c)]
-    [(Vec ds)           (compile-vector ds c)]
-    [(Var x)            (compile-variable x c)]
-    [(App f es)         (compile-app f es c tail?)]
-    [(Apply f e)        (compile-apply f e c tail?)]
-    [(Prim0 p)          (compile-prim0 p c)]
-    [(Prim1 p e)        (compile-prim1 p e c)]
-    [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
-    [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]
-    [(If e1 e2 e3)      (compile-if e1 e2 e3 c tail?)]
-    [(Begin e1 e2)      (compile-begin e1 e2 c tail?)]
-    [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
-    [(Match e0 cs)      (compile-match e0 cs c tail?)]))
+    [(Int i)                    (compile-value i)]
+    [(Bool b)                   (compile-value b)]
+    [(Char c)                   (compile-value c)]
+    [(Flonum f)                 (compile-flonum f)]
+    [(Eof)                      (compile-value eof)]
+    [(Empty)                    (compile-value '())]
+    [(String s)                 (compile-string s)]
+    [(Symbol s)                 (compile-symbol s c)]
+    [(Vec ds)                   (compile-vector ds c)]
+    [(Var x)                    (compile-variable x c)]
+    [(App 'ccall
+          (cons (String f) es)) (compile-ccall (string->symbol f) es c)]
+    [(App f es)                 (compile-app f es c tail?)]
+    [(Apply f e)                (compile-apply f e c tail?)]
+    [(Prim0 p)                  (compile-prim0 p c)]
+    [(Prim1 p e)                (compile-prim1 p e c)]
+    [(Prim2 p e1 e2)            (compile-prim2 p e1 e2 c)]
+    [(Prim3 p e1 e2 e3)         (compile-prim3 p e1 e2 e3 c)]
+    [(If e1 e2 e3)              (compile-if e1 e2 e3 c tail?)]
+    [(Begin e1 e2)              (compile-begin e1 e2 c tail?)]
+    [(Let x e1 e2)              (compile-let x e1 e2 c tail?)]
+    [(Match e0 cs)              (compile-match e0 cs c tail?)]))
 
 (define (compile-e-tail e c)
   (compile-e e c #t))
@@ -1026,6 +1028,24 @@
              (compile-e e (cons x1 (cons x2 c)) tail?)
              (Add rsp 16)
              (Jmp return))])]))
+
+;; Symbol [Listof Expr] CEnv -> Asm
+(define (compile-ccall f es c)
+  (let ([argc (length es)])
+    (seq (compile-es (reverse es) c) ; push args in reverse order
+         ;; +-------------+
+         ;; | c (argv[2]) |
+         ;; +-------------+         ^
+         ;; | b (argv[1]) |         | increasing addr
+         ;; +-------------+         |
+         ;; | a (argv[0]) |         |
+         ;; +-------------+ <- rsp
+         (Mov rdi argc)              ; argc
+         (Mov rsi rsp)               ; argv
+         (pad-stack-call c argc)
+         (Call f)
+         (unpad-stack-call c argc)
+         (Add rsp (* 8 argc)))))     ; pop args
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments

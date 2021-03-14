@@ -32,6 +32,9 @@
 
 (define (externs-e e)
   (match e
+    [(App 'ccall 
+          (cons (String f) es))
+     (list (Extern (string->symbol f)))]
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
