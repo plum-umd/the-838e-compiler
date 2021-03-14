@@ -1,5 +1,5 @@
 #lang racket
-(provide = * byte? abs max min)
+(provide = * byte? abs max min sin modulo << >> bxor band bor)
 
 ;; not exactly the right place, but fine for now
 (define (byte? b)
@@ -60,3 +60,24 @@
      (if (< y x)
          (min/acc y xs)
          (min/acc x xs))]))
+
+(define (sin x)
+  (ccall "math_sin" x))
+
+(define (modulo n m)
+  (ccall "math_modulo" n m))
+
+(define (<< x s)
+  (ccall "math_lshift" x s))
+
+(define (>> x s)
+  (ccall "math_rshift" x s))
+
+(define (bxor x y)
+  (ccall "math_xor" x y))
+
+(define (band x y)
+  (ccall "math_and" x y))
+
+(define (bor x y)
+  (ccall "math_or" x y))

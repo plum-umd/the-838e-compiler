@@ -50,6 +50,11 @@
      (append (externs-p p)
              (externs-e e1)
              (externs-e e2))]
+    [(Prim3 p e1 e2 e3)
+     (append (externs-p p)
+             (externs-e e1)
+             (externs-e e2)
+             (externs-e e3))]
     [(If e1 e2 e3)
      (append (externs-e e1)
              (externs-e e2)
@@ -81,7 +86,9 @@
              (externs-es es))]))
 
 (define (externs-f f)
-  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
+  (if (stdlib-provided? f) 
+    (list (Extern (symbol->label f))) 
+    '())) ; if it is a call to std library function
 
 (define (externs-p p)
   (let ((r (op->extern p)))

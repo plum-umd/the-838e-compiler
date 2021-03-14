@@ -54,7 +54,7 @@
 ;; S-Expr -> Expr
 (define (parse-e s)
   (match s
-    [(? integer?)                  (Int s)]
+    [(? exact-integer?)            (Int s)]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Flonum s)]
@@ -124,7 +124,7 @@
 
 (define (parse-vec-lit-aux s)
   (match s
-    [(? integer?) (Int s)]
+    [(? exact-integer?) (Int s)]
     [(? boolean?) (Bool s)]
     [(? char?)    (Char s)]
     [(? flonum?)  (Flonum s)]
@@ -142,7 +142,7 @@
          integer->char char->integer box unbox empty? car cdr
          integer-length integer? 
          string-length string? integer?
-         flonum?
+         flonum? exact->inexact exact-truncate
          symbol->string string->symbol symbol?
          vector? vector-length
          string-length string?

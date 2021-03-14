@@ -1,7 +1,7 @@
 UNAME := $(shell uname)
 .PHONY: test std default
 
-libs='-lunistring'
+libs=-lunistring -lSDL2 -lm -pthread
 ifeq ($(UNAME), Darwin)
   format=macho64
 else
@@ -18,7 +18,9 @@ objs = \
 	wrap.o \
 	utf8.o \
 	capi.o \
-	unistring.o
+	unistring.o \
+	sdl.o \
+	math.o
 
 default: runtime.o
 
@@ -30,6 +32,8 @@ symbol.o: str.h types.h villain.h
 str.o: types.h villain.h
 capi.o: runtime.h villain.h
 unistring.o: villain.h
+sdl.o: villain.h
+math.o: villain.h
 
 %.run:  %.o
 	@ racket -t formdps.rkt -m make $@

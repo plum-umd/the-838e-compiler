@@ -1,5 +1,5 @@
 #lang racket
-(provide boolean? not)
+(provide boolean? not and)
 
 (define (boolean? x)
   (match x
@@ -11,3 +11,8 @@
   (match x
     [#f #t]
     [_  #f]))
+
+(define (and x y)
+  (match x
+    [#f #f]
+    [_  y]))
