@@ -387,29 +387,6 @@
                (Sal rax char-shift)
                (Xor rax type-char))]
          ['eof-object? (eq-imm val-eof)]
-         [(or 'char-whitespace? 'char-alphabetic?)
-          (let ((l (gensym)))
-            (seq (assert-char rax c)
-                 (pad-stack c)
-                 (Sar rax char-shift)
-                 (Mov rdi rax)
-                 (Call (char-op->uc p))
-                 (unpad-stack c)
-                 (Cmp rax 0)
-                 (Mov rax val-true)
-                 (Jne l)
-                 (Mov rax val-false)
-                 (Label l)))]
-         [(or 'char-upcase 'char-downcase 'char-titlecase)
-          (let ((l (gensym)))
-            (seq (assert-char rax c)
-                 (pad-stack c)
-                 (Sar rax char-shift)
-                 (Mov rdi rax)
-                 (Call (char-op->uc p))
-                 (unpad-stack c)
-                 (Sal rax char-shift)
-                 (Or rax type-char)))]
          ['write-byte
           (seq (assert-byte c)
                (pad-stack c)

@@ -1,12 +1,11 @@
 UNAME := $(shell uname)
 .PHONY: test std default
 
+libs='-lunistring'
 ifeq ($(UNAME), Darwin)
   format=macho64
-  libs='-lunistring'
 else
   format=elf64
-  libs='-l:libunistring.a'
 endif
 
 objs = \
@@ -17,7 +16,9 @@ objs = \
 	symbol.o \
 	str.o \
 	wrap.o \
-	utf8.o
+	utf8.o \
+	capi.o \
+	unistring.o
 
 default: runtime.o
 
@@ -27,6 +28,8 @@ char.o: villain.h utf8.h char.h
 io.o: runtime.h villain.h utf8.h
 symbol.o: str.h types.h villain.h
 str.o: types.h villain.h
+capi.o: runtime.h villain.h
+unistring.o: villain.h
 
 %.run:  %.o
 	@ racket -t formdps.rkt -m make $@
