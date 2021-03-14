@@ -49,16 +49,6 @@ Code emitted by the compiler depends upon the following libraries:
   macOS (with Homebrew) or `apt-get install libunistring-dev` on
   Ubuntu, or you can download and compile the source code.
 
-  If you are using Arch Linux, the `libunistring` package does not come with
-  the static library of `libunistring` (suffixed `.a`). You need to build it
-  from source by
-
-  ```console
-  $ curl -OL https://raw.githubusercontent.com/archlinux/svntogit-packages/packages/libunistring/trunk/PKGBUILD
-  $ echo "options=('staticlibs')" >> PKGBUILD
-  $ makepkg -si
-  ```
-
 ## Reference
 
 - [standard libraries](stdlibs.md)
