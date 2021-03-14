@@ -1,5 +1,5 @@
 #lang racket
-(provide externs char-op->uc symbol->label)
+(provide externs symbol->label)
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
@@ -32,6 +32,9 @@
 
 (define (externs-e e)
   (match e
+    [(App 'ccall 
+          (cons (String f) es))
+     (list (Extern (string->symbol f)))]
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
@@ -99,15 +102,6 @@
     #;['string->symbol 'str_to_symbol]  ;; always included now
     ['open-input-file 'open_input_file]
     ['close-input-port 'close_input_port]
-    [_ (char-op->uc o)]))
-
-(define (char-op->uc o)
-  (match o
-    ['char-alphabetic? 'uc_is_property_alphabetic]
-    ['char-whitespace? 'uc_is_property_white_space]
-    ['char-upcase 'uc_toupper]
-    ['char-downcase 'uc_tolower]
-    ['char-titlecase 'uc_totitle]
     [_ #f]))
 
 ;; Symbol -> Boolean

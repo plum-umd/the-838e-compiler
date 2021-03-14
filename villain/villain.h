@@ -55,6 +55,16 @@ typedef struct vl_port {
 /* return the type of x */
 vl_type vl_typeof(vl_val x);
 
+/* check if type of x matches type.
+ * raise error on type mismatch. */
+void vl_check_type(vl_val x, vl_type type);
+/* check if argc matches arity
+ * raise error on arity mismatch. */
+void vl_check_arity(uint64_t argc, uint64_t arity);
+/* check if argc matches variable arity
+ * raise error on arity mismatch. */
+void vl_check_varity(uint64_t argc, uint64_t min, uint64_t max);
+
 /**
  * Wrap/unwrap villain values
  *

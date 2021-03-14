@@ -141,7 +141,6 @@
   '(add1 sub1 zero? char? write-byte write-char eof-object?
          integer->char char->integer box unbox empty? car cdr
          integer-length integer? 
-         char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
          string-length string? integer?
          flonum?
          symbol->string string->symbol symbol?
