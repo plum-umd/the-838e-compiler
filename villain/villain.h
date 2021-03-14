@@ -83,6 +83,7 @@ vl_str* vl_unwrap_str(vl_val x);
 vl_val vl_wrap_str(vl_str *s);
 
 double vl_unwrap_flonum(vl_val x);
+double* vl_unwrap_flonum_ptr(vl_val x);
 vl_val vl_wrap_flonum(double f);
 
 vl_box vl_unwrap_box(vl_val x);

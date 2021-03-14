@@ -1,6 +1,6 @@
 #lang racket
 (provide main)
-(require "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt" "modules.rkt"
+(require "parse.rkt" "compile.rkt" "ast.rkt" "modules.rkt"
          a86/printer (submod a86/printer private))
 
 ;; String -> Void

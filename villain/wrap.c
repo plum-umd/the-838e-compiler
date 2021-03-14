@@ -113,16 +113,16 @@ vl_val vl_wrap_str(vl_str *s)
 
 double vl_unwrap_flonum(vl_val x)
 {
- return *((double *)(x ^ flonum_type_tag));
-
+  return *((double *)(x ^ flonum_type_tag));
+}
+double* vl_unwrap_flonum_ptr(vl_val x)
+{
+  return (double *)(x ^ flonum_type_tag);
 }
 vl_val vl_wrap_flonum(double f)
 {
   double *p = vl_calloc(sizeof(double), 1);
-
   *p = f;
-
-  // let's just see how it goes
   return ((vl_val)p) | flonum_type_tag;
 }
 

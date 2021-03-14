@@ -505,7 +505,21 @@
                (Sal rax int-shift)
                (Or rax type-int))]
          ['flonum?
-          (type-pred ptr-mask type-flonum)])))
+          (type-pred ptr-mask type-flonum)]
+         ['exact->inexact 
+          (seq (assert-integer rax c)
+               (Sar rax int-shift)     ; unwrap
+               (Cvtsi2sd xmm0 rax)
+               (Movsd (Offset rbx 0) xmm0)
+               (Mov rax rbx)
+               (Or rax type-flonum)
+               (Add rbx 8))]
+         ['exact-truncate
+          (seq (assert-flonum rax c)
+               (Xor rax type-flonum)
+               (Movsd xmm0 (Offset rax 0))
+               (Cvtsd2si rax xmm0)
+               (Sal rax int-shift))])))
 
 ;; Op2 Expr Expr CEnv -> Asm
 (define (compile-prim2 p e1 e2 c)
@@ -720,14 +734,12 @@
                (assert-flonum rax c)
                (Xor rax type-flonum)              
                (Xor r8 type-flonum)
-               (Movapd xmm0 (Offset r8 0))
+               (Movsd xmm0 (Offset r8 0))
                (Addsd xmm0 (Offset rax 0))              
-               (Movapd (Offset rbx 0) xmm0)
+               (Movsd (Offset rbx 0) xmm0)
                (Mov rax rbx)
                (Or rax type-flonum)
-               (Add rbx 8)
-               )
-               ]
+               (Add rbx 8))]
          ['fl- (seq
                (Pop r8)
                (assert-flonum r8 c)
@@ -735,16 +747,12 @@
                (Xor rax type-flonum)
               
                (Xor r8 type-flonum)
-               (Movapd xmm0 (Offset r8 0))
+               (Movsd xmm0 (Offset r8 0))
                (Subsd xmm0 (Offset rax 0))               
-               (Movapd (Offset rbx 0) xmm0)
+               (Movsd (Offset rbx 0) xmm0)
                (Mov rax rbx)
                (Or rax type-flonum)
-               (Add rbx 8)
-               )
-               ]
-
-
+               (Add rbx 8))]
          ['fl=
           (let ((eq-true (gensym 'eq)))
             (seq (Pop r8)
@@ -759,8 +767,6 @@
                  (Je eq-true)
                  (Mov rax (imm->bits #f))
                  (Label eq-true)))]
-
-
          ['fl<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
@@ -778,9 +784,7 @@
                  (Mov rax (imm->bits #t))
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
-                 (Label leq-true)))]
-
-          )))
+                 (Label leq-true)))])))
 
 ;; Op3 Expr Expr Expr CEnv -> Asm
 (define (compile-prim3 p e1 e2 e3 c)

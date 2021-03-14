@@ -188,6 +188,10 @@
 (instruct Addsd  (dst src) check:xarith)
 (instruct Subsd  (dst src) check:xarith)
 (instruct Movapd (dst src) check:xsrc-xdest)
+(instruct Movsd  (dst src) check:xsrc-xdest)
+(instruct Movq   (dst src) check:src-dest)
+(instruct Cvtsd2si (dst src) check:src-dest)
+(instruct Cvtsi2sd (dst src) check:src-dest)
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
 
@@ -244,8 +248,10 @@
       (Addsd? x)
       (Subsd? x)
       (Movapd? x)
-      )
-  )
+      (Movsd? x)
+      (Movq? x)
+      (Cvtsd2si? x)
+      (Cvtsi2sd? x)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Instruction sequencing and program error checking

@@ -164,9 +164,22 @@
        (string-append tab "movapd "
                       (arg->string a1) ", "
                       (arg->string a2))]
-
-      
-      ))
+      [(Movsd a1 a2)
+       (string-append tab "movsd "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+      [(Cvtsd2si a1 a2)
+       (string-append tab "cvtsd2si "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+      [(Cvtsi2sd a1 a2)
+       (string-append tab "cvtsi2sd "
+                      (arg->string a1) ", "
+                      (arg->string a2))]
+      [(Movq a1 a2)
+       (string-append tab "movq "
+                      (arg->string a1) ", "
+                      (arg->string a2))]))
 
 
   (define (comment->string c)
