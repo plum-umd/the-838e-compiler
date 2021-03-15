@@ -54,8 +54,8 @@ typedef struct vl_port {
 } vl_port;
 
 typedef struct vl_prefab {
-  uint64_t numFields;
   vl_val key;
+  uint64_t numFields;
   vl_val fields[];
 } vl_prefab;
 

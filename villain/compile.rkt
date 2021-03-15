@@ -133,8 +133,8 @@
             (Jne (error-label (reverse xs)))
             (compile-e (Symbol s) (reverse xs) #f)
             (Mov r8 (length xs))
-            (Mov (Offset rbx 0) r8);;Store the number of fields
-            (Mov (Offset rbx 8) rax) ;;Store the key i.e the symbol
+            (Mov (Offset rbx 8) r8);;Store the number of fields
+            (Mov (Offset rbx 0) rax) ;;Store the key i.e the symbol
 
             (Mov r8 rbx)
             (Mov r9 rsp)
@@ -179,11 +179,11 @@
             (Mov r8 (Offset rsp 0))
             (Mov r9 type-prefab)
             (Xor r8 r9)
-            (Mov r9 (Offset r8 8))
+            (Mov r9 (Offset r8 0))
             (Cmp r9 rax)
             (Mov rax val-false)
             (Jne end2)
-            (Mov r9 (Offset r8 0))
+            (Mov r9 (Offset r8 8))
             (Cmp r9 (length xs))
             (Jne end2)
             (Mov rax val-true)
@@ -219,10 +219,10 @@
         (Mov r8 (Offset rsp 0))
         (Mov r9 type-prefab)
         (Xor r8 r9)
-        (Mov r9 (Offset r8 8))
+        (Mov r9 (Offset r8 0))
         (Cmp r9 rax)
         (Jne (error-label (list #f #f)))
-        (Mov r9 (Offset r8 0))
+        (Mov r9 (Offset r8 8))
         (Cmp r9 (+ i (length xs)))
         (Jne (error-label (list #f #f)))
         (Mov rax (Offset r8 (* 8 (+ 2 i))))
@@ -1029,6 +1029,15 @@
          (Jmp buildPrefab)
          
          (Label end)
+
+         ;;Swap the placement of the number of fields and the keys
+         (Mov r8 (Offset rbx 8)) ;;The key
+         (Mov r9 (Offset rbx 0)) ;;The number of fields
+
+         (Mov (Offset rbx 0) r8)
+         (Mov (Offset rbx 8) r9)
+
+         ;;Return a pointer to the struct
          (Mov rax rbx)
          (Mov r8 type-prefab) 
          (Or rax r8) ;;If type-prefab is not moved into a 64-bit register, then it is not treated as a 64-bit value in this or
@@ -1229,7 +1238,25 @@
              (Push r8)
              (compile-e e (cons x1 (cons x2 c)) tail?)
              (Add rsp 16)
-             (Jmp return))])]))
+             (Jmp return))]
+       [(Strct k xs)
+        (seq
+         (Mov r8 rax)
+         (Mov r9 ptr-mask)
+         (And r8 r9)
+         (Mov r9 type-prefab)
+         (Cmp r8 r9)
+         (Jne next)
+         (Xor rax r9)
+         (Mov r8 (Offset rax 0))
+         (Push r8)
+         (Mov r8 rax)
+         (Add r8 8)
+         (Or r8 type-vector)
+         (Push r8)
+         (compile-e e (cons xs (cons k c)) tail?)
+         (Add rsp 16)
+         (Jmp return))])]))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments

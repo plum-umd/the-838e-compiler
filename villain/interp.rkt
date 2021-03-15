@@ -153,7 +153,7 @@
                (interp-match v cs r ds))]
           [(Strct s xs)
            (if (and (struct? v) (prefab-struct-key v))
-               (interp-env e (ext (ext r xs (struct->list v)) s (prefab-struct-key v)) ds)
+               (interp-env e (ext (ext r xs (list->vector (struct->list v))) s (prefab-struct-key v)) ds)
                (interp-match v cs r ds))])])]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | 'err
@@ -189,7 +189,7 @@
 (define (create-predicate s xs)
   (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "?")) 'st)
              (match st
-               [(struct s1 xs1) (if (eq? (quote ,s) s1) (if (eq? ,(length xs) (length xs1)) #t #f) #f)]
+               [(struct s1 xs1) (if (eq? (quote ,s) s1) (if (eq? ,(length xs) (vector-length xs1)) #t #f) #f)]
                [_ #f]))))
 
 ;;List -> Expr
@@ -209,7 +209,7 @@
   (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "-" (symbol->string x))) 'st)
               (match st
                 [(struct s xs1)
-                 (list-ref xs1 (index-of ,(var_list->sym_cons xs) (quote ,x)))]
+                 (vector-ref xs1 (index-of ,(var_list->sym_cons xs) (quote ,x)))]
                 [_ 'err]))))
 
 ;;Symbol (Listof Symbol) -> Defns

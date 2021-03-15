@@ -256,13 +256,64 @@
                         ['() 0]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
                  3)
-    (check-equal? (run
+  (check-equal? (run
                  '(begin
                     (define (len lst)
                       (match lst
                         [(cons h t) (+ 1 (len t))]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
-                 'err)
+                'err)
+  
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct k vs) k])))
+                'sprout)
+  
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct k vs) (vector-ref vs 0)])))
+                2)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct k vs) (vector-ref vs 1)])))
+                3)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct k vs) (vector-length vs)])))
+                2)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct k vs) (vector-ref vs 3)])))
+                'err)
+
+  (check-equal? (run
+                 '(begin
+                    (struct empt () #:prefab)
+                    (match (empt)
+                      [(cons h t) h]
+                      [(struct k vs) k])))
+                'empt)
+
+  (check-equal? (run
+                 '(begin
+                    (struct empt () #:prefab)
+                    (match (empt)
+                      [(cons h t) h]
+                      [(struct k vs) (vector-length vs)])))
+                0)
 
   (check-equal? (run
                  '(begin (define (tri x)

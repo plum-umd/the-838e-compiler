@@ -32,8 +32,8 @@
     [(? prefab-bits? i)
      (let ((p (bitwise-xor i type-prefab)))
        (apply make-prefab-struct
-              (unload-value (heap-ref (+ p (arithmetic-shift 1 imm-shift))))
-              (for/list ([k (in-range 2 (+ 2 (heap-ref p)) 1)])
+              (unload-value (heap-ref p))
+              (for/list ([k (in-range 2 (+ 2 (heap-ref (+ p (arithmetic-shift 1 imm-shift)))) 1)])
                 (unload-value (heap-ref (+ p (arithmetic-shift k imm-shift)))))))]
          
     [(? vector-bits? i)
