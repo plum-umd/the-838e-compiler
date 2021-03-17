@@ -268,52 +268,72 @@
                  '(begin
                     (struct sprout (x y) #:prefab)
                     (match (sprout 2 3)
-                      [(struct k vs) k])))
-                'sprout)
-  
-  (check-equal? (run
-                 '(begin
-                    (struct sprout (x y) #:prefab)
-                    (match (sprout 2 3)
-                      [(struct k vs) (vector-ref vs 0)])))
+                      [(struct sprout (x y)) x])))
                 2)
+ 
 
   (check-equal? (run
                  '(begin
                     (struct sprout (x y) #:prefab)
                     (match (sprout 2 3)
-                      [(struct k vs) (vector-ref vs 1)])))
+                      [(struct sprout (a b)) b])))
                 3)
 
   (check-equal? (run
                  '(begin
-                    (struct sprout (x y) #:prefab)
-                    (match (sprout 2 3)
-                      [(struct k vs) (vector-length vs)])))
-                2)
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct sprout (a b c)) c])))
+                1)
 
   (check-equal? (run
                  '(begin
-                    (struct sprout (x y) #:prefab)
-                    (match (sprout 2 3)
-                      [(struct k vs) (vector-ref vs 3)])))
+                    (struct empt () #:prefab)
+                    (match (empt)
+                      [(cons h t) h]
+                      [(struct empt ()) 5])))
+                5)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct sprout (a b c)) 7]
+                      [(struct sprout (a b)) 6])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct sprout (a b)) 6]
+                      [(struct sprout (a b c)) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct notSprout (a b)) 6]
+                      [(struct sprout (a b c)) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x) #:prefab)
+                    (match (sprout 2)
+                      [(struct sprout (a b)) 6]
+                      [(struct sprout (a b c)) 7])))
                 'err)
 
+  
   (check-equal? (run
                  '(begin
                     (struct empt () #:prefab)
                     (match (empt)
                       [(cons h t) h]
-                      [(struct k vs) k])))
-                'empt)
-
-  (check-equal? (run
-                 '(begin
-                    (struct empt () #:prefab)
-                    (match (empt)
-                      [(cons h t) h]
-                      [(struct k vs) (vector-length vs)])))
-                0)
+                      [(struct empt (x)) 2])))
+                'err)
 
   (check-equal? (run
                  '(begin (define (tri x)

@@ -152,8 +152,10 @@
                (interp-env e (ext (ext r x2 (cdr v)) x1 (car v)) ds)
                (interp-match v cs r ds))]
           [(Strct s xs)
-           (if (and (struct? v) (prefab-struct-key v))
-               (interp-env e (ext (ext r xs (list->vector (struct->list v))) s (prefab-struct-key v)) ds)
+             (if (and (struct? v) (eq? s (prefab-struct-key v)) (eq? (length xs) (length (struct->list v))))
+               (let ((values (struct->list v))
+                     (vars xs))
+                 (interp-env e (foldr (λ (x a) (ext a (car x) (car (cdr x)))) r (zip vars values)) ds))
                (interp-match v cs r ds))])])]))
 
 ;; (Listof Expr) REnv Defns -> (Listof Value) | 'err
@@ -170,8 +172,7 @@
   (match ds
    ['() '()]
    [(cons (Struct s xs) l) (append (create-struct-bindings s xs) (interp-definitions l))]
-   [(cons h t) (cons h (interp-definitions t))]
-   ))
+   [(cons h t) (cons h (interp-definitions t))]))
 
 ;;Symbol (Listof Symbol) -> Defns ;; These only work with symbols as the 's'!  ;; Also, need to do arity checks
 (define (create-struct-bindings s xs)
@@ -189,7 +190,7 @@
 (define (create-predicate s xs)
   (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "?")) 'st)
              (match st
-               [(struct s1 xs1) (if (eq? (quote ,s) s1) (if (eq? ,(length xs) (vector-length xs1)) #t #f) #f)]
+               [(struct ,s ,xs) #t]
                [_ #f]))))
 
 ;;List -> Expr
@@ -208,8 +209,7 @@
 (define (create-accessor s xs x)
   (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "-" (symbol->string x))) 'st)
               (match st
-                [(struct s xs1)
-                 (vector-ref xs1 (index-of ,(var_list->sym_cons xs) (quote ,x)))]
+                [(struct ,s ,xs) ,x]
                 [_ 'err]))))
 
 ;;Symbol (Listof Symbol) -> Defns

@@ -1240,23 +1240,58 @@
              (Add rsp 16)
              (Jmp return))]
        [(Strct k xs)
-        (seq
-         (Mov r8 rax)
-         (Mov r9 ptr-mask)
-         (And r8 r9)
-         (Mov r9 type-prefab)
-         (Cmp r8 r9)
-         (Jne next)
-         (Xor rax r9)
-         (Mov r8 (Offset rax 0))
-         (Push r8)
-         (Mov r8 rax)
-         (Add r8 8)
-         (Or r8 type-vector)
-         (Push r8)
-         (compile-e e (cons xs (cons k c)) tail?)
-         (Add rsp 16)
-         (Jmp return))])]))
+        (let ((loop (gensym "loop"))
+              (end (gensym "end")))
+          (seq           
+           ;;Check if it is a prefab structure
+           (Mov r8 rax)
+           (Mov r9 ptr-mask)
+           (And r8 r9)
+           (Mov r9 type-prefab)
+           (Cmp r8 r9)
+           (Jne next)
+
+           ;;Check if the key of the struct is the same as the key in the pattern
+           (Xor rax r9)
+           (Push rax)
+           (compile-symbol k (cons #f c))
+           (Mov r8 rax)
+           (Pop rax)
+           (Mov r9 (Offset rax 0))
+           (Mov r10 type-prefab)
+           (Or rax r10)
+           (Cmp r8 r9)
+           (Jne next)
+
+           ;;Check if the number of fields in the pattern is the same as the number of fields of the struct
+           (Mov r10 type-prefab)
+           (Xor rax r10)
+           (Mov r8 (length xs))
+           (Mov r9 (Offset rax 8))
+           (Mov r10 type-prefab)
+           (Or rax r10)
+           (Cmp r8 r9)
+           (Jne next)
+
+           ;;Place the fields on the stack
+           (Mov r10 type-prefab)
+           (Xor rax r10)
+           (Mov r9 (Offset rax 8))
+           (Add rax 16)
+
+           (Label loop)
+           (Cmp r9 0)
+           (Jle end)
+           (Mov r8 (Offset rax 0))
+           (Push r8)
+           (Sub r9 1)
+           (Add rax 8)
+           (Jmp loop)
+           
+           (Label end)
+           (compile-e e (append (reverse xs) c) tail?)
+           (Add rsp (* 8 (length xs)))
+           (Jmp return)))])]))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments

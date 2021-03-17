@@ -93,7 +93,7 @@
      (Sym s)]
     [(list 'cons (? symbol? x1) (? symbol? x2))
      (Cons x1 x2)]
-    [(list 'struct (? symbol? s) (? symbol? xs))
+    [(list 'struct (? symbol? s) (list (? symbol? xs)...))
      (Strct s xs)]
     [(list 'box (? symbol? x1))
      (Box x1)]
