@@ -68,6 +68,40 @@
      (seq (Global (symbol->label x))
           (compile-provides xs))]))
 
+;; [Listof Id] -> Asm
+(define (compile-module-provided-externs xs)
+  (match xs
+    ['()  (seq)]
+    [(cons x xs)
+     (seq (Extern (symbol->label x))
+          (compile-module-provided-externs xs))]))
+
+;; Expr Boolean -> Asm
+(define (compile-module p root)
+  (match p
+    [(CMod pv-exts pvs ds e)
+     ;(display "externs p: ") (display (externs p))
+     (prog (if root (Global 'entry) (seq))
+           (compile-provides pvs)
+           (Default 'rel)
+           (Section '.text)
+           (compile-module-provided-externs pv-exts)
+           (externs p)
+           (Extern 'raise_error)
+           (if root (Global 'raise_error_align) (seq))
+           (Extern 'str_to_symbol)
+           (if root
+               (seq (Label 'entry)
+                         (Mov rbx rdi) ; recv heap pointer
+                         (compile-e-tail e '())
+                         (Mov rdx rbx) ; return heap pointer in second return register           
+                         (Ret)
+                         (Label 'raise_error_align)
+                         (Sub rsp 8)
+                         (Jmp 'raise_error))
+               (seq))
+           (compile-defines ds))]))
+
 (define (error-label c)
   (if (even? (length c))
       'raise_error
@@ -533,6 +567,26 @@
                (IDiv r8)
                (Mov rax rdx)
                )]
+         ['>
+          (let ((gt-true (gensym 'gt)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jg gt-true)
+                 (Mov rax (imm->bits #f))
+                 (Label gt-true)))]
+         ['<
+          (let ((lt-true (gensym 'lt)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jl lt-true)
+                 (Mov rax (imm->bits #f))
+                 (Label lt-true)))]
          ['<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
@@ -543,6 +597,16 @@
                  (Jle leq-true)
                  (Mov rax (imm->bits #f))
                  (Label leq-true)))]
+         ['>=
+          (let ((geq-true (gensym 'geq)))
+            (seq (Pop r8)
+                 (assert-integer r8 c)
+                 (assert-integer rax c)
+                 (Cmp r8 rax)
+                 (Mov rax (imm->bits #t))
+                 (Jge geq-true)
+                 (Mov rax (imm->bits #f))
+                 (Label geq-true)))]
          ['eq?
           (let ((l (gensym)))
             (seq (Pop r8)
@@ -677,9 +741,9 @@
                (assert-flonum rax c)
                (Xor rax type-flonum)              
                (Xor r8 type-flonum)
-               (Movapd xmm0 (Offset r8 0))
+               (Movsd xmm0 (Offset r8 0))
                (Addsd xmm0 (Offset rax 0))              
-               (Movapd (Offset rbx 0) xmm0)
+               (Movsd (Offset rbx 0) xmm0)
                (Mov rax rbx)
                (Or rax type-flonum)
                (Add rbx 8)
@@ -692,9 +756,9 @@
                (Xor rax type-flonum)
               
                (Xor r8 type-flonum)
-               (Movapd xmm0 (Offset r8 0))
+               (Movsd xmm0 (Offset r8 0))
                (Subsd xmm0 (Offset rax 0))               
-               (Movapd (Offset rbx 0) xmm0)
+               (Movsd (Offset rbx 0) xmm0)
                (Mov rax rbx)
                (Or rax type-flonum)
                (Add rbx 8)
