@@ -187,7 +187,7 @@
 (instruct Cqo    ()        check:none)
 (instruct Addsd  (dst src) check:xarith)
 (instruct Subsd  (dst src) check:xarith)
-(instruct Movapd (dst src) check:xsrc-xdest)
+(instruct Movsd (dst src) check:xsrc-xdest)
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
 
@@ -243,7 +243,7 @@
       (Comment? x)
       (Addsd? x)
       (Subsd? x)
-      (Movapd? x)
+      (Movsd? x)
       )
   )
 
