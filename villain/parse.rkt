@@ -93,10 +93,12 @@
      (Sym s)]
     [(list 'cons (? symbol? x1) (? symbol? x2))
      (Cons x1 x2)]
-    [(list 'struct (? symbol? s) (list (? symbol? xs)...))
-     (Strct s xs)]
     [(list 'box (? symbol? x1))
      (Box x1)]
+    [(list 'struct (? symbol? s) (list (? symbol? xs)...))
+     (Strct s xs)]
+    [(list (? symbol? s) (? symbol? xs)...)
+     (Strct s xs)] ;;Should be last becuase it encompasses other more specific patternsd
     [_ (error "bad match pattern" s)]))
 
 (define (parse-binding b)

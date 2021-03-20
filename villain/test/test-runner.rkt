@@ -272,7 +272,7 @@
                 2)
  
 
-  (check-equal? (run
+ (check-equal? (run
                  '(begin
                     (struct sprout (x y) #:prefab)
                     (match (sprout 2 3)
@@ -297,22 +297,25 @@
   (check-equal? (run
                  '(begin
                     (struct sprout (x y z) #:prefab)
+                    (struct beans (x y z) #:prefab)
                     (match (sprout 2 3 1)
                       [(struct sprout (a b c)) 7]
-                      [(struct sprout (a b)) 6])))
+                      [(struct beans (a b c)) 6])))
                 7)
 
   (check-equal? (run
                  '(begin
                     (struct sprout (x y z) #:prefab)
+                    (struct beans (x y z) #:prefab)
                     (match (sprout 2 3 1)
-                      [(struct sprout (a b)) 6]
+                      [(struct beans (a b c)) 6]
                       [(struct sprout (a b c)) 7])))
                 7)
 
   (check-equal? (run
                  '(begin
                     (struct sprout (x y z) #:prefab)
+                    (struct notSprout (x y) #:prefab)
                     (match (sprout 2 3 1)
                       [(struct notSprout (a b)) 6]
                       [(struct sprout (a b c)) 7])))
@@ -320,19 +323,100 @@
 
   (check-equal? (run
                  '(begin
-                    (struct sprout (x) #:prefab)
-                    (match (sprout 2)
-                      [(struct sprout (a b)) 6]
-                      [(struct sprout (a b c)) 7])))
+                    (struct sprout1 (x) #:prefab)
+                    (struct sprout2 (x y) #:prefab)
+                    (struct sprout3 (x y z) #:prefab)
+                    (match (sprout1 2)
+                      [(struct sprout2 (a b)) 6]
+                      [(struct sprout3 (a b c)) 7])))
                 'err)
 
   
   (check-equal? (run
                  '(begin
+                    (struct empt1 () #:prefab)
+                    (struct empt2 (x) #:prefab)
+                    (match (empt1)
+                      [(cons h t) h]
+                      [(struct empt2 (x)) 2])))
+                'err)
+
+  
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(sprout x y) x])))
+                2)
+ 
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(sprout a b) b])))
+                3)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(sprout a b c) c])))
+                1)
+
+  (check-equal? (run
+                 '(begin
                     (struct empt () #:prefab)
                     (match (empt)
                       [(cons h t) h]
-                      [(struct empt (x)) 2])))
+                      [(empt) 5])))
+                5)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x y z) #:prefab)
+                    (struct sprout2 (x) #:prefab)
+                    (match (sprout1 2 3 1)
+                      [(sprout1 a b c) 7]
+                      [(sprout2 a) 6])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x y z) #:prefab)
+                    (struct sprout2 (x) #:prefab)
+                    (match (sprout1 2 3 1)
+                      [(sprout2 a) 6]
+                      [(sprout1 a b c) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (struct notSprout (a b) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(notSprout a b) 6]
+                      [(sprout a b c) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x) #:prefab)
+                    (struct sprout2 (x y) #:prefab)
+                    (struct sprout3 (x y z) #:prefab)
+                    (match (sprout1 2)
+                      [(sprout2 a b) 6]
+                      [(sprout3 a b c) 7])))
+                'err)
+
+  
+  (check-equal? (run
+                 '(begin
+                    (struct empt1 () #:prefab)
+                    (struct empt2 (x) #:prefab)
+                    (match (empt1)
+                      [(cons h t) h]
+                      [(empt2 x) 2])))
                 'err)
 
   (check-equal? (run
