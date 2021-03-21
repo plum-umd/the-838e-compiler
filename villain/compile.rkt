@@ -1,6 +1,9 @@
 #lang racket
 (provide (all-defined-out))
-(require "ast.rkt" "parse.rkt" "types.rkt" "externs.rkt" a86/ast)
+(require "ast.rkt" "parse.rkt" "types.rkt" "externs.rkt"
+         racket/serialize
+         a86/ast
+         a86/printer (submod a86/printer private))
 
 ;; Registers used
 (define rax 'rax) ; return  ; the dividend of div in string-ref and string-set!
@@ -25,29 +28,48 @@
 
 ;; type CEnv = [Listof Variable]
 
-
-(define (compile p)
-  (let ((bs (map desugar-def stdlib-defs)))
-    (compile-aux (Letrec (map car bs) (map cdr bs) p))))
-
 ;; (Letrec (Lisof Id) (Listof Lambda) Expr) -> Asm
-(define (compile-aux p)
-  (prog (Global 'entry)
-        (Default 'rel)
-        (Section '.text)
-        (externs p)
-        (Extern 'raise_error)
-        (Global 'raise_error_align)
-        (Extern 'str_to_symbol)
-        (Label 'entry)
-        (Mov rbx rdi) ; recv heap pointer
-        (compile-e-tail p '())
-        (Mov rdx rbx) ; return heap pointer in second return register
-        (Ret)
-        (compile-λ-definitions (λs p))
-        (Label 'raise_error_align)
-        (Sub rsp 8)
-        (Jmp 'raise_error)))
+(define (compile p)
+  (let ((in-fs (open-input-file "./lib-fs"))
+        (in-letrec (open-input-file "./libraries-letrec"))
+        (in-ls-ids (open-input-file "./lib-ls-ids"))
+        (in-lib-exts (open-input-file "./lib-externs")))
+    (let ((fs (read in-fs))
+          (compiled-lib-letrec (deserialize (read in-letrec)))
+          (ls-ids (deserialize (read in-ls-ids)))
+          (libexts (deserialize (read in-lib-exts))))                            
+      (begin
+        (close-input-port in-fs)
+        (close-input-port in-letrec)
+        (close-input-port in-ls-ids)
+        (close-input-port in-lib-exts)
+        (let ((lib-ls-ids-exts (seq (map (λ (id) (Extern id)) ls-ids))))
+          (prog (Global 'entry)
+                (Default 'rel)
+                (Section '.text)
+                (Extern 'raise_error)
+                (Global 'raise_error_align)
+                (Extern 'str_to_symbol)
+                lib-ls-ids-exts ;; externs of library lambda defs
+                (externs p)
+                (apply seq libexts)    ;; externs in library lambdas
+                (Label 'entry)
+                (Mov rbx rdi) ; recv heap pointer
+                (%% "start-of-compiled-library-functions-letrec-fs-ls")
+                (apply seq compiled-lib-letrec)
+                (%% "end-of-compilation-of-library-functions-letrec-fs-ls")
+                (%% "start-of-compilation-of-program")
+                (compile-e-tail p (reverse fs))
+                (Add rsp (* 8 (length fs)))       ;; to pop lib fs off the stack
+                (%% "end-of-compilation-of-program")
+                (Mov rdx rbx) ; return heap pointer in second return register
+                (Ret)
+                (%% "start-of-compiling-λ-definitions-of-program")
+                (compile-λ-definitions (λs p))
+                (%% "end-of-compiling-λ-definitions-of-program")
+                (Label 'raise_error_align)
+                (Sub rsp 8)
+                (Jmp 'raise_error)))))))
 
 ;; Expr -> Asm
 (define (compile-library p)
@@ -61,9 +83,51 @@
            (Extern 'raise_error_align)
            (Extern 'str_to_symbol)
            (compile-defines ds))]))
-;           (compile-λ-definitions (λs
-;            (label-λ (let ((bs (map desugar-def ds)))
- ;                      (Letrec (map car bs) (map cdr bs) (void))))))
+
+(define (libraries-fs-ls)
+  (let ((bs (map desugar-def stdlib-defs)))
+    (let ((fs (map car bs)) (ls (map cdr bs)))
+      (cons fs ls))))
+  
+(define (compile-library-letrec fs ls)
+  (begin
+    (with-output-to-file "lib-fs"
+      #:exists 'truncate
+      (λ ()
+        (displayln fs)))
+    (let ((out (open-output-file "lib-ls-ids" #:exists 'truncate)))
+      (begin
+        (write (serialize (λs-labels ls)) out)
+        (close-output-port out)))
+    (let ((out (open-output-file "lib-externs" #:exists 'truncate)))
+      (begin
+        (write (serialize (externs-es ls)) out)
+        (close-output-port out)))
+    (seq
+     (compile-e-tail (Letrec fs ls #s(Int 0)) '())
+     ; to reverse poping lib fs off the stack
+     (Sub rsp (* 8 (length fs))))))
+
+(define (compile-library-λdefs ls)
+  (prog (compile-module-provides ls)
+        (Default 'rel)
+        (Section '.text)
+        (externs-es ls)
+        (Extern 'raise_error)
+        (Extern 'raise_error_align)
+        (Extern 'str_to_symbol)
+        (compile-λ-definitions (apply append (map λs ls)))))
+
+(define (λs-labels ls)
+  (match ls
+    ['()  '()]
+    [(cons l ls)
+     (cons (if (Lam? l)
+               (Lam-l l)
+               (if (Lam*? l)
+                   (Lam*-l l)
+                   (error "error in λ-ids \n")))
+           (λs-labels ls))]))
 
 ;; [Listof Id] -> Asm
 (define (compile-provides xs)
@@ -87,14 +151,6 @@
                           (error "error in compile--module-provides"))))
           (compile-module-provides ls))]))
 
-;; [Listof Id] -> Asm
-;(define (compile-module-provided-externs xs)
-;  (match xs
-;    ['()  (seq)]
-;    [(cons x xs)
-;     (seq (Extern (symbol->label x))
-;          (compile-module-provided-externs xs))]))
-
 (define (compile-module-externs ls)
   (match ls
     ['()  (seq)]
@@ -117,12 +173,10 @@
   (match p
     [(CMod pv-exts pvs fs ls dfλs e)
      (prog (Global 'entry)
-       ;   (compile-provides pvs)
            (compile-module-provides dfλs)
            (Default 'rel)
            (Section '.text)
            (compile-module-externs (apply append (map λs (remq* dfλs ls))))
-       ;    (compile-module-provided-externs pv-exts)
            (remove-duplicates (externs-es ls+))
            (externs (CMod pv-exts pvs fs ls dfλs e))
            (Extern 'raise_error)
@@ -136,7 +190,6 @@
            (Label 'raise_error_align)
            (Sub rsp 8)
            (Jmp 'raise_error)
-          ; (compile-defines ds)
            (compile-λ-definitions (λs e))
            (compile-λ-definitions (apply append (map λs ls+)))
            (compile-λ-definitions (apply append (map λs dfλs))))]))
@@ -146,17 +199,14 @@
   (match p
     [(CMod pv-exts pvs fs ls dfλs e)
      (prog (compile-module-provides dfλs)
-           ;(compile-provides pvs)
            (Default 'rel)
            (Section '.text)
-           (compile-module-externs (remq* dfλs ls))
-       ;    (compile-module-provided-externs pv-exts)
+           (compile-module-externs (apply append (map λs (remq* dfλs ls))))
            (externs p)
            (Extern 'raise_error)
+           (Extern 'raise_error_align)
            (Extern 'str_to_symbol)
-          ; (compile-defines ds)
-           (compile-λ-definitions dfλs)
-           )]))
+           (compile-λ-definitions (apply append (map λs dfλs))))]))
 
 (define (error-label c)
   (if (even? (length c))
@@ -1599,3 +1649,29 @@
          (string->list (symbol->string s))))
     "_"
     (number->string (eq-hash-code s) 16))))
+
+
+;; For viewing the assembly code of the program without the libraries code
+(define (compile-p p)
+  (let ((in-fs (open-input-file "./lib-fs")))
+    (let ((fs (read in-fs)))                           
+      (begin
+        (close-input-port in-fs)
+        (prog (Global 'entry)
+              (Default 'rel)
+              (Section '.text)
+              (externs p)
+              (Extern 'raise_error)
+              (Global 'raise_error_align)
+              (Extern 'str_to_symbol)
+              (Label 'entry)
+              (Mov rbx rdi) ; recv heap pointer
+              (compile-e-tail p (reverse fs))
+              (Add rsp (* 8 (length fs)))       ;; to pop lib fs off the stack
+              (Mov rdx rbx) ; return heap pointer in second return register
+              (Ret)
+              (%% "start-of-compiling-λ-definitions-of-program")
+              (compile-λ-definitions (λs p))
+              (Label 'raise_error_align)
+              (Sub rsp 8)
+              (Jmp 'raise_error))))))

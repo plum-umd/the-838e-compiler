@@ -1,6 +1,6 @@
 #lang racket
 (begin
-  (require "exmod1.rkt")
+  (require "./modules-example-1.rkt")
   (letrec ((f (λ (x y z . t)
                 (+ (+ x (apply (λ (a b) (+ a b)) (list y z)))
                    (apply * t))))

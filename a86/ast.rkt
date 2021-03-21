@@ -1,5 +1,7 @@
 #lang racket
 
+(require racket/serialize)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Guards
 
@@ -133,7 +135,7 @@
          (struct-out %%%)
          Comment?)
 
-(struct Comment (str)
+(serializable-struct Comment (str)
   #:transparent
   #:guard
   (λ (s n)
@@ -141,9 +143,9 @@
       (error n "expects string; given ~v" s))
     s))
 
-(struct %   Comment () #:transparent)
-(struct %%  Comment () #:transparent)
-(struct %%% Comment () #:transparent)
+(serializable-struct %   Comment () #:transparent)
+(serializable-struct %%  Comment () #:transparent)
+(serializable-struct %%% Comment () #:transparent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Instructions
@@ -151,7 +153,7 @@
 (define-syntax-rule
   (instruct Name (x ...) guard)
   (begin (provide (struct-out Name))
-         (struct Name (x ...)
+         (serializable-struct Name (x ...)
            #:transparent
            #:guard guard)))
 
