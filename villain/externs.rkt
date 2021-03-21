@@ -1,5 +1,6 @@
 #lang racket
-(provide externs char-op->uc symbol->label stdlib-ids stdlib-defs externs-es)
+(provide externs char-op->uc symbol->label stdlib-ids stdlib-defs
+         stdlib-fs-ls externs-es)
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)

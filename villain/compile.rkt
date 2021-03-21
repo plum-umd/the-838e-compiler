@@ -85,7 +85,7 @@
            (compile-defines ds))]))
 
 (define (libraries-fs-ls)
-  (let ((bs (map desugar-def stdlib-defs)))
+  (let ((bs stdlib-fs-ls))
     (let ((fs (map car bs)) (ls (map cdr bs)))
       (cons fs ls))))
   
@@ -164,7 +164,7 @@
 
 (define (compile-module p root)
   (if root
-      (let ((bs (map desugar-def stdlib-defs)))
+      (let ((bs stdlib-fs-ls))
         (compile-mod-root (map car bs) (map cdr bs) p))
       (compile-mod-not-root p)))
 

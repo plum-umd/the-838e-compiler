@@ -1,5 +1,5 @@
 #lang racket
-(provide parse parse-e desugar desugar-def parse-library)
+(provide parse parse-e desugar desugar-def parse-library desugar-def-lib)
 (require "ast.rkt")
 
 ;; S-Expr -> (Letrec (Lisof Id) (Listof Lambda) Expr)
@@ -185,6 +185,11 @@
   (match d
     [(Defn f xs e) (cons f (Lam (gensym) xs (desugar e)))]
     [(Defn* f xs xs* e) (cons f (Lam* (gensym) xs xs* (desugar e)))]))
+
+(define (desugar-def-lib d)
+  (match d
+    [(Defn f xs e) (cons f (Lam (gensym 'lib_lambda_) xs (desugar e)))]
+    [(Defn* f xs xs* e) (cons f (Lam* (gensym 'lib_lambda_) xs xs* (desugar e)))]))
 
 (define (desugar e)
   (match e

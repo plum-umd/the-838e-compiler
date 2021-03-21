@@ -9,8 +9,8 @@
 (unless (file-exists? "../runtime.o")
   (system "make -C .. runtime.o"))
 
-(unless (file-exists? "../libraries-lmdefs.o")
-  (system "make -C .. libraries-lmdefs.o"))
+;(unless (file-exists? "../libraries-lmdefs.o")
+;  (system "make -C .. libraries-lmdefs.o"))
 
 (current-objs
  (list (path->string (normalize-path "../runtime.o"))))
