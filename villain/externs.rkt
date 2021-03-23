@@ -30,8 +30,9 @@
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
-    [(Bignum _)
-      (list (Extern 'generate_bignum))]
+    ;;; [(Bignum _)                     ; I should probably do this when there are both integers and bignums right (or always?)
+    ;;;   (list (Extern 'print_bignum)
+    ;;;         (Extern 'bignum_length))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)

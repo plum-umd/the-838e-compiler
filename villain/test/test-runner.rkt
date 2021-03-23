@@ -537,6 +537,17 @@
   (check-equal? (run -18446744073709551615) -18446744073709551615)
   (check-equal? (run 18446744073709551616) 18446744073709551616)
   (check-equal? (run -18446744073709551616) -18446744073709551616)
+  
+  (check-equal? (run '(zero? -18446744073709551615)) (zero? -18446744073709551615))
+  (check-equal? (run '(zero? 18446744073709551616)) (zero? 18446744073709551616))
+  
+  (check-equal? (run '(integer? 16)) (integer? 16))
+  (check-equal? (run '(integer? -18446744073709551616)) (integer? -18446744073709551616))
+  
+  (check-equal? (run '(integer-length -16)) (integer-length -16))
+  (check-equal? (run '(integer-length -18446744073709551617)) (integer-length -18446744073709551617))
+  (check-equal? (run '(integer-length 18446744073709551616)) (integer-length 18446744073709551616))
+  (check-equal? (run '(integer-length -18446744073709551616)) (integer-length -18446744073709551616))
   )
 
 

@@ -30,6 +30,7 @@
            (Extern 'raise_error)
            (Global 'raise_error_align)
            (Extern 'str_to_symbol)
+           (Extern 'bignum_length)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e-tail e '())
@@ -153,7 +154,6 @@
         (sign (if (>= i 0) 1 -1)))
     (seq (Mov r9 (imm->bits (* sign length)))
          (Mov (Offset rbx 0) r9)          ;; write length in word 0
-         (Mov r9 0)
          (compile-bignum-words (bignum->list (abs i)) 1)
          (Mov rax rbx)                    ;; bignum is on heap
          (Add rbx (* 8 (add1 length)))
@@ -256,31 +256,74 @@
          ['sub1 ;; update for bignum
           (seq (assert-integer rax c)
                (Sub rax (imm->bits 1)))]         
-         ['zero? ;; update for bignum
+         ['zero?
           (let ((l1 (gensym)))
-            (seq (assert-integer rax c)
+            (seq (assert-integer/bignum rax c)
                  (Cmp rax 0)
                  (Mov rax val-true)
                  (Je l1)
                  (Mov rax val-false)
                  (Label l1)))]
-         ['integer? ;; update for bignum
+         ['integer?
           (let ((l1 (gensym)))
-            (seq (And rax mask-int)
-                 (Xor rax type-int)
-                 (Cmp rax 0)
-                 (Mov rax val-true)
+            (seq (Mov r8 val-true)    ; preemptively store true as result
+                 (Mov r9 rax)         ; first check if it's an integer
+                 (And r9 mask-int)
+                 (Xor r9 type-int)
+                 (Cmp r9 0)
                  (Je l1)
-                 (Mov rax val-false)
-                 (Label l1)))]
+                 (Mov r9 rax)         ; if not integer, check if bignum
+                 (And r9 ptr-mask)
+                 (Xor r9 type-bignum)
+                 (Cmp r9 0)
+                 (Je l1)
+                 (Mov r8 val-false)   ; if neither, this line stores false as result
+                 (Label l1)           ; move result into rax
+                 (Mov rax r8)))]
          ['integer-length ;; update for bignum
-          (seq (assert-integer rax c)
-               (Sar rax imm-shift)
-               (Mov r8 rax)
-               (Sar r8 63)
-               (Xor rax r8)
-               (Bsr rax rax)
-               (Sal rax int-shift))]
+          (let ((fixnum-length (gensym))
+                (end (gensym)))
+            (seq (assert-integer/bignum rax c)
+                (Mov r9 rax)                ; first check if it's an integer
+                (And r9 mask-int)
+                (Xor r9 type-int)
+                (Cmp r9 0)
+                (Je fixnum-length)
+
+                (Xor rax type-bignum)        ; take out tag
+                (pad-stack c)
+                (Mov rdi rax)
+                (Call 'bignum_length)
+                (unpad-stack c)
+
+                ;;; (Jmp (error-label c))      ; NOT FINISHED, NEED TO FIGURE OUT PROPER WAY TO GET SIGNIFICANT DIGIT FOR NEGATIVE VALUES (2^64 => int-len is 65, -2^64 => int-len is 64)
+                ;;; ;; if not integer, take abs of header, shift away intshift, multiply by 64, to be added to integer length of final word
+                ;;; (Xor rax type-bignum)      ; get rid of bignum tag
+                ;;; (Mov r9 (Offset rax 0))    ; get length of value
+                
+                ;;; ; get absolute value of tag
+                ;;; (Cmp r9 0)
+                ;;; (Mov r8 0)                 ; r8 will be added to top word when determining
+                ;;; (Jg bignum-positive)
+                ;;; (Mov r8 0)
+                ;;; (Sub r8 r9)
+                ;;; (Mov r9 r8)
+                ;;; (Mov r8 -1)                ; 
+                ;;; (Label bignum-positive)    ; if bignum of positive length
+
+                ;;; (Sar r9 (- int-shift imm-shift))
+                ;;; (Add rax r9)               ; point rax at the last word in bignum
+
+
+                (Jmp end)            ; jump to end, avoid integer-length for fixnum branch
+                (Label fixnum-length)
+                (Sar rax imm-shift)   ; if integer, take absolute value and get most significant bit
+                (Mov r8 rax)
+                (Sar r8 63)
+                (Xor rax r8)
+                (Bsr rax rax)
+                (Sal rax int-shift)
+                (Label end)))] 
          ['char?
           (let ((l1 (gensym)))
             (seq (And rax mask-char)
@@ -760,6 +803,20 @@
   (assert-type ptr-mask type-string))
 (define assert-symbol
   (assert-type ptr-mask type-symbol))
+
+(define assert-integer/bignum
+  (λ (arg c)
+    (let ((ok (gensym "intorbig")))
+    (seq (Mov r9 arg)       ; first check if integer
+         (And r9 mask-int)
+         (Cmp r9 type-int)
+         (Je ok)
+         (Mov r9 arg)       ; then check if bignum
+         (And r9 ptr-mask)
+         (Cmp r9 type-bignum)
+         (Je ok)
+         (Jmp (error-label c))
+         (Label ok)))))
 
 (define (assert-codepoint c)
   (let ((ok (gensym)))
