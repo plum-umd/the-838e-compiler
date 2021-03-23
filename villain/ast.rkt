@@ -6,7 +6,7 @@
 (struct Prog (ds e)  #:prefab)
 (struct Lib  (xs ds) #:prefab)
 (struct Mod  (pvs rqs ds e) #:prefab)
-(struct CMod (pv-exts pvs ds e) #:prefab) ; for compiling a module 
+(struct CMod (pv-exts pvs fs ls dfλs e) #:prefab) ; for compiling a module 
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
 (struct Defn (f xs e) #:prefab) 
@@ -33,8 +33,13 @@
 ;;           | (Var Id)
 ;;           | (App Id (Listof Expr))
 ;;           | (Match Expr (Listof Pat))
+;;           | (Lam Label Formals Expr)
+;;           | (Lam* Label Formals Formal Expr)
+;;           | (LCall Expr (Listof Expr))
+;;           | (Letrec (Lisof Id) (Listof Lambda) Expr)
 
 ;; type Id   = Symbol
+;; type Label = Symbol
 ;; type Op0  = 'read-byte | 'void | 'collect-garbage
 ;; type Op1  = 'add1 | 'sub1 | 'zero? | 'integer?
 ;;           | 'char? | 'integer->char | 'char->integer
@@ -56,6 +61,13 @@
 
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
+;; type Formals = (Listof Id)
+;; type Formal = Id
+;; type LExpr = Expr    
+;; type Lambda = (Lam Label Formals Expr)
+;;           | (Lam* Label Formals Formal Expr)
+;; type LabelledLambda = Lambda
+
 
 (struct Eof   ()              #:prefab)
 (struct Empty ()              #:prefab)
@@ -75,9 +87,15 @@
 (struct Let   (xs es e)       #:prefab)
 (struct Var   (x)             #:prefab)
 (struct App   (f es)          #:prefab)
+(struct LCall (e es)          #:prefab)
 (struct Apply (f e)           #:prefab)
 (struct Match (e0 cs)         #:prefab)
 (struct Vec   (es)            #:prefab)
+(struct Lam   (l xs e)        #:prefab)
+;(struct Lam-l (l xs e)        #:prefab)
+(struct Lam*  (l xs xs* e)    #:prefab)
+;(struct Lam*-l (l xs xs* e)   #:prefab)
+(struct Letrec (xs es e)      #:prefab)
 
 ;; Match clause
 (struct Clause (p e)          #:prefab)

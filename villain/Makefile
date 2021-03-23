@@ -1,5 +1,6 @@
 UNAME := $(shell uname)
 .PHONY: test std default
+.PRECIOUS: libraries-lmdefs.s
 
 ifeq ($(UNAME), Darwin)
   format=macho64
@@ -10,7 +11,6 @@ else
 endif
 
 objs = \
-	$(patsubst %.rkt,%.o,$(wildcard lib/*rkt)) \
 	main.o \
 	char.o \
 	io.o \
@@ -18,6 +18,8 @@ objs = \
 	str.o \
 	wrap.o \
 	utf8.o
+
+# $(patsubst %.rkt,%.o,$(wildcard lib/*rkt)) \
 
 default: runtime.o
 
@@ -34,12 +36,19 @@ str.o: types.h villain.h
 %.run2: %.o runtime.o 
 	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) # -lm
 	@ racket -t formdps.rkt -m mv $@
-	rm -f formdps $(shell cat modulefiles) modulefiles *.s
+	rm -f formdps $(shell cat modulefiles) modulefiles
+	find . -name "*.s" -not -name libraries-lmdefs.s -delete
 
-runtime.o: $(objs)
-	ld -r $(objs) -o runtime.o
+runtime.o: $(objs) libraries-lmdefs.o
+	ld -r $(objs) libraries-lmdefs.o -o runtime.o
+
+libraries-lmdefs.o: libraries-lmdefs.s
+	nasm -f $(format) -o $@ $<
+
+libraries-lmdefs.s: libraries-letrec
 
 .SUFFIXES: .c .s .o .rkt
+
 .c.o:
 	gcc -fPIC -c -o $@ $<
 
@@ -49,11 +58,39 @@ runtime.o: $(objs)
 lib/%.s: lib/%.rkt
 	racket -t compile-library.rkt -m $< > $@
 
-.rkt.s:
+%.s: %.rkt libraries-letrec 
 	racket -t compile-file.rkt -m $< > $@
 
+libraries-letrec:
+	racket compile-lib-letrec-lmdefs.rkt
+
 clean:
-	rm -f modulefiles formdps
-	find .  -name "*.o" -delete -or \
-		-name "*.s" -delete -or \
-		-name "*.run" -delete
+	find .  -name "*.o" -not -name \
+		"libraries-lmdefs.o" \
+		-not -name "runtime.o" \
+		-not -name "main.o" \
+		-not -name "char.o" \
+		-not -name "io.o" \
+		-not -name "symbol.o" \
+		-not -name "str.o" \
+		-not -name "wrap.o" \
+		-not -name "utf8.o"  -delete \
+		-or -name "*.s" -not -name \
+		"libraries-lmdefs.s" -delete \
+		-or -name "*.run" -delete
+	rm -f modulefiles formdps modules-example-*.*
+
+rtcl:
+	rm -f runtime.o $(objs)
+
+libcl:
+	rm -f libraries-letrec lib-externs lib-ls-ids \
+	lib-fs libraries-lmdefs.s test/libraries-letrec \
+	test/lib-fs test/lib-ls-ids test/lib-externs \
+	libraries-lmdefs.o libraries-lmdefs
+
+allcl:  clean libcl rtcl
+
+
+
+
