@@ -258,21 +258,21 @@
   (check-equal? (pn "-123") -123)
   (check-equal? (pn "+123") 123)
   ; removed frac
-  ;(check-equal? (pn "5.") 5.0)
-  ;(check-equal? (pn ".5") 0.5)
-  ;(check-equal? (pn ".5 ") 0.5)
-  ;(check-equal? (pn "+.5") 0.5)
-  ;(check-equal? (pn "-.5") -0.5)
-  ;(check-equal? (pn "+1.5") 1.5)
-  ;(check-equal? (pn "-1.5") -1.5)
-  ;(check-equal? (pn "+.5") 0.5)
-  ;(check-equal? (pn "-.") '-.)
-  ;(check-equal? (pn "+.") '+.)
-  ;(check-equal? (pn "+.x") '+.x)
+  (check-equal? (pn "5.") 5.0)
+  (check-equal? (pn ".5") 0.5)
+  (check-equal? (pn ".5 ") 0.5)
+  (check-equal? (pn "+.5") 0.5)
+  (check-equal? (pn "-.5") -0.5)
+  (check-equal? (pn "+1.5") 1.5)
+  (check-equal? (pn "-1.5") -1.5)
+  (check-equal? (pn "+.5") 0.5)
+  (check-equal? (pn "-.") '-.)
+  (check-equal? (pn "+.") '+.)
+  (check-equal? (pn "+.x") '+.x)
   (check-equal? (pn "+x") '+x)
   (check-equal? (pn "-x") '-x)
   ; removed frac
-  ;(check-equal? (pn ".x") '.x)
+  (check-equal? (pn ".x") '.x)
   (check-equal? (pn "1..") '1..)
   (check-equal? (pn "1.1.") '1.1.)  
   (check-pred err? (pn ".")))
@@ -310,8 +310,6 @@
                  p)]))
 
 (define (make-frac signed? whole frac)
-  (unimplemented "frac")
-  #; ;; unimplemented because we don't have fractions in the run-time
   (match* (whole frac)
     [('() '()) (chars->symbol (list #\. signed?))]
     [(_ _)
@@ -320,16 +318,17 @@
         [#\- (- (frac->number whole frac))]
         [_ (frac->number whole frac)]))]))
 
-#;; removed frac
+
 (define (frac->number whole frac)
-  (+ (char-digits->number whole)
-     (/ (char-digits->number frac)
+  (+ (char-digit10s->number whole)
+     (/ (char-digit10s->number frac)
         (expt 10 (length frac)))))
   
 (define (make-whole signed? ds)
   (match signed?
     [#\- (- (char-digit10s->number ds))]
     [_      (char-digit10s->number ds)]))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
