@@ -31,8 +31,7 @@
            (Extern 'raise_error)
            (Global 'raise_error_align)
            (Extern 'str_to_symbol)
-           (Extern 'bignum_length)
-           (Extern 'add_or_sub1)
+           (bignum-externs)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e-tail e '())
@@ -53,7 +52,8 @@
            (externs p)
            (Extern 'raise_error)
            (Extern 'raise_error_align)
-           (Extern 'str_to_symbol)           
+           (Extern 'str_to_symbol)
+           (bignum-externs)           
            (compile-defines ds))]))
 
 ;; [Listof Id] -> Asm
@@ -64,6 +64,10 @@
     [(cons x xs)
      (seq (Global (symbol->label x))
           (compile-provides xs))]))
+
+(define (bignum-externs)
+  (seq (Extern 'bignum_length)
+       (Extern 'add_or_sub1)))
 
 (define (error-label c)
   (if (even? (length c))
