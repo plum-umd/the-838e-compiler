@@ -289,32 +289,11 @@
                 (Xor r9 type-int)
                 (Cmp r9 0)
                 (Je fixnum-length)
-
                 (Xor rax type-bignum)        ; take out tag
                 (pad-stack c)
                 (Mov rdi rax)
                 (Call 'bignum_length)
                 (unpad-stack c)
-
-                ;;; (Jmp (error-label c))      ; NOT FINISHED, NEED TO FIGURE OUT PROPER WAY TO GET SIGNIFICANT DIGIT FOR NEGATIVE VALUES (2^64 => int-len is 65, -2^64 => int-len is 64)
-                ;;; ;; if not integer, take abs of header, shift away intshift, multiply by 64, to be added to integer length of final word
-                ;;; (Xor rax type-bignum)      ; get rid of bignum tag
-                ;;; (Mov r9 (Offset rax 0))    ; get length of value
-                
-                ;;; ; get absolute value of tag
-                ;;; (Cmp r9 0)
-                ;;; (Mov r8 0)                 ; r8 will be added to top word when determining
-                ;;; (Jg bignum-positive)
-                ;;; (Mov r8 0)
-                ;;; (Sub r8 r9)
-                ;;; (Mov r9 r8)
-                ;;; (Mov r8 -1)                ; 
-                ;;; (Label bignum-positive)    ; if bignum of positive length
-
-                ;;; (Sar r9 (- int-shift imm-shift))
-                ;;; (Add rax r9)               ; point rax at the last word in bignum
-
-
                 (Jmp end)            ; jump to end, avoid integer-length for fixnum branch
                 (Label fixnum-length)
                 (Sar rax imm-shift)   ; if integer, take absolute value and get most significant bit
