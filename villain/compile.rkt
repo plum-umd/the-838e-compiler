@@ -6,7 +6,7 @@
 (define rax 'rax) ; return  ; the dividend of div in string-ref and string-set!
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
-                               ; and string-set!
+                               ; and string-set! ; arg 3
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match, 
                   ; compile-define
@@ -14,6 +14,7 @@
                   ; string-set!, make-string, compile-define
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
+(define rsi 'rsi) ; arg 2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-define
 (define rcx 'rcx) ; arity indicator
 
@@ -31,6 +32,7 @@
            (Global 'raise_error_align)
            (Extern 'str_to_symbol)
            (Extern 'bignum_length)
+           (Extern 'add_or_sub1)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e-tail e '())
@@ -250,12 +252,56 @@
 (define (compile-prim1 p e c)
   (seq (compile-e-nontail e c)
        (match p
-         ['add1 ;; update for bignum
-          (seq (assert-integer rax c)
-               (Add rax (imm->bits 1)))]
-         ['sub1 ;; update for bignum
-          (seq (assert-integer rax c)
-               (Sub rax (imm->bits 1)))]         
+         ['add1
+          (let ((end (gensym))
+                (pos-bignum (gensym)))
+            (seq (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Mov rsi rbx)
+               (Mov rdx 1)
+               (Call 'add_or_sub1)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['sub1
+          (let ((end (gensym))
+                (pos-bignum (gensym)))
+            (seq (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Mov rsi rbx)
+               (Mov rdx -1)
+               (Call 'add_or_sub1)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]       
          ['zero?
           (let ((l1 (gensym)))
             (seq (assert-integer/bignum rax c)

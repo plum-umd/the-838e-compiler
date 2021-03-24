@@ -548,6 +548,15 @@
   (check-equal? (run '(integer-length -18446744073709551617)) (integer-length -18446744073709551617))
   (check-equal? (run '(integer-length 18446744073709551616)) (integer-length 18446744073709551616))
   (check-equal? (run '(integer-length -18446744073709551616)) (integer-length -18446744073709551616))
+
+  (check-equal? (run '(sub1 -576460752303423488)) (sub1 -576460752303423488))
+  (check-equal? (run '(sub1 576460752303423488)) (sub1 576460752303423488))
+  (check-equal? (run '(sub1 576460752303423489)) (sub1 576460752303423489))
+  (check-equal? (run '(sub1 0)) (sub1 0))
+  (check-equal? (run '(add1 576460752303423487)) (add1 576460752303423487))
+  (check-equal? (run '(add1 -576460752303423489)) (add1 -576460752303423489))
+  (check-equal? (run '(add1 576460752303423489)) (add1 576460752303423489))
+  (check-equal? (run '(add1 0)) (add1 0))
   )
 
 
