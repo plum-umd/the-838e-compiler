@@ -9,18 +9,19 @@
 (define rax 'rax) ; return  ; the dividend of div in string-ref and string-set!
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
-                               ; and string-set! ; arg 3
+                               ; and string-set! ; arg3
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
-                  ; compile-define, open-input-file
+                  ; compile-define, open-input-file, integer?
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, compile-define, fl<=
-                  ; compile-vector, vector-set!, vector-ref
+                  ; compile-vector, vector-set!, vector-ref, compile-bignum
+                  ; add1, sub1, integer?, integer-length, +, -, assert-integer/bignum
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
-                  ; compile-define, fl<=
+                  ; compile-define, fl<=, compile-bignum, integer?, integer-length, assert-integer/bignum
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
 (define xmm0 'xmm0) ; registers to hold double precision floating numbers
@@ -144,7 +145,10 @@
 (define (bignum-externs)
   (seq (Extern 'bignum_length)
        (Extern 'add_or_sub1)
+       (Extern 'integer_g)
+       (Extern 'integer_geq)
        (Extern 'integer_leq)
+       (Extern 'integer_l)
        (Extern 'integer_add)
        (Extern 'integer_sub)))
 
@@ -1191,28 +1195,25 @@
                (IDiv r8)
                (Mov rax rdx)
                )]
-         ['> ;; update to bignums
-          (let ((gt-true (gensym 'gt)))
+         ['> 
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jg gt-true)
-                 (Mov rax (imm->bits #f))
-                 (Label gt-true)))]
-         ['< ;; update to bignums
-          (let ((lt-true (gensym 'lt)))
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_g)
+                 (unpad-stack c))]
+         ['< 
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jl lt-true)
-                 (Mov rax (imm->bits #f))
-                 (Label lt-true)))]
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_l)
+                 (unpad-stack c))]
          ['<=
-          (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
                  (assert-integer/bignum r8 c)
                  (assert-integer/bignum rax c)
@@ -1220,17 +1221,16 @@
                  (Mov rdi r8)
                  (Mov rsi rax)
                  (Call 'integer_leq)
-                 (unpad-stack c)))]
-         ['>= ;; update to bignums
-          (let ((geq-true (gensym 'geq)))
+                 (unpad-stack c))]
+         ['>=
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jge geq-true)
-                 (Mov rax (imm->bits #f))
-                 (Label geq-true)))]
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_geq)
+                 (unpad-stack c))]
          ['eq?
           (let ((l (gensym)))
             (seq (Pop r8)

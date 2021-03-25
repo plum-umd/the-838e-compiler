@@ -6,6 +6,7 @@
 #include "villain.h"
 
 void load_bignum(mpz_t, int64_t*);
+int64_t integer_comparison(int64_t, int64_t, int);
 int64_t return_bignum_maybe_fixnum(mpz_t, int64_t);
 int64_t return_fixnum_maybe_bignum(int64_t, int64_t);
 
@@ -70,10 +71,41 @@ int64_t add_or_sub1(int64_t val, int64_t heap, int64_t delta) { // rdi, rsi, rdx
   }
 }
 
-int64_t integer_leq(int64_t val1, int64_t val2) { // rdi, rsi, rdx
+int64_t integer_g(int64_t val1, int64_t val2) { // rdi, rsi
+  return integer_comparison(val1, val2, 1);
+}
+
+int64_t integer_geq(int64_t val1, int64_t val2) { // rdi, rsi
+  return integer_comparison(val1, val2, 2);
+}
+
+int64_t integer_leq(int64_t val1, int64_t val2) { // rdi, rsi
+  return integer_comparison(val1, val2, 3);
+}
+
+int64_t integer_l(int64_t val1, int64_t val2) { // rdi, rsi
+  return integer_comparison(val1, val2, 4);
+}
+
+// comparison: 1 for val1 > val2, 2 for val1 >= val2, 3 for val1 <= val2, 4 for val1 < val2
+int64_t integer_comparison(int64_t val1, int64_t val2, int comparison) {
+
   if (int_type_tag == (int_type_mask & val1) && int_type_tag == (int_type_mask & val2)) {
     // both values are fixnum
-    return (val1 <= val2) ? val_true : val_false;
+    switch(comparison){
+      case 1:
+        return (val1 > val2) ? val_true : val_false;
+        break;
+      case 2:
+        return (val1 >= val2) ? val_true : val_false;
+        break;
+      case 3:
+        return (val1 <= val2) ? val_true : val_false;
+        break;
+      default:
+        return (val1 < val2) ? val_true : val_false;
+        break;
+    }
   } else if (bignum_type_tag == (ptr_type_mask & val1) && int_type_tag == (int_type_mask & val2)) {
     // val1 bignum, val2 fixnum
 
@@ -84,7 +116,20 @@ int64_t integer_leq(int64_t val1, int64_t val2) { // rdi, rsi, rdx
     load_bignum(integ, (int64_t *) (val1 ^ bignum_type_tag)); // load value
     val2 = val2 >> int_shift; // adjust integer value
 
-    ret = (mpz_cmp_d (integ, (double) val2) <= 0) ? val_true : val_false;
+    switch(comparison){
+      case 1:
+        ret = (mpz_cmp_d (integ, (double) val2) > 0) ? val_true : val_false;
+        break;
+      case 2:
+        ret = (mpz_cmp_d (integ, (double) val2) >= 0) ? val_true : val_false;
+        break;
+      case 3:
+        ret = (mpz_cmp_d (integ, (double) val2) <= 0) ? val_true : val_false;
+        break;
+      default:
+        ret = (mpz_cmp_d (integ, (double) val2) < 0) ? val_true : val_false;
+        break;
+    }
 
     mpz_clear(integ);
     return ret;
@@ -99,7 +144,21 @@ int64_t integer_leq(int64_t val1, int64_t val2) { // rdi, rsi, rdx
     load_bignum(integ, (int64_t *) (val2 ^ bignum_type_tag)); // load value
     val1 = val1 >> int_shift; // adjust integer value
     
-    ret = (mpz_cmp_d (integ, (double) val1) >= 0) ? val_true : val_false;
+    // everything is flipped since we have val2 on the left side
+    switch(comparison){
+      case 1:
+        ret = (mpz_cmp_d (integ, (double) val1) < 0) ? val_true : val_false;
+        break;
+      case 2:
+        ret = (mpz_cmp_d (integ, (double) val1) <= 0) ? val_true : val_false;
+        break;
+      case 3:
+        ret = (mpz_cmp_d (integ, (double) val1) >= 0) ? val_true : val_false;
+        break;
+      default:
+        ret = (mpz_cmp_d (integ, (double) val1) > 0) ? val_true : val_false;
+        break;
+    }
 
     mpz_clear(integ);
     return ret;
@@ -114,8 +173,20 @@ int64_t integer_leq(int64_t val1, int64_t val2) { // rdi, rsi, rdx
     load_bignum(integ1, (int64_t *) (val1 ^ bignum_type_tag)); // load value
     load_bignum(integ2, (int64_t *) (val2 ^ bignum_type_tag)); // load value
     
-    // Values are now fully loaded
-    ret = (mpz_cmp(integ1, integ2) <= 0) ? val_true : val_false;
+    switch(comparison){
+      case 1:
+        ret = (mpz_cmp(integ1, integ2) > 0) ? val_true : val_false;
+        break;
+      case 2:
+        ret = (mpz_cmp(integ1, integ2) >= 0) ? val_true : val_false;
+        break;
+      case 3:
+        ret = (mpz_cmp(integ1, integ2) <= 0) ? val_true : val_false;
+        break;
+      default:
+        ret = (mpz_cmp(integ1, integ2) < 0) ? val_true : val_false;
+        break;
+    }
 
     mpz_clear(integ1);
     mpz_clear(integ2);
