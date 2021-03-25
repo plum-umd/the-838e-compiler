@@ -1,6 +1,6 @@
 #lang racket
 (provide externs char-op->uc symbol->label)
-(require "ast.rkt" a86/ast)
+(require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
   (match p
@@ -30,9 +30,9 @@
     [(App f es)
      (append (externs-f f)
              (externs-es es))]
-    ;;; [(Bignum _)                     ; I should probably do this when there are both integers and bignums right (or always?)
-    ;;;   (list (Extern 'print_bignum)
-    ;;;         (Extern 'bignum_length))]
+    [(Apply f e)
+     (append (externs-f f)
+             (externs-e e))]
     [(Prim0 p)
      (externs-p p)]
     [(Prim1 p e)
@@ -77,18 +77,23 @@
 
 (define (externs-p p)
   (let ((r (op->extern p)))
-    (if r (list (Extern r)) '())))
+    (match r
+      [#f '()]
+      [(? list?) (map (λ (e) (Extern e)) r)]
+      [_ (list (Extern r))])))
 
 (define (op->extern o)
   (match o
-    ['peek-byte 'peek_byte]
+    ['peek-byte '(peek_byte peek_byte_port)]
+    ['read-byte '(read_byte read_byte_port)]
     ['peek-char 'peek_char]
-    ['read-byte 'read_byte]
     ['read-char 'read_char]
     ['write-byte 'write_byte]
     ['write-char 'write_char]
     ['gensym 'gensym]
     #;['string->symbol 'str_to_symbol]  ;; always included now
+    ['open-input-file 'open_input_file]
+    ['close-input-port 'close_input_port]
     [_ (char-op->uc o)]))
 
 (define (char-op->uc o)
@@ -104,44 +109,6 @@
 ;; Is x provided by a stdlib?
 (define (stdlib-provided? x)
   (memq x stdlib-ids))
-
-;; [Listof Id]
-;; List of each Id provided by a stdlib
-(define stdlib-ids
-  '(; bool
-    boolean? 
-    not
-    ; math
-    byte? 
-    *
-    ; list
-    append
-    assq
-    eighth
-    first
-    fifth
-    fourth
-    last
-    length
-    list
-    list?
-    list-ref
-    list-tail
-    memq
-    ninth
-    null?
-    pair?
-    remq
-    remq*
-    rest
-    reverse
-    second
-    seventh
-    sixth
-    tenth
-    third
-    ; NOTE: add new stdlib-provided Ids here    
-    ))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label

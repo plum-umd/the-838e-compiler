@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "types.h"
+#include "villain.h"
 
 void load_bignum(mpz_t, int64_t*);
 int64_t return_bignum_maybe_fixnum(mpz_t, int64_t);
@@ -10,10 +11,10 @@ int64_t return_fixnum_maybe_bignum(int64_t, int64_t);
 
 int64_t bound = (int64_t) ((int64_t) 1 << (63 - int_shift));
 
-void print_bignum(int64_t *h) {
+void print_bignum(vl_bignum* h) {
   mpz_t integ;
   mpz_init(integ); 
-  load_bignum(integ, h);
+  load_bignum(integ, (int64_t *) h);
   mpz_out_str(stdout,10,integ);
   mpz_clear(integ);
 }

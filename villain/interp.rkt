@@ -11,7 +11,8 @@
 ;; | Integer
 ;; | Boolean
 ;; | Character
-;; | String        
+;; | String
+;; | Vector
 ;; | Eof
 ;; | Void
 ;; | '()
@@ -34,11 +35,12 @@
     [(Bignum i) i]
     [(Bool b) b]
     [(Char c) c]
-    [(Float f) f]
+    [(Flonum f) f]
     [(String s) s]
     [(Symbol s) s]
     [(Eof)    eof]
     [(Empty)  '()]
+    [(Vec es) (list->vector (interp-env* es r ds))]
     [(Var x)  (lookup r x)]
     [(Prim0 'void) (void)]
     [(Prim0 'read-byte) (read-byte)]
@@ -79,6 +81,22 @@
      (match (interp-env* es r ds)
        ['err 'err]
        [vs (interp-env e (append (reverse (zip xs vs)) r) ds)])]
+    [(Apply f ex)
+     (match (interp-env ex r ds)
+       [(list vs ...)
+        (match (defns-lookup ds f)
+          [(Defn f xs e)
+           ; check arity matches
+           (if (= (length xs) (length vs))
+               (interp-env e (zip xs vs) ds)
+               'err)] 
+          [(Defn* f xs xs* e) 
+           (if (>= (length vs) (length xs)) 
+               (interp-env e 
+                  (append (zip xs (take vs (length xs))) 
+                          (list (list xs* (list-tail vs (length xs))))) ds)
+               'err)])]
+       [_ 'err])]
     [(App f es)
      (match (interp-env* es r ds)
        [(list vs ...)
@@ -93,12 +111,14 @@
                (interp-env e 
                   (append (zip xs (take vs (length xs))) 
                           (list (list xs* (list-tail vs (length xs))))) ds)
-               'err)])])]
+               'err)])]
+       [_ 'err])]
     [(Match e0 cs)
      (match (interp-env e0 r ds)
        ['err 'err]
        [v (interp-match v cs r ds)])]
     [_ 'err]))
+
 
 ;; Value (Listof Clause) Env Defs -> Answer
 (define (interp-match v cs r ds)

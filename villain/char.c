@@ -1,15 +1,12 @@
 #include <stdio.h>
-#include <inttypes.h>
-#include "types.h"
+#include "villain.h"
+#include "utf8.h"
+#include "char.h"
 
-void print_codepoint(int64_t);
-void print_str(int64_t *);
-void print_str_char(int64_t);
-
-void print_char (int64_t v) {
-  int64_t codepoint = v >> char_shift;
+void print_char(vl_char c)
+{
   printf("#\\");
-  switch (codepoint) {
+  switch (c) {
   case 0:
     printf("nul"); break;
   case 8:
@@ -29,64 +26,25 @@ void print_char (int64_t v) {
   case 127:
     printf("rubout"); break;
   default:
-    print_codepoint(v);
+    print_codepoint(c);
   }
 }
 
-void print_codepoint(int64_t v) {
-  int64_t codepoint = v >> char_shift;
-  // Print using UTF-8 encoding of codepoint
-  // https://en.wikipedia.org/wiki/UTF-8
-  if (codepoint < 128) {
-    printf("%c", (char) codepoint);
-  } else if (codepoint < 2048) {
-    printf("%c%c",
-	   (char)(codepoint >> 6) | 192,
-	   ((char)codepoint & 63) | 128);
-  } else if (codepoint < 65536) {
-    printf("%c%c%c",
-	   (char)(codepoint >> 12) | 224,
-	   ((char)(codepoint >> 6) & 63) | 128,
-	   ((char)codepoint & 63) | 128);
-  } else {
-    printf("%c%c%c%c",
-	   (char)(codepoint >> 18) | 240,
-	   ((char)(codepoint >> 12) & 63) | 128,
-	   ((char)(codepoint >> 6) & 63) | 128,
-	   ((char)codepoint & 63) | 128);
-  }
+void print_str_char_u(vl_char c)
+{
+  printf("\\u%04X", c);
 }
 
-void print_str(int64_t *str) {
-  int64_t len = (str[0] >> int_shift);
-  int temp;
-  int i, j;
-  int n = (len % 3 == 0) ? len / 3 : (len / 3 + 1);
-  for (i = 1; i < n; i++) {
-    for (j = 0; j < 3; j++) {
-      temp = str[i] >> (j * 21);
-      print_str_char(temp);
-    }
-  }
-  i = (len % 3 == 0) ? 3 : (len % 3);
-  for (j = 0; j < i; j++){
-    temp = str[n] >> (j * 21);
-    print_str_char(temp);
-  }
+void print_str_char_U(vl_char c)
+{
+  printf("\\U%08X", c);
 }
 
-void print_str_char_u(int64_t v) {
-  printf("\\u%04X", (int)(v >> char_shift));
-}
-
-void print_str_char_U(int64_t v) {
-  printf("\\U%08X", (int)(v >> char_shift));
-}
-
-void print_str_char(int64_t v) {
-  switch (v >> char_shift) {
+void print_str_char(vl_char c)
+{
+  switch (c) {
   case 0 ... 6:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 7:
     printf("\\a");
@@ -110,13 +68,13 @@ void print_str_char(int64_t v) {
     printf("\\r");
     break;
   case 14 ... 26:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 27:
     printf("\\e");
     break;
   case 28 ... 31:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 34:
     printf("\\\"");
@@ -500,7 +458,7 @@ void print_str_char(int64_t v) {
   case 65511 ... 65511:
   case 65519 ... 65531:
   case 65534 ... 65535:
-    print_str_char_u(v);
+    print_str_char_u(c);
     break;
   case 65548 ... 65548:
   case 65575 ... 65575:
@@ -732,11 +690,17 @@ void print_str_char(int64_t v) {
   case 178206 ... 194559:
   case 195102 ... 917759:
   case 918000 ... 1114110:
-    print_str_char_U(v);
+    print_str_char_U(c);
     break;
   default:
-    print_codepoint(v);
+    print_codepoint(c);
     break;
   }
 }
 
+void print_str(vl_str *str)
+{
+  uint64_t i;
+  for (i = 0; i < str->len; ++i)
+    print_str_char(str->buf[i]);
+}

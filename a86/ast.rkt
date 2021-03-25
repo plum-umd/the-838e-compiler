@@ -99,6 +99,24 @@
       (error n "expects label; given ~v" x))
     (values dst x)))
 
+(define check:xsrc-xdest
+  (λ (a1 a2 n)
+    (unless (or (xregister? a1) (offset? a1))
+      (error n "expects register or offset; given ~v" a1))
+    (unless (or (xregister? a2) (offset? a2))
+      (error n "expects register, offset, or exact integer; given ~v" a2))
+    (when (and (offset? a1) (offset? a2))
+      (error n "cannot use two memory locations; given ~v, ~v" a1 a2))
+    (values a1 a2)))
+
+(define check:xarith
+  (λ (a1 a2 n)
+    (unless (xregister? a1)
+      (error n "expects xmm register; given ~v" a1))
+    (unless (or (xregister? a2) (offset? a2))
+      (error n "expects xmm registe or offset; given ~v" a2))
+    (values a1 a2)))
+
 (define check:none
   (λ (n) (values)))
 
@@ -146,6 +164,8 @@
 (instruct Mov    (dst src) check:src-dest)
 (instruct Add    (dst src) check:arith)
 (instruct Sub    (dst src) check:arith)
+(instruct IMul   (dst src) check:arith)
+(instruct IDiv   (dst)     check:arith-div)
 (instruct Div    (dst)     check:arith-div)
 (instruct Cmp    (a1 a2)   check:src-dest)
 (instruct Jmp    (x)       check:target)
@@ -164,16 +184,24 @@
 (instruct Pop    (a1)      check:register)
 (instruct Lea    (dst x)   check:lea)
 (instruct Bsr    (dst src) check:src-dest)
-
+(instruct Cqo    ()        check:none)
+(instruct Addsd  (dst src) check:xarith)
+(instruct Subsd  (dst src) check:xarith)
+(instruct Movapd (dst src) check:xsrc-xdest)
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
 
-(provide offset? register? instruction? label?)
+
+(provide offset? register? xregister? instruction? label?)
 
 (define offset? Offset?)
 
 (define (register? x)
-  (and (memq x '(rax rbx rcx rdx rbp rsp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15))
+  (and (memq x '(rax rbx rcx rdx rbp rsp rsi rdi r8 r9 r10 r11 r12 r13 r14 r15 al xmm0))
+       #t))
+
+(define (xregister? x)
+  (and (memq x '(xmm0))
        #t))
 
 (define (label? x)
@@ -191,6 +219,9 @@
       (Mov? x)
       (Add? x)
       (Sub? x)
+      (IMul? x)
+      (IDiv? x)
+      (Cqo? x)
       (Div? x)
       (Cmp? x)
       (Jmp? x)
@@ -209,7 +240,12 @@
       (Pop? x)
       (Lea? x)
       (Bsr? x)
-      (Comment? x)))
+      (Comment? x)
+      (Addsd? x)
+      (Subsd? x)
+      (Movapd? x)
+      )
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Instruction sequencing and program error checking
