@@ -69,7 +69,8 @@
   (seq (Extern 'bignum_length)
        (Extern 'add_or_sub1)
        (Extern 'integer_leq)
-       (Extern 'integer_add)))
+       (Extern 'integer_add)
+       (Extern 'integer_sub)))
 
 (define (error-label c)
   (if (even? (length c))
@@ -456,7 +457,7 @@
        (Push rax)
        (compile-e-nontail e2 (cons #f c))
        (match p
-         ['+  ;; update for bignum
+         ['+
           (let ((end (gensym))
                 (pos-bignum (gensym))) 
            (seq (Pop r8)
@@ -483,13 +484,34 @@
                 (Sar r9 (- int-shift imm-shift))
                 (Add rbx r9)
                 (Label end)))]
-         ['-  ;; update for bignum
-          (seq (Pop r8)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Sub r8 rax)
-               (Mov rax r8))]
-         ['<=  ;; update for bignum
+         ['-
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+           (seq (Pop r8)
+                (assert-integer/bignum r8 c)
+                (assert-integer/bignum rax c)
+                (pad-stack c)
+                (Mov rdi r8)
+                (Mov rsi rax)
+                (Mov rdx rbx)
+                (Call 'integer_sub)
+                (unpad-stack c)
+                (Mov r9 rax)         ; first check if return value is fixnum
+                (And r9 mask-int)
+                (Xor r9 type-int)
+                (Cmp r9 0)
+                (Je end)             ; if not fixnum, we should adjust rbx
+                (Mov r9 (Offset rbx 0))
+                (Cmp r9 -1)
+                (Jg pos-bignum)      ; get absolute value of length
+                (Mov r8 0)
+                (Sub r8 r9)
+                (Mov r9 r8)
+                (Label pos-bignum)
+                (Sar r9 (- int-shift imm-shift))
+                (Add rbx r9)
+                (Label end)))]
+         ['<=
           (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
                  (assert-integer/bignum r8 c)
