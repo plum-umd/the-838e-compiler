@@ -160,8 +160,8 @@
                       (arg->string a1) ", "
                       (arg->string a2))]
 
-      [(Movapd a1 a2)
-       (string-append tab "movapd "
+      [(Movsd a1 a2)
+       (string-append tab "movsd "
                       (arg->string a1) ", "
                       (arg->string a2))]
 
