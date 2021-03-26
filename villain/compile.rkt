@@ -150,7 +150,9 @@
        (Extern 'integer_leq)
        (Extern 'integer_l)
        (Extern 'integer_add)
-       (Extern 'integer_sub)))
+       (Extern 'integer_sub)
+       (Extern 'integer_quotient)
+       (Extern 'integer_remainder)))
 
 ;; [Listof Id] -> Asm
 (define (compile-module-provides ls)
@@ -1173,28 +1175,64 @@
                 (Sar r9 (- int-shift imm-shift))
                 (Add rbx r9)
                 (Label end)))]
-         ['quotient ;; update to bignums
-          (seq (Mov r8 rax)
-               (Pop rax)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Cmp r8 (imm->bits 0))
+         ['quotient
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+            (seq (Pop r8)
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (Cmp rax (imm->bits 0)) ; error out if divisor is 0
                (Je (error-label c))
-               (Cqo)
-               (IDiv r8)
-               (Sal rax int-shift)
-               )]
-         ['remainder ;; update to bignums
-          (seq (Mov r8 rax)
-               (Pop rax)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Cmp r8 (imm->bits 0))
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'integer_quotient)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['remainder 
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+            (seq (Pop r8)
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (Cmp rax (imm->bits 0)) ; error out if divisor is 0
                (Je (error-label c))
-               (Cqo)
-               (IDiv r8)
-               (Mov rax rdx)
-               )]
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'integer_remainder)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
          ['> 
             (seq (Pop r8)
                  (assert-integer/bignum r8 c)

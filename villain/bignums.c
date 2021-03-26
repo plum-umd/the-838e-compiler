@@ -6,6 +6,7 @@
 #include "villain.h"
 
 void load_bignum(mpz_t, int64_t*);
+void load_any_to_bignum(mpz_t, int64_t);
 int64_t integer_comparison(int64_t, int64_t, int);
 int64_t return_bignum_maybe_fixnum(mpz_t, int64_t);
 int64_t return_fixnum_maybe_bignum(int64_t, int64_t);
@@ -336,6 +337,74 @@ int64_t integer_sub(int64_t val1, int64_t val2, int64_t heap) { // rdi, rsi, rdx
     mpz_clear(integ2);
     return ret;
     
+  }
+}
+
+int64_t integer_quotient(int64_t val1, int64_t val2, int64_t heap) { // rdi, rsi, rdx
+  
+  int64_t ret;
+  mpz_t integ1, integ2;
+  mpz_init(integ1); mpz_init(integ2);
+  
+  load_any_to_bignum(integ1, val1); // load value
+  load_any_to_bignum(integ2, val2); // load value
+  
+  mpz_tdiv_q(integ1, integ1, integ2);
+
+  ret = return_bignum_maybe_fixnum(integ1, heap);
+
+  mpz_clear(integ1);
+  mpz_clear(integ2);
+  return ret;
+
+}
+
+int64_t integer_remainder(int64_t val1, int64_t val2, int64_t heap) { // rdi, rsi, rdx
+  
+  int64_t ret;
+  mpz_t integ1, integ2;
+  mpz_init(integ1); mpz_init(integ2);
+  
+  load_any_to_bignum(integ1, val1); // load value
+  load_any_to_bignum(integ2, val2); // load value
+  
+  mpz_tdiv_r(integ1, integ1, integ2);
+
+  ret = return_bignum_maybe_fixnum(integ1, heap);
+
+  mpz_clear(integ1);
+  mpz_clear(integ2);
+  return ret;
+
+}
+
+void load_any_to_bignum(mpz_t integ, int64_t val) {
+  if (int_type_tag == (int_type_mask & val)) {
+    val = val >> int_shift;
+
+    if( val < 0 ) {
+      int64_t absval = - val;
+      mpz_import(integ, 1, 0, 8, 0, 0, &absval);
+      mpz_neg(integ, integ);
+    } else {
+      mpz_import(integ, 1, 0, 8, 0, 0, &val);
+    }
+    
+  } else {
+    int64_t* hp = (int64_t *) (val ^ bignum_type_tag);
+    int64_t len = (hp[0] >> int_shift);
+    size_t abslen;
+
+    if(len < 0) { // check if the sign is negative
+      abslen = (size_t) (- len); // WARNING: potentially lossy conversion
+    } else {
+      abslen = (size_t) len;
+    }
+
+    mpz_import(integ, abslen, -1, (size_t) 8, 0, 0, (void*) (hp+1));
+    if(len < 0) { // if sign is negative, negate integer
+      mpz_neg(integ, integ);
+    }
   }
 }
 
