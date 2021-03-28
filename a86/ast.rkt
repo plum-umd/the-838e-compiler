@@ -1,5 +1,7 @@
 #lang racket
 
+(require racket/serialize)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Guards
 
@@ -133,7 +135,7 @@
          (struct-out %%%)
          Comment?)
 
-(struct Comment (str)
+(serializable-struct Comment (str)
   #:transparent
   #:guard
   (λ (s n)
@@ -141,9 +143,9 @@
       (error n "expects string; given ~v" s))
     s))
 
-(struct %   Comment () #:transparent)
-(struct %%  Comment () #:transparent)
-(struct %%% Comment () #:transparent)
+(serializable-struct %   Comment () #:transparent)
+(serializable-struct %%  Comment () #:transparent)
+(serializable-struct %%% Comment () #:transparent)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Instructions
@@ -151,7 +153,7 @@
 (define-syntax-rule
   (instruct Name (x ...) guard)
   (begin (provide (struct-out Name))
-         (struct Name (x ...)
+         (serializable-struct Name (x ...)
            #:transparent
            #:guard guard)))
 
@@ -187,7 +189,7 @@
 (instruct Cqo    ()        check:none)
 (instruct Addsd  (dst src) check:xarith)
 (instruct Subsd  (dst src) check:xarith)
-(instruct Movapd (dst src) check:xsrc-xdest)
+(instruct Movsd (dst src) check:xsrc-xdest)
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
 
@@ -243,7 +245,7 @@
       (Comment? x)
       (Addsd? x)
       (Subsd? x)
-      (Movapd? x)
+      (Movsd? x)
       )
   )
 

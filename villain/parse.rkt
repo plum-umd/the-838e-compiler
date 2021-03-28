@@ -1,19 +1,50 @@
 #lang racket
-(provide parse parse-e parse-library parse-d)
+(provide parse parse-e parse-d parse-library desugar desugar-def desugar-def-lib)
 (require "ast.rkt")
 
-;; S-Expr -> Library
+;; S-Expr -> (Letrec (Lisof Id) (Listof Lambda) Expr)
+(define (parse s)
+  (desugar (parse-aux s)))
+
+;; S-Expr -> Prog
+(define (parse-aux s)
+  (match s
+    [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
+           (and ds (list 'define _ _)) ...)
+     (parse-mod pvs rqs ds '(void))]
+    [(list 'begin (list 'require rqs ...) (and ds (list 'define _ _)) ...)
+     (parse-mod '() rqs ds '(void))]
+    [(list 'begin (list 'provide pvs ...) (and ds (list 'define _ _)) ...)
+     (parse-mod pvs '() ds '(void))]
+    [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
+           (and ds (list 'define _ _)) ... e)
+     (parse-mod pvs rqs ds e)]
+    [(list 'begin (list 'require rqs ...) (and ds (list 'define _ _)) ... e)
+     (parse-mod '() rqs ds e)]
+    [(list 'begin (list 'provide pvs ...) (and ds (list 'define _ _)) ... e)
+     (parse-mod pvs '() ds e)]
+    [(list 'begin (and ds (or (list-rest 'define _ _) (list-rest 'struct _ _ )) ) ... e)
+     (Prog (map parse-d ds) (parse-e e))]
+    [e (Prog '() (parse-e e))]))
+
+;;; S-Expr -> Library
 (define (parse-library s)
   (match s
     [(list (list 'provide xs ...) (and ds (list 'define _ _)) ...)
      (Lib xs (map parse-d ds))]))
 
-;; S-Expr -> Prog
-(define (parse s)
-  (match s
-    [(list 'begin (and ds (or (list-rest 'define _ _) (list-rest 'struct _ _ )) ) ... e)
-     (Prog (map parse-d ds) (parse-e e))]
-    [e (Prog '() (parse-e e))]))
+(define (parse-mod pvs rqs ds e)
+  (let ((pvs2 (if (equal? pvs '((all-defined-out)))
+                  (parse-all-defined-out ds)
+                   pvs)))
+    (Mod pvs2 rqs (map parse-d ds) (parse-e e))))
+                 
+
+(define (parse-all-defined-out ds)
+   (match ds
+     [(list (list 'define fs _) ...) (map car fs)]
+     [_ (error "parse-all-defined-out")]))
+  
 
 ;; S-Expr -> Defn
 (define (parse-d s)
@@ -41,7 +72,7 @@
     ['eof                          (Eof)]
     [(? symbol?)                   (Var s)]
     [(list 'quote (list))          (Empty)]
-    [(list 'apply f e)             (Apply f (parse-e e))]
+    [(list 'apply f e)             (Apply (parse-e f) (parse-e e))]
     [(list (? (op? op0) p0))       (Prim0 p0)]
     [(list (? (op? op1) p1) e)     (Prim1 p1 (parse-e e))]
     [(list (? (op? op2) p2) e1 e2) (Prim2 p2 (parse-e e1) (parse-e e2))]
@@ -49,6 +80,8 @@
     [(list 'make-prefab-struct (? prefab-key? k) rest ...) (Mps (parse-prefab-key k) (map parse-e rest))] ;;Takes the fields individually
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin)                 (Prim0 'void)]
+    [(list 'begin (and ds (list-rest 'define _ _)) ..1 e es ...)
+     (Prog (map parse-d ds) (parse-seq e es))]
     [(list-rest 'begin e es) (parse-seq e es)]
     [(list 'cond) (Prim0 'void)]
     [(list 'cond (list-rest 'else e es)) (parse-seq e es)]
@@ -63,9 +96,16 @@
     [(cons 'quote (list (? symbol? x))) (Symbol x)]
     [(list 'match e0 cs ...)
      (Match (parse-e e0) (map parse-c cs))]
-    [(cons (? symbol? f) es)
-     (App f (map parse-e es))]
     ['#:prefab '#:prefab]
+    [(list-rest 'letrec bs e es)
+     (let ((x+es (map parse-binding bs)))
+       (Letrec (map first x+es) (map second x+es) (parse-seq e es)))]
+    [(list-rest (or 'lambda 'λ) (list xs ...) e es)
+     (Lam (gensym) xs (parse-seq e es))]
+    [(list-rest (or 'lambda 'λ) (list-rest (? symbol? xs) ... (? symbol? xs*)) e es)         
+     (Lam* (gensym) xs xs* (parse-seq e es))]
+    [(cons e es)
+     (LCall (parse-e e) (map parse-e es))]
     [_ (error "Parse error" s)]))
 
 (define (parse-seq e es)
@@ -159,12 +199,14 @@
 (define op3
   '(string-set!  vector-set!))  
 (define op4
-  '(vector-cas!))
+  '(vector-cas!))  
 
 (define (op? ops)
   (λ (x)
     (and (symbol? x)
          (memq x ops))))
+
+
 (define (prefab-key? k)
   (match k
     [(cons 'quote (list (? symbol? s))) #t]
@@ -172,3 +214,49 @@
            (list (? exact-nonnegative-integer? n2) v2) ...
            (? list? l)...) #t] ;;Only allowed until we implement vectors, list? should change to vector?
     [_ #f]))
+
+
+(define (desugar-def d)
+  (match d
+    [(Defn f xs e) (cons f (Lam (gensym) xs (desugar e)))]
+    [(Defn* f xs xs* e) (cons f (Lam* (gensym) xs xs* (desugar e)))]
+    [d d]))
+
+(define (desugar-def-lib d)
+  (match d
+    [(Defn f xs e) (cons f (Lam (gensym 'lib_lambda_) xs (desugar e)))]
+    [(Defn* f xs xs* e) (cons f (Lam* (gensym 'lib_lambda_) xs xs* (desugar e)))]
+    [d d]))
+
+(define (desugar e)
+  (match e
+    [(Prog ds e)
+     (let ((bs (map desugar-def ds)))
+       (Letrec (map car bs) (map cdr bs) (desugar e)))]
+    [(Int i)            e]
+    [(Bool b)           e]
+    [(Char c)           e]
+    [(Flonum f)         e]
+    [(Eof)              e]
+    [(Empty)            e]
+    [(String s)         e]
+    [(Symbol s)         e]
+    [(Vec ds)           e]
+    [(Var x)            e]
+    [(Mps k f)          e]
+    [(LCall e es)       (LCall (desugar e) (map desugar es))]
+;    [(App f es)         (App f (map desugar es))]
+    [(Apply f e)        (Apply (desugar f) (desugar e))]
+    [(Prim0 p)          e]
+    [(Prim1 p e)        (Prim1 p (desugar e))]
+    [(Prim2 p e1 e2)    (Prim2 p (desugar e1) (desugar e2))]
+    [(Prim3 p e1 e2 e3) (Prim3 p (desugar e1) (desugar e2) (desugar e3))]
+    [(If e1 e2 e3)      (If (desugar e1) (desugar e2) (desugar e3))]
+    [(Begin e1 e2)      (Begin (desugar e1) (desugar e2))]
+    [(Let x e1 e2)      (Let x (map desugar e1) (desugar e2))]
+    [(Letrec xs es e)   (Letrec xs (map desugar es) (desugar e))]
+    [(Lam l xs e)       (Lam l xs (desugar e))]
+    [(Lam* l xs xs* e)  (Lam* l xs xs* (desugar e))]
+    [(Mod pvs rqs ds e) (Mod pvs rqs (map desugar-def ds) (desugar e))]
+    [(Match e0 cs)
+     (Match (desugar e0) (map (λ (c) (Clause (Clause-p c) (desugar (Clause-e c)))) cs))]))

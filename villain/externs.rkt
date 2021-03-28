@@ -1,12 +1,23 @@
 #lang racket
-(provide externs char-op->uc symbol->label)
+(provide externs char-op->uc symbol->label stdlib-ids stdlib-defs
+         stdlib-fs-ls externs-es)
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
   (match p
-    [(Prog ds e)
-     (remove-duplicates (append (externs-ds ds)
-                                (externs-e e)))]
+     [(Letrec fs ls e)
+        (remove-duplicates (append (externs-es ls)
+                                   (externs-e e)))]
+;    [(Prog ds e)
+;     (remove-duplicates (append (externs-ds ds)
+;                                (externs-e (desugar e))))]
+
+    [(CMod pv-exts pvs fs ls dfλs e)
+     (let ((exts (apply set (append (externs-es ls)
+                                    (externs-e e))))
+           (prvs (set))) ;(apply set (map Extern (map symbol->label pv-exts)))))
+       (set->list (set-subtract exts prvs)))]
+
     [(Lib ps ds)
      ; provided ids aren't external
      (let ((exts (apply set (externs-ds ds)))
@@ -28,11 +39,13 @@
 
 (define (externs-e e)
   (match e
-    [(App f es)
-     (append (externs-f f)
-             (externs-es es))]
+;    [(App f es)
+;     (append (externs-f f)
+;             (externs-es es))]
+    [(LCall e es)
+     (append (externs-e e) (externs-es es))]
     [(Apply f e)
-     (append (externs-f f)
+     (append (externs-e f)
              (externs-e e))]
     [(Prim0 p)
      (externs-p p)]
@@ -53,9 +66,15 @@
     [(Let xs es e)
      (append (externs-es es)
              (externs-e e))]
+    [(Letrec fs ls e)
+     (append (externs-es ls)
+             (externs-e e))]
     [(Match e cs)
      (append (externs-e e)
              (externs-cs cs))]
+    [(Lam l xs e) (externs-e e)]
+    [(Lam* l xs xs* e) (externs-e e)]
+    [(Var x) '()]  ;(externs-f x)]
     [_ '()]))
 
 ;; [Listof Clause] -> [Listof Id]
@@ -74,7 +93,9 @@
              (externs-es es))]))
 
 (define (externs-f f)
-  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
+  (if (stdlib-def-id? f) (list (Extern (symbol->label f))) '()))
+   ; if it is one of the ids of std library function definitions
+;  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
 
 (define (externs-p p)
   (let ((r (op->extern p)))
@@ -110,6 +131,9 @@
 ;; Is x provided by a stdlib?
 (define (stdlib-provided? x)
   (memq x stdlib-ids))
+
+(define (stdlib-def-id? x)
+  (memq x stdlib-defs-ids))
 
 ;; Symbol -> Label
 ;; Produce a symbol that is a valid Nasm label
