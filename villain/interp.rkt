@@ -87,9 +87,8 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
-    [(Prog sts '() e)
-     (let* ((new-ds (interp-structs sts)))
-       (interp-env e r (append new-ds ds)))]
+    [(Prog '() '() e)
+       (interp-env e r ds)]
     [(Let xs es e)
      (match (interp-env* es r ds)
        ['err 'err]
