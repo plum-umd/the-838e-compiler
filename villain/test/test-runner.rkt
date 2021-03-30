@@ -932,7 +932,7 @@
                        (g f))) 88)
 
  ;; Check (begin (define _ _) ..1 e ... es) -> letrec
-  (check-equal? (run '(begin
+ (check-equal? (run '(begin
                         (define (f x)
                           (match x
                             [z (begin
@@ -940,7 +940,7 @@
                                  (define (g2 y) (+ z y))
                                  (+ z (g1 z)))]))
                         (f 2))) 7)
-  (check-equal? (run '(begin
+ (check-equal? (run '(begin
                         (define (f1 x) (add1 x))
                         (define (f2 x) (+ x 2))
                         (define (f3 x) (- x 3))

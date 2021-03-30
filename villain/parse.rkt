@@ -24,8 +24,23 @@
     [(list 'begin (list 'provide pvs ...) (and ds (list 'define _ _)) ... e)
      (parse-mod pvs '() ds e)]
     [(list 'begin (and ds (or (list-rest 'define _ _) (list-rest 'struct _ _ )) ) ... e)
-     (Prog (map parse-d ds) (parse-e e))]
-    [e (Prog '() (parse-e e))]))
+     (let ((globals (separate-struct-from-def ds)))
+       (match globals
+         [(cons sts ds)
+          (Prog (map parse-d sts) (map parse-d ds) (parse-e e))]))]
+    [e (Prog '() '() (parse-e e))]))
+
+;; S-Expr -> (Pairof (Listof S-Expr))
+(define (separate-struct-from-def ds)
+  (match ds
+    [(cons (and d (list-rest 'define _ _)) rest)
+     (match (separate-struct-from-def rest)
+       [(cons a b) (cons a (cons d b))])]
+    [(cons (and s (list-rest 'struct _ _)) rest)
+     (match (separate-struct-from-def rest)
+       [(cons a b) (cons (cons s a) b)])]
+    ['() (cons '() '())]))
+     
 
 ;;; S-Expr -> Library
 (define (parse-library s)
@@ -81,7 +96,7 @@
     [(list (? (op? op3) p3) e1 e2 e3) (Prim3 p3 (parse-e e1) (parse-e e2) (parse-e e3))] 
     [(list 'begin)                 (Prim0 'void)]
     [(list 'begin (and ds (list-rest 'define _ _)) ..1 e es ...)
-     (Prog (map parse-d ds) (parse-seq e es))]
+     (Prog '() (map parse-d ds) (parse-seq e es))]
     [(list-rest 'begin e es) (parse-seq e es)]
     [(list 'cond) (Prim0 'void)]
     [(list 'cond (list-rest 'else e es)) (parse-seq e es)]
@@ -219,20 +234,19 @@
 (define (desugar-def d)
   (match d
     [(Defn f xs e) (cons f (Lam (gensym) xs (desugar e)))]
-    [(Defn* f xs xs* e) (cons f (Lam* (gensym) xs xs* (desugar e)))]
-    [d d]))
+    [(Defn* f xs xs* e) (cons f (Lam* (gensym) xs xs* (desugar e)))]))
 
 (define (desugar-def-lib d)
   (match d
     [(Defn f xs e) (cons f (Lam (gensym 'lib_lambda_) xs (desugar e)))]
-    [(Defn* f xs xs* e) (cons f (Lam* (gensym 'lib_lambda_) xs xs* (desugar e)))]
-    [d d]))
+    [(Defn* f xs xs* e) (cons f (Lam* (gensym 'lib_lambda_) xs xs* (desugar e)))]))
 
 (define (desugar e)
   (match e
-    [(Prog ds e)
+    [(Prog sts ds e)
      (let ((bs (map desugar-def ds)))
-       (Letrec (map car bs) (map cdr bs) (desugar e)))]
+       (Letrec (map car bs) (map cdr bs) 
+               (Prog sts '() (desugar e))))]
     [(Int i)            e]
     [(Bool b)           e]
     [(Char c)           e]

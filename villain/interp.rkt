@@ -28,9 +28,11 @@
 
 (define (interp p)
   (match p
-    [(Prog ds e)
-  (let ((bs (map desugar-def stdlib-defs)) (new-ds (interp-definitions ds)))
-    (interp-aux (Letrec (map car bs) (map cdr bs) (Prog new-ds e))))]))
+    [(Letrec names bodies (Prog sts ds e))
+  (let* ((bs (map desugar-def stdlib-defs))
+         (new-ds  (interp-structs sts))
+         (l (Letrec (append (map car new-ds) names) (append (map cdr new-ds) bodies) e)))
+    (interp-aux (Letrec (map car bs) (map cdr bs) l)))]))
 
 (define (interp-aux p)
   (interp-env p '() stdlib))
@@ -85,6 +87,9 @@
      (match (interp-env e1 r ds)
        ['err 'err]
        [_ (interp-env e2 r ds)])]
+    [(Prog sts '() e)
+     (let* ((new-ds (interp-structs sts)))
+       (interp-env e r (append new-ds ds)))]
     [(Let xs es e)
      (match (interp-env* es r ds)
        ['err 'err]
@@ -208,30 +213,32 @@
        [v (cons v (interp-env* es r ds))])]))
 
 ;; Defns -> Defns
-(define (interp-definitions ds)
+(define (interp-structs ds)
   (match ds
    ['() '()]
-   [(cons (Struct s xs) l) (append (create-struct-bindings s xs) (interp-definitions l))]
-   [(cons h t) (cons h (interp-definitions t))]))
+   [(cons (Struct s xs) l) (append (create-struct-bindings s xs) (interp-structs l))]
+   [(cons h t) (interp-structs t)]))
 
 ;;Symbol (Listof Symbol) -> Defns ;; These only work with symbols as the 's'!  ;; Also, need to do arity checks
 (define (create-struct-bindings s xs)
   (let* ((constructor (create-constructor s xs))
          (predicate   (create-predicate s xs))
-         (accessors   (create-accessors s xs)))
-    (cons constructor (cons predicate accessors))))
+         (accessors   (create-accessors s xs))
+         (result (cons constructor (cons predicate accessors))))
+    result))
 
 ;;Symbol (Listof Symbol) -> Defn
 (define (create-constructor s xs)
-  (parse-d `(define ,(cons s xs)
-                 (make-prefab-struct (quote ,s) ,xs))))
+  (desugar-def (parse-d `(define ,(cons s xs)
+                 (make-prefab-struct (quote ,s) ,xs)))))
 
 ;;Symbol (Listof Symbol) -> Defns
 (define (create-predicate s xs)
-  (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "?")) 'st)
-             (match st
-               [(struct ,s ,xs) #t]
-               [_ #f]))))
+  (let ((f (string-append (symbol->string s) "?")))
+    (desugar-def (parse-d `(define ,(list (string->symbol f) 'st)
+                        (match st
+                          [(struct ,s ,xs) #t]
+                          [_ #f]))))))
 
 ;;List -> Expr
 (define (list->cons xs)
@@ -247,10 +254,11 @@
 
 ;;Symbol (Listof Symbol) Symbol -> Defn
 (define (create-accessor s xs x)
-  (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "-" (symbol->string x))) 'st)
-              (match st
-                [(struct ,s ,xs) ,x]
-                [_ 'err]))))
+  (let ((f (string-append (symbol->string s) "-" (symbol->string x))))
+    (desugar-def (parse-d `(define ,(list (string->symbol (string-append (symbol->string s) "-" (symbol->string x))) 'st)
+                (match st
+                  [(struct ,s ,xs) ,x]
+                  [_ 'err]))))))
 
 ;;Symbol (Listof Symbol) -> Defns
 (define (create-accessors s xs)

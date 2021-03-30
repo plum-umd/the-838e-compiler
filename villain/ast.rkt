@@ -1,15 +1,15 @@
 #lang racket
 (provide (all-defined-out))
 
-;; type Prog = (Prog (Listof Defn) Expr)
+;; type Prog = (Prog (Listof Struct) (Listof Defn) Expr)
 ;;           | (Lib  (Listof Id) (Listof Defn))
-(struct Prog (ds e)  #:prefab)
+(struct Prog (sts ds e)  #:prefab)
 (struct Lib  (xs ds) #:prefab)
 (struct Mod  (pvs rqs ds e) #:prefab)
 (struct CMod (pv-exts pvs fs ls dfλs e) #:prefab) ; for compiling a module 
 
-;; type Defn = (Defn Id (Listof Id) Expr)
-;;           | (Struct Id (Listof Id))
+;; type Defn   = (Defn Id (Listof Id) Expr)
+;; type Struct = (Struct Id (Listof Id))
 
 (struct Defn (f xs e) #:prefab)
 (struct Struct (s xs) #:prefab)
