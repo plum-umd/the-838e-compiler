@@ -2,11 +2,14 @@
 #include <inttypes.h>
 #include "villain.h"
 #include "runtime.h"
+#include <math.h>
+#include <gmp.h>
 
 FILE* in;
 FILE* out;
 void (*error_handler)();
 int64_t *heap;
+
 
 void error_exit()
 {
@@ -23,6 +26,7 @@ void print_str(vl_str *);
 void print_char(vl_char);
 void print_cons(vl_cons *);
 void print_vector(vl_vec *);
+void print_bignum(vl_bignum *);
 vl_str *symbol_to_str(vl_symbol s);
 
 void print_result(vl_val x)
@@ -58,6 +62,7 @@ void print_result(vl_val x)
     printf(")");
     break;
   case VL_STR:
+    printf("test");
     putchar('"');
     print_str(vl_unwrap_str(x));
     putchar('"');
@@ -76,6 +81,9 @@ void print_result(vl_val x)
     break;
   case VL_PORT:
     printf("#<input-port>");
+    break;
+  case VL_BIGNUM:
+    print_bignum(vl_unwrap_bignum(x));
     break;
   case VL_INVALID:
   default:

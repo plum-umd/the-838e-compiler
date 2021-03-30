@@ -16,6 +16,8 @@ vl_type vl_typeof(vl_val x)
     return VL_VEC;
   case flonum_type_tag:
     return VL_FLONUM;
+  case bignum_type_tag:
+    return VL_BIGNUM;
   default:
     if ((int_type_mask & x) == int_type_tag)
       return VL_INT;
@@ -169,6 +171,15 @@ vl_port* vl_unwrap_port(vl_val x)
 vl_val vl_wrap_port(vl_port *p)
 {
   return ((vl_val)p) | port_type_tag;
+}
+
+vl_bignum* vl_unwrap_bignum(vl_val x)
+{
+  return (vl_bignum *)(x ^ bignum_type_tag);
+}
+vl_val vl_wrap_bignum(vl_bignum *p)
+{
+  return ((vl_val) p) | bignum_type_tag;
 }
 
 vl_val vl_wrap_eof(void)

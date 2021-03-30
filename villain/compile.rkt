@@ -9,19 +9,19 @@
 (define rax 'rax) ; return  ; the dividend of div in string-ref and string-set!
 (define rbx 'rbx) ; heap
 (define rdx 'rdx) ; return, 2  ; remainder of division and scratch in string-ref
-                               ; and string-set!
-
+                               ; and string-set! ; arg3
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
-                  ; compile-define, open-input-file
+                  ; compile-define, open-input-file, integer?
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, compile-define, fl<=
-                  ; compile-vector, vector-set!, vector-ref
+                  ; compile-vector, vector-set!, vector-ref, compile-bignum
+                  ; add1, sub1, integer?, integer-length, +, -, assert-integer/bignum
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
-                  ; compile-define, fl<=
+                  ; compile-define, fl<=, compile-bignum, integer?, integer-length, assert-integer/bignum
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
 (define xmm0 'xmm0) ; registers to hold double precision floating numbers
@@ -50,6 +50,7 @@
                 (Extern 'raise_error)
                 (Global 'raise_error_align)
                 (Extern 'str_to_symbol)
+                (bignum-externs)
                 lib-ls-ids-exts ;; externs of library lambda defs
                 (externs p)
                 (apply seq libexts)    ;; externs in library lambdas
@@ -82,6 +83,7 @@
            (Extern 'raise_error)
            (Extern 'raise_error_align)
            (Extern 'str_to_symbol)
+           (bignum-externs)           
            (compile-defines ds))]))
 
 (define (libraries-fs-ls)
@@ -116,6 +118,7 @@
         (Extern 'raise_error)
         (Extern 'raise_error_align)
         (Extern 'str_to_symbol)
+        (bignum-externs)
         (compile-λ-definitions (apply append (map λs ls)))))
 
 (define (λs-labels ls)
@@ -137,6 +140,19 @@
     [(cons x xs)
      (seq (Global (symbol->label x))
           (compile-provides xs))]))
+
+;; -> Asm
+(define (bignum-externs)
+  (seq (Extern 'bignum_length)
+       (Extern 'add_or_sub1)
+       (Extern 'integer_g)
+       (Extern 'integer_geq)
+       (Extern 'integer_leq)
+       (Extern 'integer_l)
+       (Extern 'integer_add)
+       (Extern 'integer_sub)
+       (Extern 'integer_quotient)
+       (Extern 'integer_remainder)))
 
 ;; [Listof Id] -> Asm
 (define (compile-module-provides ls)
@@ -182,6 +198,7 @@
            (Extern 'raise_error)
            (Global 'raise_error_align)
            (Extern 'str_to_symbol)
+           (bignum-externs)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
            (compile-e-tail (Letrec (append fs+ fs) (append ls+ ls) e) '())
@@ -206,6 +223,7 @@
            (Extern 'raise_error)
            (Extern 'raise_error_align)
            (Extern 'str_to_symbol)
+           (bignum-externs)
            (compile-λ-definitions (apply append (map λs dfλs))))]))
 
 (define (error-label c)
@@ -220,6 +238,7 @@
     [(Bool b)           (compile-value b)]
     [(Char c)           (compile-value c)]
     [(Flonum f)         (compile-flonum f)]
+    [(Bignum i)         (compile-bignum i c)]
     [(Eof)              (compile-value eof)]
     [(Empty)            (compile-value '())]
     [(String s)         (compile-string s)]
@@ -263,6 +282,7 @@
       [(Bool b)           '()]
       [(Char c)           '()]
       [(Flonum f)         '()]
+      [(Bignum b)         '()]
       [(Eof)              '()]
       [(Empty)            '()]
       [(String s)         '()]
@@ -311,6 +331,7 @@
     [(Bool b)           '()]
     [(Char c)           '()]
     [(Flonum f)         '()]
+    [(Bignum b)         '()]
     [(Eof)              '()]
     [(Empty)            '()]
     [(String s)         '()]
@@ -594,6 +615,38 @@
   )
 
 ;; String -> Asm
+(define (compile-bignum i c)
+  (let ((length (ceiling (/ (integer-length (abs i)) 64)))
+        (sign (if (>= i 0) 1 -1)))
+    (seq (Mov r9 (imm->bits (* sign length)))
+         (Mov (Offset rbx 0) r9)          ;; write length in word 0
+         (compile-bignum-words (bignum->list (abs i)) 1)
+         (Mov rax rbx)                    ;; bignum is on heap
+         (Add rbx (* 8 (add1 length)))
+         (Mov r10 type-bignum)
+         (Or rax r10))))   
+
+;; Integer -> (Listof Integers)
+;; Breaks an integer down into 64 bit chunks
+;; input should always be positive
+(define (bignum->list i)
+  (if (< i (arithmetic-shift 1 64))
+    (list i) 
+    (cons (bitwise-and i (sub1 (arithmetic-shift 1 64))) 
+          (bignum->list (arithmetic-shift i -64)))))
+
+;; (Listof Integers) Integer -> Asm
+;; Takes list of 64-bit integers and places them on the heap
+;; Note: least significant 64-bit integers are placed first
+(define (compile-bignum-words ws n)
+  (match ws
+    ['()  (seq)]
+    [(cons w ws)
+     (seq (Mov r9 w)
+          (Mov (Offset rbx (* 8 n)) r9)
+          (compile-bignum-words ws (add1 n)))]))
+
+;; String -> Asm
 (define (compile-string s)
   (let ((len (string-length s)))
     (seq (Mov r9 (imm->bits len))
@@ -801,14 +854,58 @@
   (seq (compile-e-nontail e c)
        (match p
          ['add1
-          (seq (assert-integer rax c)
-               (Add rax (imm->bits 1)))]
+          (let ((end (gensym))
+                (pos-bignum (gensym)))
+            (seq (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Mov rsi rbx)
+               (Mov rdx 1)
+               (Call 'add_or_sub1)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
          ['sub1
-          (seq (assert-integer rax c)
-               (Sub rax (imm->bits 1)))]
+          (let ((end (gensym))
+                (pos-bignum (gensym)))
+            (seq (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Mov rsi rbx)
+               (Mov rdx -1)
+               (Call 'add_or_sub1)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]       
          ['zero?
           (let ((l1 (gensym)))
-            (seq (assert-integer rax c)
+            (seq (assert-integer/bignum rax c)
                  (Cmp rax 0)
                  (Mov rax val-true)
                  (Je l1)
@@ -816,21 +913,46 @@
                  (Label l1)))]
          ['integer?
           (let ((l1 (gensym)))
-            (seq (And rax mask-int)
-                 (Xor rax type-int)
-                 (Cmp rax 0)
-                 (Mov rax val-true)
+            (seq (Mov r8 val-true)    ; preemptively store true as result
+                 (Mov r9 rax)         ; first check if it's an integer
+                 (And r9 mask-int)
+                 (Xor r9 type-int)
+                 (Cmp r9 0)
                  (Je l1)
-                 (Mov rax val-false)
-                 (Label l1)))]
+                 (Mov r9 rax)         ; if not integer, check if bignum
+                 (Mov r10 ptr-mask)
+                 (And r9 r10)
+                 (Mov r10 type-bignum)
+                 (Xor r9 r10)
+                 (Cmp r9 0)
+                 (Je l1)
+                 (Mov r8 val-false)   ; if neither, this line stores false as result
+                 (Label l1)           ; move result into rax
+                 (Mov rax r8)))]
          ['integer-length
-          (seq (assert-integer rax c)
-               (Sar rax imm-shift)
-               (Mov r8 rax)
-               (Sar r8 63)
-               (Xor rax r8)
-               (Bsr rax rax)
-               (Sal rax int-shift))]
+          (let ((fixnum-length (gensym))
+                (end (gensym)))
+            (seq (assert-integer/bignum rax c)
+                (Mov r9 rax)                ; first check if it's an integer
+                (And r9 mask-int)
+                (Xor r9 type-int)
+                (Cmp r9 0)
+                (Je fixnum-length)
+                (Mov r10 type-bignum)
+                (Xor rax r10)        ; take out tag
+                (pad-stack c)
+                (Mov rdi rax)
+                (Call 'bignum_length)
+                (unpad-stack c)
+                (Jmp end)            ; jump to end, avoid integer-length for fixnum branch
+                (Label fixnum-length)
+                (Sar rax imm-shift)   ; if integer, take absolute value and get most significant bit
+                (Mov r8 rax)
+                (Sar r8 63)
+                (Xor rax r8)
+                (Bsr rax rax)
+                (Sal rax int-shift)
+                (Label end)))] 
          ['char?
           (let ((l1 (gensym)))
             (seq (And rax mask-char)
@@ -1000,78 +1122,153 @@
        (compile-e-nontail e2 (cons #f c))
        (match p
          ['+
-          (seq (Pop r8)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Add rax r8))]
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+           (seq (Pop r8)
+                (assert-integer/bignum r8 c)
+                (assert-integer/bignum rax c)
+                (pad-stack c)
+                (Mov rdi r8)
+                (Mov rsi rax)
+                (Mov rdx rbx)
+                (Call 'integer_add)
+                (unpad-stack c)
+                (Mov r9 rax)         ; first check if return value is fixnum
+                (And r9 mask-int)
+                (Xor r9 type-int)
+                (Cmp r9 0)
+                (Je end)             ; if not fixnum, we should adjust rbx
+                (Mov r9 (Offset rbx 0))
+                (Cmp r9 -1)
+                (Jg pos-bignum)      ; get absolute value of length
+                (Mov r8 0)
+                (Sub r8 r9)
+                (Mov r9 r8)
+                (Label pos-bignum)
+                (Sar r9 (- int-shift imm-shift))
+                (Add rbx r9)
+                (Label end)))]
          ['-
-          (seq (Pop r8)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Sub r8 rax)
-               (Mov rax r8))]
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+           (seq (Pop r8)
+                (assert-integer/bignum r8 c)
+                (assert-integer/bignum rax c)
+                (pad-stack c)
+                (Mov rdi r8)
+                (Mov rsi rax)
+                (Mov rdx rbx)
+                (Call 'integer_sub)
+                (unpad-stack c)
+                (Mov r9 rax)         ; first check if return value is fixnum
+                (And r9 mask-int)
+                (Xor r9 type-int)
+                (Cmp r9 0)
+                (Je end)             ; if not fixnum, we should adjust rbx
+                (Mov r9 (Offset rbx 0))
+                (Cmp r9 -1)
+                (Jg pos-bignum)      ; get absolute value of length
+                (Mov r8 0)
+                (Sub r8 r9)
+                (Mov r9 r8)
+                (Label pos-bignum)
+                (Sar r9 (- int-shift imm-shift))
+                (Add rbx r9)
+                (Label end)))]
          ['quotient
-          (seq (Mov r8 rax)
-               (Pop rax)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Cmp r8 (imm->bits 0))
-               (Je (error-label c))
-               (Cqo)
-               (IDiv r8)
-               (Sal rax int-shift)
-               )]
-         ['remainder
-          (seq (Mov r8 rax)
-               (Pop rax)
-               (assert-integer r8 c)
-               (assert-integer rax c)
-               (Cmp r8 (imm->bits 0))
-               (Je (error-label c))
-               (Cqo)
-               (IDiv r8)
-               (Mov rax rdx)
-               )]
-         ['>
-          (let ((gt-true (gensym 'gt)))
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jg gt-true)
-                 (Mov rax (imm->bits #f))
-                 (Label gt-true)))]
-         ['<
-          (let ((lt-true (gensym 'lt)))
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (Cmp rax (imm->bits 0)) ; error out if divisor is 0
+               (Je (error-label c))
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'integer_quotient)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['remainder 
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jl lt-true)
-                 (Mov rax (imm->bits #f))
-                 (Label lt-true)))]
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (Cmp rax (imm->bits 0)) ; error out if divisor is 0
+               (Je (error-label c))
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'integer_remainder)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['> 
+            (seq (Pop r8)
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_g)
+                 (unpad-stack c))]
+         ['< 
+            (seq (Pop r8)
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_l)
+                 (unpad-stack c))]
          ['<=
-          (let ((leq-true (gensym 'leq)))
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jle leq-true)
-                 (Mov rax (imm->bits #f))
-                 (Label leq-true)))]
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_leq)
+                 (unpad-stack c))]
          ['>=
-          (let ((geq-true (gensym 'geq)))
             (seq (Pop r8)
-                 (assert-integer r8 c)
-                 (assert-integer rax c)
-                 (Cmp r8 rax)
-                 (Mov rax (imm->bits #t))
-                 (Jge geq-true)
-                 (Mov rax (imm->bits #f))
-                 (Label geq-true)))]
+                 (assert-integer/bignum r8 c)
+                 (assert-integer/bignum rax c)
+                 (pad-stack c)
+                 (Mov rdi r8)
+                 (Mov rsi rax)
+                 (Call 'integer_geq)
+                 (unpad-stack c))]
          ['eq?
           (let ((l (gensym)))
             (seq (Pop r8)
@@ -1508,7 +1705,8 @@
              (Jmp return))]
        [(Box x)
         (seq (Mov r8 rax)
-             (And r8 ptr-mask)
+             (Mov r9 ptr-mask)
+             (And r8 r9)
              (Cmp r8 type-box)
              (Jne next)
              (Xor rax type-box)
@@ -1519,7 +1717,8 @@
              (Jmp return))]
        [(Cons x1 x2)
         (seq (Mov r8 rax)
-             (And r8 ptr-mask)
+             (Mov r9 ptr-mask)
+             (And r8 r9)
              (Cmp r8 type-cons)
              (Jne next)
              (Xor rax type-cons)
@@ -1611,6 +1810,22 @@
 (define assert-proc
   (assert-type proc-mask type-proc))
 
+(define assert-integer/bignum
+  (λ (arg c)
+    (let ((ok (gensym "intorbig")))
+    (seq (Mov r9 arg)       ; first check if integer
+         (And r9 mask-int)
+         (Cmp r9 type-int)
+         (Je ok)
+         (Mov r9 arg)       ; then check if bignum
+         (Mov r10 ptr-mask)
+         (And r9 r10)
+         (Mov r10 type-bignum)
+         (Cmp r9 r10)
+         (Je ok)
+         (Jmp (error-label c))
+         (Label ok)))))
+
 (define (assert-codepoint c)
   (let ((ok (gensym)))
     (seq (assert-integer rax c)
@@ -1664,6 +1879,7 @@
               (Extern 'raise_error)
               (Global 'raise_error_align)
               (Extern 'str_to_symbol)
+              (bignum-externs)
               (Label 'entry)
               (Mov rbx rdi) ; recv heap pointer
               (compile-e-tail p (reverse fs))
