@@ -2,6 +2,8 @@
 #include <inttypes.h>
 #include "villain.h"
 #include "runtime.h"
+#include <math.h>
+#include <gmp.h>
 
 FILE* in;
 FILE* out;
@@ -25,7 +27,7 @@ void print_char(vl_char);
 void print_cons(vl_cons *);
 void print_vector(vl_vec *);
 void print_prefab(vl_prefab *);
-
+void print_bignum(vl_bignum *);
 vl_str *symbol_to_str(vl_symbol s);
 
 void print_result(vl_val x)
@@ -84,6 +86,9 @@ void print_result(vl_val x)
     printf("'#s(");
     print_prefab(vl_unwrap_prefab(x));
     printf(")");
+    break;
+  case VL_BIGNUM:
+    print_bignum(vl_unwrap_bignum(x));
     break;
   case VL_INVALID:
   default:

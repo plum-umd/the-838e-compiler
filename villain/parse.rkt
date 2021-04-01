@@ -1,6 +1,8 @@
 #lang racket
+
 (provide parse parse-e parse-d parse-library desugar desugar-def desugar-def-lib)
-(require "ast.rkt")
+(require "ast.rkt" "types.rkt")
+
 
 ;; S-Expr -> (Letrec (Lisof Id) (Listof Lambda) Expr)
 (define (parse s)
@@ -76,7 +78,7 @@
 ;; S-Expr -> Expr
 (define (parse-e s)
   (match s
-    [(? integer?)                  (Int s)]
+    [(? integer?)                  (if (bignum? s) (Bignum s) (Int s))]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]
     [(? flonum?)                   (Flonum s)]
@@ -255,6 +257,7 @@
     [(Bool b)           e]
     [(Char c)           e]
     [(Flonum f)         e]
+    [(Bignum b)         e]
     [(Eof)              e]
     [(Empty)            e]
     [(String s)         e]

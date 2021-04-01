@@ -14,9 +14,12 @@
 (define type-port       #x0000000000000005)
 (define type-vector     #x0000000000000006)
 (define type-flonum     #x0000000000000007)
+
 (define type-prefab     #x1000000000000001)
 (define type-proc       #x1000000000000002)
 (define proc-mask       #x7000000000000002)
+(define type-bignum     #x1000000000000003)
+
 
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
@@ -57,9 +60,6 @@
         [(void? v)  val-void]
         [(empty? v) val-empty]
         ))
-
-
-
 
 ;; converts a flonum to bits with the IEEE protocol
 ;; so that the sign, exponent, and mantissa can be stored
@@ -131,7 +131,6 @@
 
 
 
- 
 (define (imm-bits? v)
   (zero? (bitwise-and v imm-mask)))
 
@@ -159,6 +158,13 @@
 (define (prefab-bits? v)
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-prefab)))
 
+(define (bignum? v) 
+  (or (>= v (arithmetic-shift 1 (- 63 int-shift)))
+      (<  v (- (arithmetic-shift 1 (- 63 int-shift))))))
+
+(define (bignum-bits? v)
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-bignum)))
+
 (define (port-bits? v)
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-port)))
 
@@ -167,4 +173,3 @@
 
 (define (proc-bits? v)
   (zero? (bitwise-xor (bitwise-and v proc-mask) type-proc)))
-

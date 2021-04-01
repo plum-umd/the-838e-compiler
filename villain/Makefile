@@ -16,6 +16,7 @@ objs = \
 	io.o \
 	symbol.o \
 	str.o \
+	bignums.o \
 	wrap.o \
 	utf8.o
 
@@ -29,12 +30,13 @@ char.o: villain.h utf8.h char.h
 io.o: runtime.h villain.h utf8.h
 symbol.o: str.h types.h villain.h
 str.o: types.h villain.h
+bignums.o: villain.h types.h
 
 %.run:  %.o
 	@ racket -t formdps.rkt -m make $@
 
 %.run2: %.o runtime.o 
-	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) # -lm
+	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) -lgmp # -lm 
 	@ racket -t formdps.rkt -m mv $@
 	rm -f formdps $(shell cat modulefiles) modulefiles
 	find . -name "*.s" -not -name libraries-lmdefs.s -delete
@@ -74,6 +76,7 @@ clean:
 		-not -name "symbol.o" \
 		-not -name "str.o" \
 		-not -name "wrap.o" \
+		-not -name "bignums.o" \
 		-not -name "utf8.o"  -delete \
 		-or -name "*.s" -not -name \
 		"libraries-lmdefs.s" -delete \

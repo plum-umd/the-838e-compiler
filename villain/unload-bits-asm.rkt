@@ -28,14 +28,16 @@
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
             (list->string (reverse str-chars)))))]
-
     [(? prefab-bits? i)
      (let ((p (bitwise-xor i type-prefab)))
        (apply make-prefab-struct
               (unload-value (heap-ref p))
               (for/list ([k (in-range 2 (+ 2 (heap-ref (+ p (arithmetic-shift 1 imm-shift)))) 1)])
                 (unload-value (heap-ref (+ p (arithmetic-shift k imm-shift)))))))]
-         
+    [(? bignum-bits? i)
+        (let ((b (bitwise-xor i type-bignum)))
+          (let ((length-sign (unload-value (heap-ref-signed b))))
+            (* (/ length-sign (abs length-sign)) (bignum-loop (abs length-sign) b))))]
     [(? vector-bits? i)
         (let ((length (heap-ref i)))
           (let ((elems (vector-loop length i)))
@@ -77,11 +79,14 @@
 ;;the length of the number of bits used to tag a pointer at the bottom and back to the left, leaving
 ;;zeros there in the least significant bits in question.
 (define (untag i)
-  (arithmetic-shift (arithmetic-shift (arithmetic-shift i 3) (- (+ 3 (integer-length ptr-bottom-mask))))
+  (arithmetic-shift (arithmetic-shift (arithmetic-shift i 4) (- (+ 4 (integer-length ptr-bottom-mask))))
                     (integer-length ptr-bottom-mask)))
 
 (define (heap-ref i)
   (ptr-ref (cast (untag i) _int64 _pointer) _uint64))
+
+(define (heap-ref-signed i)
+  (ptr-ref (cast (untag i) _int64 _pointer) _sint64))
 
 (define string-loop
   (λ (n i)
@@ -93,6 +98,13 @@
            (let ((v2 (arithmetic-shift v1 -43)))
              (cons (unload-value v2) (string-loop (- n 1) i))))])))
 
+(define bignum-loop
+  (λ (n i)
+    (match n
+      [0 0]
+      [n (let ((v1 (heap-ref (+ i (arithmetic-shift n imm-shift)))))
+             (+ (arithmetic-shift v1 (* 64 (sub1 n))) (bignum-loop (- n 1) i)))])))
+                             
 (define vector-loop
   (λ (n i)
     (match n

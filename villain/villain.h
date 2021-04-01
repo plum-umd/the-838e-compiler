@@ -25,7 +25,8 @@ typedef enum vl_type {
   VL_VEC,
   VL_FLONUM,
   VL_PORT,
-  VL_PREFAB
+  VL_PREFAB,
+  VL_BIGNUM
 } vl_type;
 
 typedef struct {
@@ -52,6 +53,10 @@ typedef struct vl_port {
   int8_t closed;
   char buf[];
 } vl_port;
+typedef struct vl_bignum {
+  int64_t signlen;
+  int64_t buf[];
+} vl_bignum;
 
 typedef struct vl_prefab {
   vl_val key;
@@ -99,6 +104,10 @@ vl_val vl_wrap_port(vl_port *p);
 
 vl_prefab* vl_unwrap_prefab(vl_val x);
 vl_val vl_wrap_prefab(vl_prefab *p);
+
+vl_bignum* vl_unwrap_bignum(vl_val x);
+vl_val vl_wrap_bignum(vl_bignum *p);
+
 
 vl_val vl_wrap_eof(void);
 vl_val vl_wrap_empty(void);
