@@ -29,10 +29,13 @@
 (define (interp p)
   (match p
     [(Letrec names bodies (Prog sts ds e))
-  (let* ((bs (map desugar-def stdlib-defs))
-         (new-ds  (interp-structs sts))
-         (l (Letrec (append (map car new-ds) names) (append (map cdr new-ds) bodies) e)))
-    (interp-aux (Letrec (map car bs) (map cdr bs) l)))]))
+     (let* ((bs (map desugar-def stdlib-defs))
+            (new-ds  (interp-structs sts))
+            (l (Letrec (append (map car new-ds) names) (append (map cdr new-ds) bodies) e)))
+       (interp-aux (Letrec (map car bs) (map cdr bs) l)))]
+    [(Letrec names bodies e)
+     (let* ((bs (map desugar-def stdlib-defs)))
+       (interp-aux (Letrec (map car bs) (map cdr bs) p)))]))
 
 (define (interp-aux p)
   (interp-env p '() stdlib))

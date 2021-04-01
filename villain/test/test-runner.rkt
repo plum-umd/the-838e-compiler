@@ -264,7 +264,7 @@
                     (len (cons 1 (cons 2 (cons 3 '()))))))
                 'err)
   
-  (check-equal? (run
+ (check-equal? (run
                  '(begin
                     (struct sprout (x y) #:prefab)
                     (match (sprout 2 3)
@@ -1014,9 +1014,7 @@
   (check-equal? (run '(apply (λ x x) '())) '())
   (check-equal? (run '(let ((z 0)) (apply (λ (x) z) (cons 1 '())))) 0)
   (check-equal? (run '(let ((z 0)) (apply (λ x z) (cons 1 '())))) 0)
-  (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)
-
- ) 
+  (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)) 
 
 ;; Variable
 

@@ -43,7 +43,7 @@ runtime.o: $(objs) libraries-lmdefs.o
 	ld -r $(objs) libraries-lmdefs.o -o runtime.o
 
 libraries-lmdefs.o: libraries-lmdefs.s
-	nasm -f $(format) -o $@ $<
+	nasm -g -f $(format) -o $@ $<
 
 libraries-lmdefs.s: libraries-letrec
 
@@ -53,7 +53,7 @@ libraries-lmdefs.s: libraries-letrec
 	gcc -fPIC -c -g -o $@ $<
 
 .s.o:
-	nasm -f $(format) -o $@ $<
+	nasm -g -f $(format) -o $@ $<
 
 lib/%.s: lib/%.rkt
 	racket -t compile-library.rkt -m $< > $@

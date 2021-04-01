@@ -243,6 +243,10 @@
 
 (define (desugar e)
   (match e
+    [(Prog '() ds e)
+     (let ((bs (map desugar-def ds)))
+       (Letrec (map car bs) (map cdr bs) 
+               (desugar e)))]
     [(Prog sts ds e)
      (let ((bs (map desugar-def ds)))
        (Letrec (map car bs) (map cdr bs) 
