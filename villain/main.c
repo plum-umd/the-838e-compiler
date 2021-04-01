@@ -62,7 +62,6 @@ void print_result(vl_val x)
     printf(")");
     break;
   case VL_STR:
-    printf("test");
     putchar('"');
     print_str(vl_unwrap_str(x));
     putchar('"');
