@@ -72,6 +72,23 @@ int64_t add_or_sub1(int64_t val, int64_t heap, int64_t delta) { // rdi, rsi, rdx
   }
 }
 
+int64_t bitwise_not(int64_t val1, int64_t heap) { // rdi, rsi, rdx
+  
+  int64_t ret;
+  mpz_t integ1;
+  mpz_init(integ1);
+  
+  load_any_to_bignum(integ1, val1); // load value
+  
+  mpz_com(integ1, integ1);
+
+  ret = return_bignum_maybe_fixnum(integ1, heap);
+
+  mpz_clear(integ1);
+  return ret;
+
+}
+
 int64_t integer_g(int64_t val1, int64_t val2) { // rdi, rsi
   return integer_comparison(val1, val2, 1);
 }
@@ -369,6 +386,63 @@ int64_t integer_remainder(int64_t val1, int64_t val2, int64_t heap) { // rdi, rs
   load_any_to_bignum(integ2, val2); // load value
   
   mpz_tdiv_r(integ1, integ1, integ2);
+
+  ret = return_bignum_maybe_fixnum(integ1, heap);
+
+  mpz_clear(integ1);
+  mpz_clear(integ2);
+  return ret;
+
+}
+
+int64_t bitwise_and(int64_t val1, int64_t val2, int64_t heap) { // rdi, rsi, rdx
+  
+  int64_t ret;
+  mpz_t integ1, integ2;
+  mpz_init(integ1); mpz_init(integ2);
+  
+  load_any_to_bignum(integ1, val1); // load value
+  load_any_to_bignum(integ2, val2); // load value
+  
+  mpz_and(integ1, integ1, integ2);
+
+  ret = return_bignum_maybe_fixnum(integ1, heap);
+
+  mpz_clear(integ1);
+  mpz_clear(integ2);
+  return ret;
+
+}
+
+int64_t bitwise_ior(int64_t val1, int64_t val2, int64_t heap) { // rdi, rsi, rdx
+  
+  int64_t ret;
+  mpz_t integ1, integ2;
+  mpz_init(integ1); mpz_init(integ2);
+  
+  load_any_to_bignum(integ1, val1); // load value
+  load_any_to_bignum(integ2, val2); // load value
+  
+  mpz_ior(integ1, integ1, integ2);
+
+  ret = return_bignum_maybe_fixnum(integ1, heap);
+
+  mpz_clear(integ1);
+  mpz_clear(integ2);
+  return ret;
+
+}
+
+int64_t bitwise_xor(int64_t val1, int64_t val2, int64_t heap) { // rdi, rsi, rdx
+  
+  int64_t ret;
+  mpz_t integ1, integ2;
+  mpz_init(integ1); mpz_init(integ2);
+  
+  load_any_to_bignum(integ1, val1); // load value
+  load_any_to_bignum(integ2, val2); // load value
+  
+  mpz_xor(integ1, integ1, integ2);
 
   ret = return_bignum_maybe_fixnum(integ1, heap);
 

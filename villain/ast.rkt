@@ -47,10 +47,10 @@
 ;;           | 'write-byte | 'eof-object?
 ;;           | 'box | 'car | 'cdr | 'unbox
 ;;           | 'string-length | 'string? | make-string    
-;;           | 'empty?  |'vector? |'vector-length |list?
+;;           | 'empty?  |'vector? |'vector-length |list? | 'bitwise-not
 ;; type Op2  = '+ | '- | * | quotient| remainder
 ;;           | 'eq? | 'cons | 'string-ref | 'make-vector 
-;;           | 'vector-ref |'vector-set!
+;;           | 'vector-ref |'vector-set! | 'bitwise-and | 'bitwise-ior | 'bitwise-xor
 ;; type Op3  = 'string-set!
 ;; type Op4  = 'vector-cas!
 ;; type Pat  = (Wild)

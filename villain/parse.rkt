@@ -162,13 +162,15 @@
          symbol->string string->symbol symbol?
          vector? vector-length
          string-length string?
-         close-input-port open-input-file port? read-byte peek-byte))
+         close-input-port open-input-file port? read-byte peek-byte 
+         bitwise-not))
 
 (define op2
   '(+ - quotient remainder eq? cons string-ref make-string 
       > < <= >=
       make-vector vector-ref
-      fl+ fl- fl<= fl=))
+      fl+ fl- fl<= fl=
+      bitwise-and bitwise-ior bitwise-xor))
 
 (define op3
   '(string-set!  vector-set!))  

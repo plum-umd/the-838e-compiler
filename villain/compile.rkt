@@ -152,7 +152,11 @@
        (Extern 'integer_add)
        (Extern 'integer_sub)
        (Extern 'integer_quotient)
-       (Extern 'integer_remainder)))
+       (Extern 'integer_remainder)
+       (Extern 'bitwise_not)
+       (Extern 'bitwise_and)
+       (Extern 'bitwise_ior)
+       (Extern 'bitwise_xor)))
 
 ;; [Listof Id] -> Asm
 (define (compile-module-provides ls)
@@ -952,7 +956,31 @@
                 (Xor rax r8)
                 (Bsr rax rax)
                 (Sal rax int-shift)
-                (Label end)))] 
+                (Label end)))]
+         ['bitwise-not
+          (let ((end (gensym))
+                (pos-bignum (gensym)))
+            (seq (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi rax)
+               (Mov rsi rbx)
+               (Call 'bitwise_not)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
          ['char?
           (let ((l1 (gensym)))
             (seq (And rax mask-char)
@@ -1217,6 +1245,87 @@
                (Mov rsi rax)
                (Mov rdx rbx)
                (Call 'integer_remainder)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['bitwise-and 
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+            (seq (Pop r8)
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'bitwise_and)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['bitwise-ior 
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+            (seq (Pop r8)
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'bitwise_ior)
+               (unpad-stack c)
+               (Mov r9 rax)         ; first check if return value is fixnum
+               (And r9 mask-int)
+               (Xor r9 type-int)
+               (Cmp r9 0)
+               (Je end)             ; if not fixnum, we should adjust rbx
+               (Mov r9 (Offset rbx 0))
+               (Cmp r9 -1)
+               (Jg pos-bignum)      ; get absolute value of length
+               (Mov r8 0)
+               (Sub r8 r9)
+               (Mov r9 r8)
+               (Label pos-bignum)
+               (Sar r9 (- int-shift imm-shift))
+               (Add rbx r9)
+               (Label end)))]
+         ['bitwise-xor 
+          (let ((end (gensym))
+                (pos-bignum (gensym))) 
+            (seq (Pop r8)
+               (assert-integer/bignum r8 c)
+               (assert-integer/bignum rax c)
+               (pad-stack c)
+               (Mov rdi r8)
+               (Mov rsi rax)
+               (Mov rdx rbx)
+               (Call 'bitwise_xor)
                (unpad-stack c)
                (Mov r9 rax)         ; first check if return value is fixnum
                (And r9 mask-int)

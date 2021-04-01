@@ -41,6 +41,7 @@
     [(list 'flonum? v)                    (flonum? v)]
     [(list 'vector? v)                    (vector? v)]
     [(list 'vector-length v)              (vector-length v)]
+    [(list 'bitwise-not v)                (bitwise-not v)]
     [_                                    'err]))
 
 ;; Op2 Value Value -> Answer
@@ -72,7 +73,10 @@
     [(list 'vector-ref
            (? vector?) (? integer?)) (if (<= 0 v2 (sub1 (vector-length v1)))
                                          (vector-ref v1 v2)
-                                         'err)]           
+                                         'err)]
+    [(list 'bitwise-and (? integer?) (? integer?)) (bitwise-and v1 v2)]    
+    [(list 'bitwise-ior (? integer?) (? integer?)) (bitwise-ior v1 v2)]   
+    [(list 'bitwise-xor (? integer?) (? integer?)) (bitwise-xor v1 v2)]          
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer

@@ -820,6 +820,23 @@
   (check-equal? (run '(let ((z 0)) (apply (λ x z) (cons 1 '())))) 0)
   (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)
 
+;; bitwise operations
+  (check-equal? (run '(bitwise-not 0)) (bitwise-not 0))
+  (check-equal? (run '(bitwise-not 4)) (bitwise-not 4))
+  (check-equal? (run '(bitwise-not -11111111111111111111111)) (bitwise-not -11111111111111111111111))
+  
+  (check-equal? (run '(bitwise-and 7 3)) (bitwise-and 7 3))
+  (check-equal? (run '(bitwise-and 7 -1000000000000000000000)) (bitwise-and 7 -1000000000000000000000))
+  (check-equal? (run '(bitwise-and -11111111111111111111111 -1000000000000000000000)) (bitwise-and -11111111111111111111111 -1000000000000000000000))
+  
+  (check-equal? (run '(bitwise-ior 7 3)) (bitwise-ior 7 3))
+  (check-equal? (run '(bitwise-ior 7 -1000000000000000000000)) (bitwise-ior 7 -1000000000000000000000))
+  (check-equal? (run '(bitwise-ior -11111111111111111111111 -1000000000000000000000)) (bitwise-ior -11111111111111111111111 -1000000000000000000000))
+  
+  (check-equal? (run '(bitwise-xor 7 3)) (bitwise-xor 7 3))
+  (check-equal? (run '(bitwise-xor 7 -1000000000000000000000)) (bitwise-xor 7 -1000000000000000000000))
+  (check-equal? (run '(bitwise-xor -11111111111111111111111 -1000000000000000000000)) (bitwise-xor -11111111111111111111111 -1000000000000000000000))
+
  ) 
 
 ;; Variable
