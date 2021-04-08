@@ -997,6 +997,8 @@
                (Mov rax (Offset rax 0)))]
          ['string?
           (type-pred ptr-mask type-string)]
+         ['procedure?
+          (type-pred ptr-mask type-proc)]
          ['string->symbol
           (seq (assert-string rax c)
                (Xor rax type-string)

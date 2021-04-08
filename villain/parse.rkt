@@ -157,7 +157,7 @@
          integer->char char->integer box unbox empty? car cdr
          integer-length integer? 
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string? integer?
+         string-length string? integer? procedure?
          flonum?
          symbol->string string->symbol symbol?
          vector? vector-length

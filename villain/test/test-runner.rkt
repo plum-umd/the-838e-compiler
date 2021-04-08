@@ -819,6 +819,8 @@
   (check-equal? (run '(let ((z 0)) (apply (λ (x) z) (cons 1 '())))) 0)
   (check-equal? (run '(let ((z 0)) (apply (λ x z) (cons 1 '())))) 0)
   (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)
+  (check-equal? (run '(procedure? (λ (x) x))) #t)
+  (check-equal? (run '(procedure? (cons 1 '()))) #f)
 
  ) 
 
