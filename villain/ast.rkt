@@ -94,9 +94,7 @@
 (struct Match (e0 cs)         #:prefab)
 (struct Vec   (es)            #:prefab)
 (struct Lam   (l xs e)        #:prefab)
-;(struct Lam-l (l xs e)        #:prefab)
 (struct Lam*  (l xs xs* e)    #:prefab)
-;(struct Lam*-l (l xs xs* e)   #:prefab)
 (struct Letrec (xs es e)      #:prefab)
 
 ;; Match clause
