@@ -90,7 +90,7 @@ libcl:
 	rm -f libraries-letrec lib-externs lib-ls-ids \
 	lib-fs libraries-lmdefs.s test/libraries-letrec \
 	test/lib-fs test/lib-ls-ids test/lib-externs \
-	libraries-lmdefs.o libraries-lmdefs
+	libraries-lmdefs.o
 
 allcl:  clean libcl rtcl
 
