@@ -37,7 +37,8 @@
           (let ((elems (vector-loop length i)))
             (list->vector (reverse elems))))]
     [(? flonum-bits? i)
-     (bits->flonum (heap-ref i))]))
+     (bits->flonum (heap-ref i))]
+    [(? proc-bits? i) "#<procedure>"]))
 
 (define (bits->flonum b)
   (let (; the max decimal places to round to are the first non-zero bits

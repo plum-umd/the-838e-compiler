@@ -85,6 +85,9 @@ void print_result(vl_val x)
   case VL_BIGNUM:
     print_bignum(vl_unwrap_bignum(x));
     break;
+  case VL_PROC:
+    printf("#<procedure>");
+    break;
   case VL_INVALID:
   default:
     error_exit();

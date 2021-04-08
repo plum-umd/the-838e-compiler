@@ -25,7 +25,8 @@ typedef enum vl_type {
   VL_VEC,
   VL_FLONUM,
   VL_PORT,
-  VL_BIGNUM
+  VL_BIGNUM,
+  VL_PROC
 } vl_type;
 
 typedef struct {

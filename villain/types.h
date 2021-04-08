@@ -28,6 +28,7 @@
 #define vector_type_tag  (uint64_t)0x6
 #define flonum_type_tag  (uint64_t)0x7	 
 #define bignum_type_tag  (uint64_t)0x1000000000000003
+#define proc_type_tag    (uint64_t)0x1000000000000002
 
 #define int_shift        (1 + imm_shift)
 #define int_type_mask    ((1 << int_shift) - 1)

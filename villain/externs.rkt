@@ -91,8 +91,8 @@
      (append (externs-e e)
              (externs-es es))]))
 
-(define (externs-f f)
-  (if (stdlib-def-id? f) (list (Extern (symbol->label f))) '()))
+;(define (externs-f f)
+;  (if (stdlib-def-id? f) (list (Extern (symbol->label f))) '()))
    ; if it is one of the ids of std library function definitions
 ;  (if (stdlib-provided? f) (list (Extern (symbol->label f))) '())) ; if it is a call to std library function
 
