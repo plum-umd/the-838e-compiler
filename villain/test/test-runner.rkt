@@ -509,6 +509,14 @@
   (check-equal? (run '(sixth (list 1 2 3 4 5 6 7 8 9 10))) 6)
   (check-equal? (run '(tenth (list 1 2 3 4 5 6 7 8 9 10))) 10)
   (check-equal? (run '(third (list 1 2 3 4 5 6 7 8 9 10))) 3)
+  (check-equal? (run '(let ((add1 (λ (x) (add1 x)))) (map add1 (list 1 2 3)))) '(2 3 4))
+  (check-equal? (run '(foldr (λ (x acc) (cons x acc)) '() (list 1 2 3))) '(1 2 3))
+  (check-equal? (run '(foldl (λ (x acc) (cons x acc)) '() (list 1 2 3))) '(3 2 1))
+  (check-equal? (run '(remove-duplicates (list 'x 'y 1 3 'y 3 'y 'x 3 3 'z)))
+                '(x y 1 3 z))
+  (check-equal? (run '(findf (λ (arg) (> arg 9)) (list 7 8 9 10 11))) 10)
+  (check-equal? (run '(findf (λ (arg) (> arg 11)) (list 7 8 9 10 11))) #f)
+  
 
   ;; Standard library: bool.rkt
   (check-equal? (run '(boolean? #t)) #t)
@@ -550,6 +558,16 @@
   (check-equal? (run '(string->list "abc")) '(#\a #\b #\c))
   (check-equal? (run '(list->string '())) "")
   (check-equal? (run '(list->string (list #\a #\b #\c))) "abc")
+  (check-equal? (run '(build-string 6 (lambda (i) (string-ref "qwerty" (- 5 i)))))
+                     "ytrewq")
+  (check-equal? (run '(string=?)) 'err)
+  (check-equal? (run '(string=? 1 2)) 'err)
+  (check-equal? (run '(string=? "qwerty")) #t)
+  (check-equal? (run '(string=? "qwerty" "qwerty" "qwerty")) #t)
+  (check-equal? (run '(string=? "qwerty" "qwerty" "qwertu")) #f)
+  (check-equal? (run '(string-trim "qwertyq" "qw")) "ertyq")
+  (check-equal? (run '(string-trim "example.rkt" ".rkt")) "example")
+
 
   ;; n-ary let
   (check-equal? (run '(let () 4)) 4)

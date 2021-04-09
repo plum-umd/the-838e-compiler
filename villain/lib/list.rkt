@@ -23,7 +23,12 @@
          seventh
          sixth
          tenth
-         third)
+         third
+         findf
+         map
+         foldl
+         foldr
+         remove-duplicates)
 
 ;; needs to be generalized to n-ary case eventually
 (define (append xs ys)
@@ -149,3 +154,29 @@
 
 (define (third xs)
   (list-ref xs 2))
+
+(define (map f xs)
+  (match xs
+    ['() '()]
+    [(cons x xs)
+     (cons (f x) (map f xs))]))  
+
+(define (foldr f acc xs)
+  (match xs
+    ['() acc]
+    [(cons x xs) (f x (foldr f acc xs))]))
+
+(define (foldl f acc xs)
+  (match xs
+    ['() acc]
+    [(cons x xs) (foldl f (f x acc) xs)]))
+
+(define (findf proc lst)
+  (match lst
+    ['() #f]
+    [(cons x xs) (if (proc x) x (findf proc xs))]))
+
+(define (remove-duplicates xs)
+  (match xs
+    ['() '()]
+    [(cons x xs) (cons x (remq x (remove-duplicates xs)))]))

@@ -3,7 +3,10 @@
          string-append
          string-copy!
          string->list
-         list->string)
+         list->string
+         build-string
+         string=?
+         string-trim)
 
 (define (^string-append2 s1 s2)
   (let ((dst (make-string (+ (string-length s1) (string-length s2)) #\0)))
@@ -63,3 +66,53 @@
 
 (define (string . cs)
   (list->string cs))
+
+(define (build-string n proc)
+  (build-string/acc n 0 proc (make-string n #\0)))
+
+(define (build-string/acc n m proc str)
+  (if (= m n)
+      str
+      (begin (string-set! str m (proc m))
+             (build-string/acc n (add1 m) proc str))))
+
+(define (string=? . xs)
+  (string=?/acc xs))
+
+(define (string=?/acc xs)
+  (match xs
+    ['() 'err]
+    [(cons x xs) (if (empty? xs)
+                     (if (string? x) #t 'err)
+                     (if (^string=? x (car xs))
+                         (if (string=?/acc xs) #t #f)
+                         #f))]))
+
+(define (^string=? x y)
+  (let ((len-x (string-length x))
+        (len-y (string-length y)))
+    (if (= len-x len-y)
+        (letrec ((str-chars=?
+                  (λ (x y len i)
+                    (if (= i len)
+                        #t
+                        (if (eq? (string-ref x i) (string-ref y i))
+                            (str-chars=? x y len (add1 i))
+                            #f)))))
+          (str-chars=? x y len-x 0))
+        #f)))
+
+(define (string-trim str sep)
+  (let ((len-sep (string-length sep))
+        (len-str (string-length str)))
+    (if (string=? (substring str 0 len-sep) sep)
+        (let ((str-tmp (substring str len-sep len-str)))
+          (if (string=? (substring str (- len-str len-sep) len-str) sep)
+              (substring str-tmp 0 (- len-str (* 2 len-sep)))
+              str-tmp))
+        (if (string=? (substring str (- len-str len-sep) len-str) sep)
+            (substring str 0 (- len-str len-sep))
+            str))))
+              
+            
+    
