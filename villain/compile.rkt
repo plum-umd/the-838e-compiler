@@ -1037,7 +1037,7 @@
                  (Sal rax char-shift)
                  (Or rax type-char)))]
          ['write-byte
-          (seq (assert-byte rax)
+          (seq (assert-byte rax c)
                (pad-stack c)
                (Mov rdi rax)
                (Call 'write_byte)
@@ -1156,7 +1156,7 @@
          ['bytes?
           (type-pred ptr-mask type-bytes)]
          ['bytes-length
-          (seq (assert-bytes rax)
+          (seq (assert-bytes rax c)
                (Xor rax type-bytes)
                (Mov rax (Offset rax 0))
                (Sal rax int-shift))]
@@ -1439,8 +1439,8 @@
                  (Or rax type-string)))]
          ['bytes-ref
           (seq (Pop r8)
-               (assert-bytes r8)
-               (assert-integer rax)
+               (assert-bytes r8 c)
+               (assert-integer rax c)
                (Sar rax int-shift)
                (assert-valid-index r8 rax)
                (Add r8 rax)
@@ -1534,9 +1534,9 @@
          ['bytes-set!
           (seq (Pop r8)   ; e2
                (Pop r10)  ; e1
-               (assert-bytes r10)
-               (assert-integer r8)
-               (assert-byte rax)
+               (assert-bytes r10 c)
+               (assert-integer r8 c)
+               (assert-byte rax c)
                (Sar r8 int-shift)
                (Sar rax int-shift)
                (assert-valid-index r10 r8)
@@ -1916,12 +1916,12 @@
          (Jmp (error-label c))
          (Label ok))))
        
-(define (assert-byte r)
-  (seq (assert-integer r)
+(define (assert-byte r c)
+  (seq (assert-integer r c)
        (Cmp r (imm->bits 0))
-       (Jl 'raise_error)
+       (Jl (error-label c))
        (Cmp r (imm->bits 255))
-       (Jg 'raise_error)))
+       (Jg (error-label c))))
 
 ;; Assume: r-ptr holds is a tagged pointer and first word is size of heap object
 ;; Use r9 as scratch

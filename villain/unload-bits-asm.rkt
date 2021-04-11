@@ -80,6 +80,9 @@
 (define (heap-ref i)
   (ptr-ref (cast (untag i) _int64 _pointer) _uint64))
 
+(define (heap-byte-ref i j)
+  (ptr-ref (cast (+ (untag i) j) _int64 _pointer) _uint8))
+
 (define (heap-ref-signed i)
   (ptr-ref (cast (untag i) _int64 _pointer) _sint64))
 

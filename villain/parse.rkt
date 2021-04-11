@@ -208,6 +208,7 @@
     [(Eof)              e]
     [(Empty)            e]
     [(String s)         e]
+    [(Bytes  b)         e]
     [(Symbol s)         e]
     [(Vec ds)           e]
     [(Var x)            e]

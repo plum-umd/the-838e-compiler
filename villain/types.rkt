@@ -150,7 +150,7 @@
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-string))) 
 
 (define (bytes-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-bytes)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-bytes)))
 
 (define (symbol-bits? v)
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-symbol)))
