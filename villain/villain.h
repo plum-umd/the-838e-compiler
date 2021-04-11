@@ -21,6 +21,7 @@ typedef enum vl_type {
   VL_BOX,
   VL_CONS,
   VL_STR,
+  VL_BYTES,
   VL_SYMBOL,
   VL_VEC,
   VL_FLONUM,
@@ -44,6 +45,10 @@ typedef struct vl_str {
   uint64_t len;
   vl_char buf[];
 } vl_str;
+typedef struct __attribute__((__packed__)) {
+  uint64_t len;
+  uint64_t words[];
+} vl_bytes;
 typedef vl_str* vl_symbol;
 typedef struct vl_port {
   FILE *fp;
@@ -101,6 +106,9 @@ vl_val vl_wrap_bignum(vl_bignum *p);
 vl_val vl_wrap_eof(void);
 vl_val vl_wrap_empty(void);
 vl_val vl_wrap_void(void);
+
+vl_bytes* vl_unwrap_bytes(vl_val x);
+vl_val vl_wrap_bytes(const vl_bytes *s);
 
 /* Currently the same as malloc and calloc, but they might
  * be useful if we want to add GC later */

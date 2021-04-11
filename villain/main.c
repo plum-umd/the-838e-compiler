@@ -23,6 +23,7 @@ void raise_error()
 }
 
 void print_str(vl_str *);
+void print_bytes(const vl_bytes *);
 void print_char(vl_char);
 void print_cons(vl_cons *);
 void print_vector(vl_vec *);
@@ -125,15 +126,10 @@ void print_cons(vl_cons *cons)
   }
 }
 
-void print_bytes(int64_t a) {
-  int64_t* bs = (int64_t *)(a ^ bytes_type_tag); 
-  int64_t len = (bs[0]);
-  char* cs = (char*)&(bs[1]);
-  printf("#\"");
-  for (int i = 0; i < len; i++) {
-    printf("%c", cs[i]);
+void print_bytes(const vl_bytes *b) {
+  for (int i = 0; i < b->len * sizeof(*b->words); i++) {
+    printf("%c", ((char *) b->words)[i]);
   }
-  printf("\"");
 }
 
 

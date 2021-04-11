@@ -10,6 +10,8 @@ vl_type vl_typeof(vl_val x)
     return VL_CONS;
   case str_type_tag:
     return VL_STR;
+  case bytes_type_tag:
+    return VL_BYTES;
   case symbol_type_tag:
     return VL_SYMBOL;
   case vector_type_tag:
@@ -195,4 +197,11 @@ vl_val vl_wrap_empty(void)
 vl_val vl_wrap_void(void)
 {
   return val_void;
+}
+
+vl_bytes* vl_unwrap_bytes(vl_val x) {
+  return (vl_bytes *) x;
+}
+vl_val vl_wrap_bytes(const vl_bytes *s) {
+  return (vl_val) s;
 }
