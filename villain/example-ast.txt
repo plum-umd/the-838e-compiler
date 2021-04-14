@@ -1,0 +1,19 @@
+(define interp
+    (Defn 'interp '(e r ds)
+          (Match (Var 'e)
+                 (list (Clause (Pat (Int 'i)) (Var 'i))
+                       (Clause (Pat (Bool 'b)) (Var 'b))
+                       (Clause (Pat (If 'e1 'e2 'e3))
+                               (Match (App 'interp-env '(e1 r ds))
+                                      (list (Clause (Var 'v)
+                                                    (If (Var 'v)
+                                                        (App 'interp-env '(e2 r ds))
+                                                        (App 'interp-env '(e3 r ds)))))))))))
+
+(define prog1
+	(Int 5))
+
+(define prog2
+	(If (Bool #t) (Int 1) (Int 2)))
+
+

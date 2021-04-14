@@ -107,3 +107,5 @@
 (struct Sym (s)               #:prefab)
 (struct Cons (p1 p2)          #:prefab)
 (struct Box (p)               #:prefab)
+(struct Err ()                #:prefab)
+(struct Pat (p)               #:prefab)
