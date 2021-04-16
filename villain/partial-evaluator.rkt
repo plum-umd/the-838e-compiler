@@ -10,26 +10,41 @@
 ;;Value = int
 
 
-;;Prog Prog -> S-Expression
-;;Given the AST for an interpreter and the AST for a program, this function
+;;Symbol (Listof Prog) Prog -> S-Expression
+;;Given the name of the starting interpreter function, a list of ASTs for interpreter functions and the AST for a program, this function
 ;;returns racket code that does exactly what the interpreter would do when run
 ;;on the program. This function takes the interpreter in as one function. We can extend this
 ;;to take in the starting point of interpreting a program and a list of other relevant interpretation
 ;;functions.
-(define (eval interp prog)
-  (match interp
-    [(Defn f xs body)
-     `(define ,f 
-        ,(eval-p body (car xs) (list (cons (car xs) prog)) (list)))])) 
+(define (eval main interp-fns prog)
+  `(define (gensym)
+     ,(eval-interp main interp-fns prog (list) (list))))
+  
+;;Evaluate a program using the interpreter function specified by interp-sym
+;;Symbol (Listof Prog) Prog IEnv PEnv -> S-Expression
+(define (eval-interp interp-sym interp-fns prog interp-env prog-env)
+  (let ((interpreter (lookup-interpreter interp-sym interp-fns))
+        (f (Defn-f interpreter))
+        (xs (Defn-xs intepreter)))
+    (match f
+      ['interp-env
+       (let ((interp-env (extend (car xs) prog interp-env)))
+         (eval-interp-env interpreter interp-env prog-env))]
+      ['interp-prim1
+       (match prog
+         [(App 'intepr-prim1 (list prim v))
+          (let ((interp-env (extend (car xs) prim (extend (car (cdr xs)) v interp-env))))
+            (eval-interp-prim interpreter interp-env prog-env))])])))
 
-;;Evaluate an expression in the program the way it would be done by the interpreter
-;;Match Symbol IEnv PEnv -> S-Expression
-(define (eval-p interp-body sym interp-env prog-env)
-  (match interp-body
+;;Evaluate a program using interp-env
+;;Defn IEnv PEnv
+(define (eval-interp-env interpreter interp-env prog-env)
+  (match (Defn-e interpreter)
     [(Match (Var p) cls)
      (let* ((expr (lookup p interp-env)) (env-clause (find-clause-interp-body cls expr interp-env)))
        ;;Evaluate the body of the match clause in the updated environment
-       (eval-i (cdr env-clause) (car env-clause) prog-env interp-body sym))]))
+       (eval-i (cdr env-clause) (car env-clause) prog-env))]))
+
 
 ;;Expr IEnv PEnv Match Symbol-> Value
 ;;Evaluate an expression associated with the interpreter
@@ -74,7 +89,10 @@
        [(Pat (Bool (? symbol? sb)))
         (match expr
           [(Bool bool) (cons (extend sb bool interp-env) b)]
-          [_ (find-clause-interp-body clauses expr interp-env)])])]))
+          [_ (find-clause-interp-body clauses expr interp-env)])]
+       [(Pat (Prim1 (? symbol? p) (? symbol? e)))
+        (match expr
+          [(Prim1 pr expr) (cons (extend p pr (extend e expr interp-env)) b)])])]))
 
 ;;(Listof Clause) Value IEnv -> Clause
 ;;Finds the first clause in a list of clauses that matches a given expression from the interpreter.
@@ -105,4 +123,14 @@
       ['() (error (string-append "Variable " (symbol->string s) " not found"))]
       [(cons pair env)
        (if (eq? (car pair) s) (cdr pair) (lookup s env))])))
+
+;;Given a symbol and a list of interpreter functions, return the first function with the same name as the symbol
+;;Symbol (Listof Prog) -> Prog
+(define (lookup-interpreter f lst)
+  (match lst
+    ['() (error (string-append (symbol->string f) " is not an interpreter function"))]
+    [(cons (Defn fun xs e) lst)
+     (if (eq? fun f)
+         (Defn fun xs e)
+         (lookup-interpreter f lst))]))
        
