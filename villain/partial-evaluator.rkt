@@ -105,25 +105,28 @@
 
 ;;(Listof Clause) Expr IEnv -> Clause
 (define (find-clause-interp-env clauses expr interp-env)
-  (match clauses
-    ['() (error "program contains an invalid expression")]
-    [(cons (Clause p b) clauses)
-     (match p
-       [(Pat (Int (? symbol? s)))
-        (match expr
-          [(Int i) (cons (extend s i  interp-env) b)]
-          [_ (find-clause-interp-env clauses expr interp-env)])]
-       [(Pat (If (? symbol? se1) (? symbol? se2) (? symbol? se3)))
-        (match expr
-          [(If e1 e2 e3) (cons (extend se1 e1 (extend se2 e2 (extend se3 e3 interp-env))) b)]
-          [_ (find-clause-interp-env clauses expr interp-env)])]
-       [(Pat (Bool (? symbol? sb)))
-        (match expr
-          [(Bool bool) (cons (extend sb bool interp-env) b)]
-          [_ (find-clause-interp-env clauses expr interp-env)])]
-       [(Pat (Prim1 (? symbol? p) (? symbol? e)))
-        (match expr
-          [(Prim1 pr expr) (cons (extend p pr (extend e expr interp-env)) b)])])]))
+  (begin
+    (debug "find-clause-interp-env" expr interp-env)
+    (match clauses
+      ['() (error "program contains an invalid expression")]
+      [(cons (Clause p b) clauses)
+       (match p
+         [(Pat (Int (? symbol? s)))
+          (match expr
+            [(Int i) (cons (extend s i  interp-env) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (If (? symbol? se1) (? symbol? se2) (? symbol? se3)))
+          (match expr
+            [(If e1 e2 e3) (cons (extend se1 e1 (extend se2 e2 (extend se3 e3 interp-env))) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (Bool (? symbol? sb)))
+          (match expr
+            [(Bool bool) (cons (extend sb bool interp-env) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (Prim1 (? symbol? p) (? symbol? e)))
+          (match expr
+            [(Prim1 pr expr) (cons (extend p pr (extend e expr interp-env)) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])])])))
 
 ;;Find the clause matching the provided prim
 ;;(Listof Clause) Symbol IEnv -> Clause
