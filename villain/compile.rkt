@@ -12,16 +12,16 @@
                                ; and string-set! ; arg3
 (define r8  'r8)  ; scratch in +, -, compile-chars, compile-prim2, string-ref,
                   ; make-string, compile-prim3, string-ref!, integer-length, match,
-                  ; compile-define, open-input-file, integer?
+                  ; compile-define, open-input-file, integer?, make-bytes
 (define r9  'r9)  ; scratch in assert-type, compile-str-chars, string-ref,
                   ; string-set!, make-string, compile-define, fl<=
-                  ; compile-vector, vector-set!, vector-ref, compile-bignum
+                  ; compile-vector, vector-set!, vector-ref, compile-bignum, make-bytes
                   ; add1, sub1, integer?, integer-length, +, -, assert-integer/bignum
 (define rsp 'rsp) ; stack
 (define rdi 'rdi) ; arg
 (define rsi 'rsi) ; arg2
 (define r10 'r10) ; scratch in compile-prim3, make-string, string-set!, compile-vector, vector-set!
-                  ; compile-define, fl<=, compile-bignum, integer?, integer-length, assert-integer/bignum
+                  ; compile-define, fl<=, compile-bignum, integer?, integer-length, assert-integer/bignum, make-bytes
 (define rcx 'rcx) ; arity indicator
 (define al  'al)  ; low byte of rax ; open-input-file
 (define xmm0 'xmm0) ; registers to hold double precision floating numbers
@@ -739,7 +739,7 @@
       (list-ref ls i)))
 
 ;; Nat (Listof Byte) -> Asm
-;; Write four bytes into word at offset i in heap
+;; Write eight bytes into word at offset i in heap
 (define (compile-bytes-word i bs)  
   (seq (Mov rax (+ (arithmetic-shift (list-ref0 bs 7) (* 8 7))
                    (arithmetic-shift (list-ref0 bs 6) (* 8 6))
@@ -750,6 +750,23 @@
                    (arithmetic-shift (list-ref0 bs 1) (* 8 1))
                    (arithmetic-shift (list-ref0 bs 0) (* 8 0))))
        (Mov (Offset rbx i) rax)))
+
+;; Byte -> Asm
+;; Fill 64 bit word with repeated copies of byte
+;; Use r9 to speed it up a bit
+(define (compile-fill-word-with-byte b)
+  (Seq
+    (Mov rax b)
+    (Sal rax 8)
+    (Or rax b)
+    (Sal rax 8)
+    (Mov r9 rax)
+    (Sal rax (* 8 2))
+    (Or rax r9)
+    (Mov r9 rax)
+    (Sal rax (* 8 4))
+    (Or rax r9)
+  ))
 
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
@@ -1447,6 +1464,42 @@
                (Mov rax (Offset r8 8))
                (And rax #xFF)
                (Sal rax int-shift))]
+         ['make-bytes
+            (let ((loop_start (gensym 'loop_start))
+                  (loop_end   (gensym 'loop_end))
+                  (zero_rem   (gensym 'zero_rem))
+                  )
+              (seq (Pop r8)
+                (assert-byte   rax c)       ; rax = byte to write
+                (assert-integer r8 c)       ; r8 = int arg = length
+                (Sar r8 int-shift)          ; unwrap from type tag
+                (cmp r8 0)
+                (Jl (error-label c))        ; return error if len < 0
+                (Mov (Offset rbx 0) r8)     ; store length field for the new Bytes
+                (Mov r10 rbx)               ; store heap for later
+                (Add rbx 8)                 ; move heap forward for len field
+                (compile-fill-word-with-byte rax) ; save full word for optimization
+                (Label loop_start)
+                (Cmp r8 8)                  ; while (r8 >= 8)
+                (Jl loop_end)
+                (Mov (Offset rbx 0) rax)    ; write entire word of byte copy into heap
+                (Add rbx 8)                 ; move heap to accomodate
+                (Sub r8  8)                 ; decrease num left to write
+                (Jmp loop_start)            ; end while
+                (Label loop_end)
+                (Cmp r8 0)                  ; check to see if there is no remainder to write
+                (Je zero_rem)
+                (Mov r9 4)                  ; start with 0b0....10
+                (Sal r8 3)                  ; rem *= 8 (byte alignment, not bits)
+                (Sal r9 r8)                 ; shift to 0b0....1(bytes to keep)
+                (Sub r9  1)                 ; 0b0.....0FFFFFFFF...F
+                (And rax r9)                ; bitmask unused byte copies
+                (Mov (Offset rbx 0) rax)    ; write the final word remainder
+                (Label zero_rem)
+                (Mov rax r10)               ; return start of byte string
+              )
+            )
+          ]
          ['cons
           (seq (Mov (Offset rbx 0) rax)
                (Pop rax)

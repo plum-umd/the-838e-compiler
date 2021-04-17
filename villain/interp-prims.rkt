@@ -80,6 +80,8 @@
            (? bytes?) (? integer?))       (if (<= 0 v2 (sub1 (bytes-length v1)))
                                               (bytes-ref v1 v2)
                                               'err)]
+    [(list 'make-bytes
+           (? integer?) (? byte?))        (if (< v1 0) 'err (Bytes (make-bytes v1 v2)))]
     [_                                    'err]))
 
 ;; Op3 Value Value Value -> Answer
