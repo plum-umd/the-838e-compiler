@@ -1,0 +1,38 @@
+(define interp-env
+    (Defn 'interp-env '(e r ds)
+          (Match (Var 'e)
+                 (list (Clause (Pat (Int 'i)) (Var 'i))
+                       (Clause (Pat (Bool 'b)) (Var 'b))
+                       (Clause (Pat (Prim1 'prim 'e)) (App 'interp-prim1 (list (Var 'prim) (Var 'e))))
+                       (Clause (Pat (If 'e1 'e2 'e3))
+                               (Match (App 'interp-env (list (Var 'e1) (Var 'r) (Var 'ds)))
+                                      (list (Clause (Var 'v)
+                                                    (If (Var 'v)
+                                                        (App 'interp-env (list (Var 'e2) (Var 'r) (Var 'ds)))
+                                                        (App 'interp-env (list (Var 'e3) (Var 'r) (Var 'ds))))))))))))
+                                                        
+(define interp-prim1
+    (Defn 'interp-prim1 '(op i)
+          (Match (Var 'op)
+                 (list
+                  (Clause (Symbol 'add1) (Prim1 'add1 (Var 'i)))
+                  (Clause (Symbol 'sub1) (Prim1 'sub1 (Var 'i)))))))
+                  
+           
+
+(define prog1
+	(Int 5))
+
+(define prog2
+	(If (Bool #t) (Int 1) (Int 2)))
+	
+	
+(define prog3
+    (Prim1 'add1 (Int 3)))
+    
+(define prog4
+    (If (Bool #t) (Prim1 'add1 (Prim1 'sub1 (Int 3))) (Bool #f)))
+    
+    
+
+

@@ -88,7 +88,7 @@
          (eval-interp 'interp interp-fns v interp-env prog-env))]
       [(App 'interp-prim1 (list prim e))
        (let* ((prim (eval-i prim interp-env prog-env interp-fns))
-              (v (eval-interp 'interp interp-fns (eval-i e interp-env prog-env interp-fns) interp-env prog-env)))
+              (v (eval-i e interp-env prog-env interp-fns)))
          (eval-interp 'interp-prim1 interp-fns (Prim1 prim v) interp-env prog-env))]
       [(Prim1 'add1 e)
        (add1 (eval-i e interp-env prog-env interp-fns))]
