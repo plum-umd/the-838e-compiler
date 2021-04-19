@@ -65,4 +65,52 @@
                               (bytes-copy! scratch offset bstr)
                               (^bytes-append (+ offset (bytes-length bstr)) others))]))
     (^bytes-append 0 bstr)))
+
+(define (bytes->list bstr)
+  (let ([bstr-len (bytes-length bstr)])
+    (define (^bytes->list cur)
+      (if (< cur bstr-len)
+          (cons
+           (bytes-ref bstr cur)
+           (^bytes->list (+ cur 1)))
+          '()))
+
+    (^bytes->list 0)))
+
+(define (list->bytes lst)
+  (apply bytes lst))
+
+(define (bytes=? . bstrs)
+  (match bstrs
+    ['() #t]
+    [(cons bstr others)
+     (define (^bytes=? bstrs)
+       (match bstrs
+         ['() #t]
+         [(cons h others) (and (eqv? h bstr) (^bytes=? others))]))
+
+     (^bytes=? others)]))
+
+(define (bytes<? . bstrs)
+  (define (^bytes2<? bstr1 bstr2)
+    (let ([len1 (bytes-length bstr1)] [len2 (bytes-length bstr2)])
+      (define (^^bytes<? cur)
+        (if (< cur len1)
+            (if (< cur len2)
+                (or
+                 (< (bytes-ref bstr1 cur) (bytes-ref bstr2 cur))
+                 (^^bytes<? (+ cur 1)))
+                #f)
+            #f))
+      (^^bytes<? 0)))
+
+  (define (^bytes<? bstrs)
+    (match bstrs
+      [(cons h1 (cons h2 t)) (and (^bytes2<? h1 h2) (^bytes<? t))]
+      [_ #t]))
+
+  (^bytes<? bstrs))
+
+(define (bytes>? . bstrs)
+  (apply bytes<? (reverse bstrs)))
       
