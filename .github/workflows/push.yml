@@ -47,7 +47,7 @@ jobs:
         cmake ..
         cmake --build .
         cd ..
-        export PATH="$(pws)/bin:$PATH"
+        export PATH="$(pwd)/bin:$PATH"
         echo 'export PATH="'$(pwd)'/bin:$PATH"' >> ~/.bashrc
     - name: Install nodejs
       run: |
