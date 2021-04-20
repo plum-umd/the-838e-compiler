@@ -78,20 +78,6 @@
                 (Sub rsp 8)
                 (Jmp 'raise_error)))))))
 
-;; Expr -> Asm
-(define (compile-library p)
-  (match p
-    [(Lib xs ds)
-     (prog (compile-provides xs)
-           (Default 'rel)
-           (Section '.text)
-           (externs p)
-           (Extern 'raise_error)
-           (Extern 'raise_error_align)
-           (Extern 'str_to_symbol)
-           (bignum-externs)           
-           (compile-defines ds))]))
-
 (define (libraries-fs-ls)
   (let ((bs stdlib-fs-ls))
     (let ((fs (map car bs)) (ls (map cdr bs)))
@@ -137,15 +123,6 @@
                    (Lam*-l l)
                    (error "error in λ-ids \n")))
            (λs-labels ls))]))
-
-;; [Listof Id] -> Asm
-(define (compile-provides xs)
-  (match xs
-    ['()
-     (seq)]
-    [(cons x xs)
-     (seq (Global (symbol->label x))
-          (compile-provides xs))]))
 
 ;; -> Asm
 (define (bignum-externs)
@@ -542,54 +519,6 @@
          (Add r9 8)              
          (Jmp loop)
          (Label done))))  
-
-;; [Listof Defn] -> Asm
-(define (compile-defines ds)
-  (match ds
-    ['() (seq)]
-    [(cons d ds)
-     (seq (compile-define d)
-          (compile-defines ds))]))
-
-;; Defn -> Asm
-(define (compile-define d)
-  (match d
-    [(Defn f xs e)
-     (seq (Label (symbol->label f))
-          (Cmp rcx (imm->bits (length xs))) ; arity check
-          (Jne 'raise_error)
-          (compile-e-tail e (reverse xs))
-          ; return
-          (Add rsp (* 8 (length xs))) ; pop args
-          (Ret))]
-    [(Defn* f xs xs* e)
-     (let ((loop (gensym 'loop))
-           (end (gensym 'end)))
-
-       (seq (Label (symbol->label f))
-            (Cmp rcx (imm->bits (length xs)))
-            (Jl 'raise_error)
-            (Mov rax (imm->bits '()))         ; initialize rest arg
-            (Sub rcx (imm->bits (length xs))) ; # of things to pop off of stack
-
-            (Label loop) ; at each step, rax <- cons pop rax
-            (Cmp rcx 0)
-            (Je end)
-            (Mov (Offset rbx 0) rax)
-            (Pop rax)
-            (Mov (Offset rbx 8) rax)
-            (Mov rax rbx)
-            (Add rbx 16)
-            (Or rax type-cons)
-            (Sub rcx (imm->bits 1))
-            (Jmp loop)
-            (Label end)
-
-            (Push rax) ; push the rest list
-            (compile-e-tail e (cons xs* (reverse xs)))
-            ; return
-            (Add rsp (* 8 (add1 (length xs)))) ; pop args
-            (Ret)))]))
 
 ;; Value -> Asm
 (define (compile-value v)

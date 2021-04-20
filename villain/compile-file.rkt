@@ -15,8 +15,5 @@
                      (asm-string (compile (Letrec fs ls e)))]
                     [(Mod pvs rqs fls e)
                      (let ((CModstruct (build-mgraph fn pvs rqs fls e)))
-                       (asm-string (compile-module CModstruct #t)))]
-                    [(Lib xs ds)
-                     (parameterize ((current-shared? #t))
-                       (asm-string (compile-library (Lib xs ds))))]))
+                       (asm-string (compile-module CModstruct #t)))]))
       (close-input-port p))))

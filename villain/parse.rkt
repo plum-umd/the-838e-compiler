@@ -100,8 +100,6 @@
      (Lam* (gensym) xs xs* (parse-seq e es))]
     [(cons e es)
      (LCall (parse-e e) (map parse-e es))]
-    ;[(cons (? symbol? f) es)
-     ;(App f (map parse-e es))]
     [_ (error "Parse error" s)]))
 
 (define (parse-seq e es)
@@ -208,7 +206,6 @@
     [(Vec ds)           e]
     [(Var x)            e]
     [(LCall e es)       (LCall (desugar e) (map desugar es))]
-;    [(App f es)         (App f (map desugar es))]
     [(Apply f e)        (Apply (desugar f) (desugar e))]
     [(Prim0 p)          e]
     [(Prim1 p e)        (Prim1 p (desugar e))]
