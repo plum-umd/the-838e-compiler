@@ -15,7 +15,6 @@
          (parsed-prog (parse prog))
          (interp-defns (extract-interp-definitions parsed-interp))
          (interp-prim-defns (extract-interp-definitions parsed-interp-prim)))
-    (displayln interp-defns)
     (eval 'interp (append interp-defns interp-prim-defns) parsed-prog)))
 
 ;;Prog -> (Listof Defn)

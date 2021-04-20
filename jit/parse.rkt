@@ -47,6 +47,6 @@
 ;;Given a symbol, determine if it is a primitive of the language
 ;;Symbol -> boolean
 (define (prim1? s)
-  (if (member s (list 'add1 'sub1))
+  (if (member s (list 'add1 'sub1 'zero?))
       #t
       #f))

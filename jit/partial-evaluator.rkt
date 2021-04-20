@@ -1,30 +1,30 @@
 #lang racket
 (provide eval)
-(require "ast.rkt")
+(require "ast.rkt" "cfg.rkt")
 
 ;;Env = IEnv | PEnv
-;;ENVValue = Prog | Value
+;;ENVValue = Expr | Value
 
-;;IEnv      = (Listof (Pairof Symbol Prog))
+;;IEnv      = (Listof (Pairof Symbol Expr))
 ;;PEnv      = (Listof (Pairof Symbol Value))
 
 ;;Value = int
 
-(define debug? #t)
+(define debug? #f)
 
-;;Symbol (Listof Prog) Prog -> S-Expression
 ;;Given the name of the starting interpreter function, a list of ASTs for interpreter functions and the AST for a program, this function
 ;;returns racket code that does exactly what the interpreter would do when run
 ;;on the program. This function takes the interpreter in as one function. We can extend this
 ;;to take in the starting point of interpreting a program and a list of other relevant interpretation
 ;;functions.
+;;Symbol (Listof Defn) Expr -> S-Expression
 (define (eval main interp-fns prog)
   (begin
     (debug "eval" prog (list))
     (eval-interp main interp-fns prog (list) (list))))
   
 ;;Evaluate a program using the interpreter function specified by interp-sym
-;;Symbol (Listof Prog) Prog IEnv PEnv -> S-Expression
+;;Symbol (Listof Defn) Expr IEnv PEnv -> S-Expression
 (define (eval-interp interp-sym interp-fns prog interp-env prog-env)
   (let* ((interpreter (lookup-interpreter interp-sym interp-fns))
         (f (Defn-f interpreter))
@@ -41,7 +41,7 @@
             (eval-interp-prim1 interpreter interp-env prog-env interp-fns))])])))
 
 ;;Evaluate a program using interp-env
-;;Defn IEnv PEnv (Listof Prog) -> S-Expression
+;;Defn IEnv PEnv (Listof Defn) -> S-Expression
 (define (eval-interp-env interpreter interp-env prog-env interp-fns)
   (begin
     (debug "eval-interp-env" "unknown" interp-env)
@@ -56,7 +56,7 @@
          (eval-i todo new-interp-env prog-env interp-fns))])))
 
 ;;Evaluate a call to interp-prim1
-;;Defn IEnv PEnv (Listof Prog) -> S-Expression
+;;Defn IEnv PEnv (Listof Defn) -> S-Expression
 (define (eval-interp-prim1 interpreter interp-env prog-env interp-fns)
   (begin
     (debug "eval-interp-prim1" "unknown" interp-env)
@@ -67,11 +67,13 @@
          (eval-i (cdr env-clause) (car env-clause) prog-env interp-fns))])))
 
 ;;Evaluate an expression associated with the interpreter
-;;Prog IEnv PEnv (Listof Prog) -> Value
+;;Expr IEnv PEnv (Listof Defn) -> Value
 (define (eval-i e interp-env prog-env interp-fns)
   (begin
     (debug "eval-i" e interp-env)
     (match e
+      [(Int i) i]
+      [(Bool b) b]
       [(Var v) (lookup v interp-env)] ;;This (Var v) is not from the program. This is the interpreter attempting to return the value of a variable v
       [(If expr true false)
        (if (eval-i expr interp-env prog-env interp-fns)
@@ -93,7 +95,9 @@
       [(Prim1 'add1 e)
        (add1 (eval-i e interp-env prog-env interp-fns))]
       [(Prim1 'sub1 e)
-       (sub1 (eval-i e interp-env prog-env interp-fns))])))
+       (sub1 (eval-i e interp-env prog-env interp-fns))]
+      [(Prim1 'zero? e)
+       (zero? (eval-i e interp-env prog-env interp-fns))])))
   
              
 
@@ -171,7 +175,7 @@
        (if (equal? (car pair) s) (cdr pair) (lookup s env))]))
 
 ;;Given a symbol and a list of interpreter functions, return the first function with the same name as the symbol
-;;Symbol (Listof Prog) -> Prog
+;;Symbol (Listof Defn) -> Defn
 (define (lookup-interpreter f lst)
   (match lst
     ['() (error (string-append (symbol->string f) " is not an interpreter function"))]
