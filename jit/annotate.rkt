@@ -1,5 +1,5 @@
 #lang racket
-(provide Green Red annotate)
+(provide Green Red annotate annotation?)
 (require "ast.rkt")
 
 (struct Green (ast)               #:prefab)
@@ -34,4 +34,8 @@
      (match (annotate-env e env) ;;All our prim1s are foldable hence green as long as their argument is green
        [(Green e) (Green (Prim1 p (Green e)))]
        [(Red e) (Red (Prim1 p (Red e)))])]))
+
+;;Return true if the argument is an annotation, false otherwise
+(define (annotation? e)
+  (or (Green? e) (Red? e)))
   

@@ -111,3 +111,8 @@
 (struct Box (p)               #:prefab)
 (struct Err ()                #:prefab)
 (struct Pat (p)               #:prefab)
+
+(define (ast-expr? v)
+  (or (Eof? v) (Void? v) (Empty? v) (Int? v) (Bool? v) (Char? v) (Flonum? v) (String? v) (Bignum? v) (Symbol? v) (Prim0? v) (Prim1? v) (Prim2? v) (Prim3? v) (Prim4? v)
+      (If? v) (Begin? v) (Let? v) (Var? v) (App? v) (LCall? v) (Apply? v) (Match? v) (Vec? v) (Lam? v) (Lam*? v) (Letrec? v) (Clause? v) (Wild? v) (Lit? v) (Sym? v)
+      (Cons? v) (Box? v) (Err? v) (Pat? v)))

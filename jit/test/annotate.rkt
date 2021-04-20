@@ -1,5 +1,5 @@
 #lang racket
-(require rackunit "../cfg.rkt" "../parse.rkt" "../ast.rkt")
+(require rackunit "../annotate.rkt" "../parse.rkt" "../ast.rkt")
 
 
 (define (p-annotate e)

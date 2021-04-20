@@ -1,9 +1,9 @@
 #lang racket
 (provide eval)
-(require "ast.rkt" "cfg.rkt")
+(require "ast.rkt" "annotate.rkt")
 
 ;;Env = IEnv | PEnv
-;;ENVValue = Expr | Value
+;;ENVValue = Annotation | Value
 
 ;;IEnv      = (Listof (Pairof Symbol ENVValue))
 ;;PEnv      = (Listof (Pairof Symbol Value))
@@ -15,18 +15,14 @@
 ;;Given the name of the starting interpreter function, a list of ASTs for interpreter functions and an annotated program, this function
 ;;returns racket code that does exactly what the interpreter would do when run
 ;;on the original program.
-;;Symbol (Listof Defn) Annotation -> S-Expression
+;;Symbol (Listof Defn) Annotation -> Expr
 (define (eval main interp-fns prog)
   (begin
     (debug "eval" prog (list))
-    (match prog
-      [(Green expr)
-       (eval-interp main interp-fns prog (list) (list))]
-      [(Red expr)
-       0])))
+    (eval-interp main interp-fns prog (list) (list))))
   
 ;;Evaluate a program using the interpreter function specified by interp-sym
-;;Symbol (Listof Defn) Annotation IEnv PEnv -> S-Expression
+;;Symbol (Listof Defn) Annotation IEnv PEnv -> Expr
 (define (eval-interp interp-sym interp-fns prog interp-env prog-env)
   (match prog
     [(Green prog)
@@ -45,10 +41,20 @@
                ;;first argument and the evaluated argument to the prim as the second
                (eval-interp-prim1 interpreter interp-env prog-env interp-fns))])]))]
     [(Red prog)
-     prog]))
+     (match prog
+       [(Int i) (error "int literal should not be red")]
+       [(Bool b) (error "bool literal should not be red")]
+       [(If e1 e2 e3)
+        (let ((e2 (eval-interp 'interp interp-fns e2 interp-env prog-env))
+              (e3 (eval-interp 'interp interp-fns e3 interp-env prog-env)))
+          (If e1 e2 e3))]
+       [(Prim1 p e)
+        prog])]))
+       
+        
 
 ;;Evaluate a program using interp-env
-;;Defn IEnv PEnv (Listof Defn) -> S-Expression
+;;Defn IEnv PEnv (Listof Defn) -> Expr
 (define (eval-interp-env interpreter interp-env prog-env interp-fns)
   (begin
     (debug "eval-interp-env" "unknown" interp-env)
@@ -63,7 +69,7 @@
          (eval-i todo new-interp-env prog-env interp-fns))])))
 
 ;;Evaluate a call to interp-prim1
-;;Defn IEnv PEnv (Listof Defn) -> S-Expression
+;;Defn IEnv PEnv (Listof Defn) -> Expr
 (define (eval-interp-prim1 interpreter interp-env prog-env interp-fns)
   (begin
     (debug "eval-interp-prim1" "unknown" interp-env)
@@ -74,19 +80,30 @@
          (eval-i (cdr env-clause) (car env-clause) prog-env interp-fns))])))
 
 ;;Evaluate an expression associated with the interpreter
-;;Expr IEnv PEnv (Listof Defn) -> Value
+;;Expr IEnv PEnv (Listof Defn) -> Expr
 (define (eval-i e interp-env prog-env interp-fns)
   (begin
     (debug "eval-i" e interp-env)
     (match e
-      [(Int i) i]
-      [(Bool b) b]
-      [(Var v) (lookup v interp-env)] ;;This (Var v) is not from the program. This is the interpreter attempting to return the value of a variable v
+      [(Int i) e]
+      [(Bool b) e]
+      [(Var v) ;;This (Var v) is not from the program. This is the interpreter attempting to return the value of a variable v
+       (let ((value (lookup v interp-env)))
+         (match value
+           [(? integer? i) (Int i)]
+           [(? boolean? b) (Bool b)]
+           [(? ast-expr? v) v]
+           [(? symbol? s) (Symbol s)]
+           [(? annotation? a) a]))] 
       [(If expr true false)
-       (if (eval-i expr interp-env prog-env interp-fns)
-           (eval-i true interp-env prog-env interp-fns)
-           (eval-i false interp-env prog-env interp-fns))]
-    
+       (let ((v (eval-i expr interp-env prog-env interp-fns)))
+         (match v
+           [(Bool b)
+            (if (equal? b #f)
+                (eval-i false interp-env prog-env interp-fns)
+                (eval-i true interp-env prog-env interp-fns))]
+           [_
+            (eval-i true interp-env prog-env interp-fns)]))]   
       [(Match expr cls)                  ;;This is the interpreter attempting to pattern match an expression expr.
        (let* ((expr (eval-i expr interp-env prog-env interp-fns))
               (env-clause (find-clause-i cls expr interp-env)))
@@ -96,15 +113,15 @@
        (let ((v (eval-i p interp-env prog-env interp-fns)))
          (eval-interp 'interp interp-fns v interp-env prog-env))]
       [(App 'interp-prim1 (list prim e))
-       (let* ((prim (eval-i prim interp-env prog-env interp-fns))
+       (let* ((prim (Symbol-s (eval-i prim interp-env prog-env interp-fns)))
               (v (eval-i e interp-env prog-env interp-fns)))
          (eval-interp 'interp-prim1 interp-fns (Green (Prim1 prim v)) interp-env prog-env))]
       [(Prim1 'add1 e)
-       (add1 (eval-i e interp-env prog-env interp-fns))]
+       (Int (add1 (Int-i (eval-i e interp-env prog-env interp-fns))))]
       [(Prim1 'sub1 e)
-       (sub1 (eval-i e interp-env prog-env interp-fns))]
+       (Int (sub1 (Int-i (eval-i e interp-env prog-env interp-fns))))]
       [(Prim1 'zero? e)
-       (zero? (eval-i e interp-env prog-env interp-fns))])))
+       (Bool (zero? (Int-i (eval-i e interp-env prog-env interp-fns))))])))
   
              
 
@@ -199,6 +216,9 @@
         (display " with prog: ")
         (display prog)
         (display " and interp-env: ")
-        (displayln interp-env))
+        (displayln interp-env)
+        (displayln ""))
       (void)))
+
+
        
