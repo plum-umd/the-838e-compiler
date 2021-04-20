@@ -5,40 +5,47 @@
 ;;Env = IEnv | PEnv
 ;;ENVValue = Expr | Value
 
-;;IEnv      = (Listof (Pairof Symbol Expr))
+;;IEnv      = (Listof (Pairof Symbol ENVValue))
 ;;PEnv      = (Listof (Pairof Symbol Value))
 
-;;Value = int
+;;Value = int | bool
 
 (define debug? #f)
 
-;;Given the name of the starting interpreter function, a list of ASTs for interpreter functions and the AST for a program, this function
+;;Given the name of the starting interpreter function, a list of ASTs for interpreter functions and an annotated program, this function
 ;;returns racket code that does exactly what the interpreter would do when run
-;;on the program. This function takes the interpreter in as one function. We can extend this
-;;to take in the starting point of interpreting a program and a list of other relevant interpretation
-;;functions.
-;;Symbol (Listof Defn) Expr -> S-Expression
+;;on the original program.
+;;Symbol (Listof Defn) Annotation -> S-Expression
 (define (eval main interp-fns prog)
   (begin
     (debug "eval" prog (list))
-    (eval-interp main interp-fns prog (list) (list))))
+    (match prog
+      [(Green expr)
+       (eval-interp main interp-fns prog (list) (list))]
+      [(Red expr)
+       0])))
   
 ;;Evaluate a program using the interpreter function specified by interp-sym
-;;Symbol (Listof Defn) Expr IEnv PEnv -> S-Expression
+;;Symbol (Listof Defn) Annotation IEnv PEnv -> S-Expression
 (define (eval-interp interp-sym interp-fns prog interp-env prog-env)
-  (let* ((interpreter (lookup-interpreter interp-sym interp-fns))
-        (f (Defn-f interpreter))
-        (xs (Defn-xs interpreter)))
-    (debug "eval-interp" prog interp-env)
-    (match f
-      ['interp
-       (let ((interp-env (extend (car xs) prog interp-env)))
-         (eval-interp-env interpreter interp-env prog-env interp-fns))]
-      ['interp-prim1
-       (match prog
-         [(Prim1 prim v)
-          (let ((interp-env (extend (car xs) prim (extend (car (cdr xs)) v interp-env))))
-            (eval-interp-prim1 interpreter interp-env prog-env interp-fns))])])))
+  (match prog
+    [(Green prog)
+     (let* ((interpreter (lookup-interpreter interp-sym interp-fns))
+            (f (Defn-f interpreter))
+            (xs (Defn-xs interpreter)))
+       (debug "eval-interp" prog interp-env)
+       (match f
+         ['interp
+          (let ((interp-env (extend (car xs) prog interp-env))) ;;We are using the knowledge that the interp accepts the expression to be interpreted as its first argument
+            (eval-interp-env interpreter interp-env prog-env interp-fns))]
+         ['interp-prim1
+          (match prog
+            [(Prim1 prim v)
+             (let ((interp-env (extend (car xs) prim (extend (car (cdr xs)) v interp-env)))) ;;We are using the knowledge that interp-prim1 accepts the prim symbol as its
+               ;;first argument and the evaluated argument to the prim as the second
+               (eval-interp-prim1 interpreter interp-env prog-env interp-fns))])]))]
+    [(Red prog)
+     prog]))
 
 ;;Evaluate a program using interp-env
 ;;Defn IEnv PEnv (Listof Defn) -> S-Expression
@@ -91,7 +98,7 @@
       [(App 'interp-prim1 (list prim e))
        (let* ((prim (eval-i prim interp-env prog-env interp-fns))
               (v (eval-i e interp-env prog-env interp-fns)))
-         (eval-interp 'interp-prim1 interp-fns (Prim1 prim v) interp-env prog-env))]
+         (eval-interp 'interp-prim1 interp-fns (Green (Prim1 prim v)) interp-env prog-env))]
       [(Prim1 'add1 e)
        (add1 (eval-i e interp-env prog-env interp-fns))]
       [(Prim1 'sub1 e)

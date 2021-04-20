@@ -1,6 +1,6 @@
 #lang racket
 (provide evaluate)
-(require "ast.rkt" "parse.rkt" "partial-evaluator.rkt")
+(require "ast.rkt" "parse.rkt" "partial-evaluator.rkt" "cfg.rkt")
 
 ;;Given a program, return the result of partially evaluating it using the
 ;;interpreter.
@@ -13,9 +13,10 @@
          (parsed-interp (parse interp))
          (parsed-interp-prim (parse interp-prim))
          (parsed-prog (parse prog))
+         (annotated-prog (annotate parsed-prog))
          (interp-defns (extract-interp-definitions parsed-interp))
          (interp-prim-defns (extract-interp-definitions parsed-interp-prim)))
-    (eval 'interp (append interp-defns interp-prim-defns) parsed-prog)))
+    (eval 'interp (append interp-defns interp-prim-defns) annotated-prog)))
 
 ;;Prog -> (Listof Defn)
 (define (extract-interp-definitions prog)
