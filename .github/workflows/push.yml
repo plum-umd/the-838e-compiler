@@ -33,5 +33,24 @@ jobs:
         gcc --version        
     - name: Install langs package
       run: raco pkg install ../the-838e-compiler/
+    - name: Install g++
+      run: sudo apt -y install g++
+    - name: Install cmake
+      run: sudo apt-get -y install cmake
+    - name: Install wabt
+      run: |
+        cd ..
+        git clone --recursive https://github.com/WebAssembly/wabt
+        cd wabt
+        mkdir build
+        cd build
+        cmake ..
+        cmake --build .
+        cd ..
+        export PATH="$(pws)/bin:$PATH"
+        echo 'export PATH="'$(pwd)'/bin:$PATH"' >> ~/.bashrc
+    - name: Install nodejs
+      run: |
+        sudo apt -y install nodejs
     - name: Run tests
       run: raco test -p the-838e-compiler

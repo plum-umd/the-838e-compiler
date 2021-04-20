@@ -1,0 +1,18 @@
+UNAME := $(shell uname)
+.PHONY: clean
+.PRECIOUS: %.wat
+
+ifeq ($(UNAME), Darwin)
+  format=macho64
+else
+  format=elf64
+endif
+
+%.wrun:  %.wat
+	./watjs2run $@
+
+%.wat:  %.rkt
+	racket -t compile-wat-file.rkt -m $< > $@
+
+clean:
+	rm -f *.wat *.wasm *.wrun
