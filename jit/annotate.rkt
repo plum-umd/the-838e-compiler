@@ -17,8 +17,9 @@
 ;;Expr (Listof (Pair Symbol Color))-> Expr
 (define (annotate-env ast env)
   (match ast
-    [(Int i) (Green (Int i))]
+    [(Int i)  (Green (Int i))]
     [(Bool b) (Green (Bool b))]
+    [(Char c) (Green (Char c))]
     [(If e1 e2 e3)
      (match (annotate-env e1 env)
        [(Green e1)

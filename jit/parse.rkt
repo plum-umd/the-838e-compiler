@@ -10,6 +10,7 @@
   (match p
     [(? integer? i) (Int i)]
     [(? boolean? b) (Bool b)]
+    [(? char? c) (Char c)]
     [(? symbol? s) (Var s)]
     [(list 'if e1 e2 e3)
      (If (parse e1) (parse e2) (parse e3))]
@@ -38,15 +39,17 @@
   (match pat
     [(? integer? i) (Int i)]
     [(? boolean? b) (Bool b)]
+    [(? char? c) (Char c)]
     [(list 'quote (? symbol? s)) (Symbol s)]
     [(list 'Int s) (Pat (Int s))]
     [(list 'Bool s) (Pat (Bool s))]
+    [(list 'Char s) (Pat (Char s))]
     [(list 'Prim1 s1 s2) (Pat (Prim1 s1 s2))]
     [(list 'If s1 s2 s3) (Pat (If s1 s2 s3))]))
 
 ;;Given a symbol, determine if it is a primitive of the language
 ;;Symbol -> boolean
 (define (prim1? s)
-  (if (member s (list 'add1 'sub1 'zero?))
+  (if (member s (list 'add1 'sub1 'zero? 'char? 'integer->char 'char->integer))
       #t
       #f))

@@ -11,3 +11,8 @@
 (check-parse-unparse '(if #t 1 2))
 (check-parse-unparse '(if (zero? 0) (add1 3) (sub1 (add1 3))))
 (check-parse-unparse '(sub1 (add1 (sub1 (add1 (if (zero? 0) 1 2))))))
+;;Dodger tests
+(check-parse-unparse '#\a)
+(check-parse-unparse '(char? #\a))
+(check-parse-unparse '(char->integer #\a))
+(check-parse-unparse '(integer->char 955))

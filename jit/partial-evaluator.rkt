@@ -44,6 +44,7 @@
      (match prog
        [(Int i) (error "int literal should not be red")]
        [(Bool b) (error "bool literal should not be red")]
+       [(Char c) (error "char literal should not be red")]
        [(If e1 e2 e3)
         (let ((e2 (eval-interp 'interp interp-fns e2 interp-env prog-env))
               (e3 (eval-interp 'interp interp-fns e3 interp-env prog-env)))
@@ -87,11 +88,13 @@
     (match e
       [(Int i) e]
       [(Bool b) e]
+      [(Char c) e]
       [(Var v) ;;This (Var v) is not from the program. This is the interpreter attempting to return the value of a variable v
        (let ((value (lookup v interp-env)))
          (match value
            [(? integer? i) (Int i)]
            [(? boolean? b) (Bool b)]
+           [(? char? c) (Char c)]
            [(? ast-expr? v) v]
            [(? symbol? s) (Symbol s)]
            [(? annotation? a) a]))] 
@@ -121,7 +124,15 @@
       [(Prim1 'sub1 e)
        (Int (sub1 (Int-i (eval-i e interp-env prog-env interp-fns))))]
       [(Prim1 'zero? e)
-       (Bool (zero? (Int-i (eval-i e interp-env prog-env interp-fns))))])))
+       (Bool (zero? (Int-i (eval-i e interp-env prog-env interp-fns))))]
+      [(Prim1 'char? e)
+       (match (eval-i e interp-env prog-env interp-fns)
+          [(Char _) (Bool (char? (Char-c (eval-i e interp-env prog-env interp-fns))))]
+          [_        (Bool #f)])]
+      [(Prim1 'integer->char e)
+       (Char (integer->char (Int-i (eval-i e interp-env prog-env interp-fns))))]
+      [(Prim1 'char->integer e)
+       (Int (char->integer (Char-c (eval-i e interp-env prog-env interp-fns))))])))
   
              
 
@@ -151,6 +162,10 @@
          [(Pat (Bool (? symbol? sb)))
           (match expr
             [(Bool bool) (cons (extend sb bool interp-env) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (Char (? symbol? sb)))
+          (match expr
+            [(Char char) (cons (extend sb char interp-env) b)]
             [_ (find-clause-interp-env clauses expr interp-env)])]
          [(Pat (Prim1 (? symbol? p) (? symbol? e)))
           (match expr

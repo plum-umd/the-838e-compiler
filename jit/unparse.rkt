@@ -7,8 +7,9 @@
 ;;Expr -> S-Expression
 (define (unparse e)
   (match e
-    [(Int i) i]
-    [(Bool b) b]
+    [(Int i)    i]
+    [(Bool b)   b]
+    [(Char c)   c]
     [(If e1 e2 e3)
      (list 'if (unparse e1) (unparse e2) (unparse e3))]
     [(Prim1 p e)
