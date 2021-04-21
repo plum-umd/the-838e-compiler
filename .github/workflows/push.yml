@@ -47,28 +47,14 @@ jobs:
         cmake ..
         cmake --build .
         cd ..
-        pwd
-        ls
-        ls bin
-        echo $PATH
         export PATH="$(pwd)/bin:$PATH"
-        echo $PATH
         echo 'export PATH="'$(pwd)'/bin:$PATH"' >> ~/.bashrc
-        which wat2wasm
     - name: Install nodejs
       run: |
-        pwd
-        ls
-        ls ..
-        ls ../..
-        echo $PATH
-        which wat2wasm      
         sudo apt -y install nodejs
-    - name: Run tests on .
-      run: |
-        pws
-        echo $PATH
-        which wat2wasm
-        raco test .   
     - name: Run tests
-      run: raco test -p the-838e-compiler
+      run: |
+        pwd
+        export PATH="/home/runner/work/the-838e-compiler/wabt/bin:$PATH"
+        echo $PATH
+        raco test -p the-838e-compiler
