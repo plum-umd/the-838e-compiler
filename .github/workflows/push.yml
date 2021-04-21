@@ -47,10 +47,14 @@ jobs:
         cmake ..
         cmake --build .
         cd ..
+        pwd
+        echo $PATH
         export PATH="$(pwd)/bin:$PATH"
+        echo $PATH
         echo 'export PATH="'$(pwd)'/bin:$PATH"' >> ~/.bashrc
     - name: Install nodejs
-      run: |
-        sudo apt -y install nodejs
+      run: sudo apt -y install nodejs
+    - name: Run tests on .
+      run: raco test .   
     - name: Run tests
       run: raco test -p the-838e-compiler
