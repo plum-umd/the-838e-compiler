@@ -16,3 +16,10 @@
 (check-parse-unparse '(char? #\a))
 (check-parse-unparse '(char->integer #\a))
 (check-parse-unparse '(integer->char 955))
+;;Evildoer rests
+(check-parse-unparse '(read-byte))
+(check-parse-unparse '(peek-byte))
+(check-parse-unparse '(write-byte 1))
+(check-parse-unparse '(eof-object? eof))
+(check-parse-unparse '(void))
+(check-parse-unparse '(begin (if (zero? (read-byte)) 1 (write-byte 1)) eof))

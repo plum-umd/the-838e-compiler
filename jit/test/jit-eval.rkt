@@ -1,5 +1,5 @@
 #lang racket
-(require "test-runner.rkt"
+(require "test-runner-pe.rkt"
          "../parse.rkt"
          "../eval.rkt")
          ;; "../unload-bits-asm.rkt"

@@ -39,18 +39,32 @@
             [(Prim1 prim v)
              (let ((interp-env (extend (car xs) prim (extend (car (cdr xs)) v interp-env)))) ;;We are using the knowledge that interp-prim1 accepts the prim symbol as its
                ;;first argument and the evaluated argument to the prim as the second
-               (eval-interp-prim1 interpreter interp-env prog-env interp-fns))])]))]
+               (eval-interp-prim1 interpreter interp-env prog-env interp-fns))])]
+         ['interp-prim0
+          (match prog
+            [(Prim0 prim)
+             (let ((interp-env (extend (car xs) prim interp-env)))
+               (eval-interp-prim0 interpreter interp-env prog-env interp-fns))])]))]
     [(Red prog)
      (match prog
        [(Int i) (error "int literal should not be red")]
        [(Bool b) (error "bool literal should not be red")]
        [(Char c) (error "char literal should not be red")]
+       [(Eof) (error "eof object should not be red")]
        [(If e1 e2 e3)
-        (let ((e2 (eval-interp 'interp interp-fns e2 interp-env prog-env))
+        (let ((e1 (eval-interp 'interp interp-fns e1 interp-env prog-env))
+              (e2 (eval-interp 'interp interp-fns e2 interp-env prog-env))
               (e3 (eval-interp 'interp interp-fns e3 interp-env prog-env)))
           (If e1 e2 e3))]
        [(Prim1 p e)
-        prog])]))
+        (let ((e (eval-interp 'interp interp-fns e interp-env prog-env)))
+          (Prim1 p e))]
+       [(Prim0 p)
+        prog]
+       [(Begin2 e1 e2)
+        (let ((e2 (eval-interp 'interp interp-fns e1 interp-env prog-env))
+              (e3 (eval-interp 'interp interp-fns e2 interp-env prog-env)))
+          (Begin2 e2 e3))])]))
        
         
 
@@ -80,6 +94,17 @@
               (env-clause (find-clause-interp-prim1 cls prim interp-env)))
          (eval-i (cdr env-clause) (car env-clause) prog-env interp-fns))])))
 
+;;Evaluate a call to interp-prim0
+;;Defn IEnv PEnv (Listof Defn) -> Expr
+(define (eval-interp-prim0 interpreter interp-env prog-env interp-fns)
+  (begin
+    (debug "eval-interp-prim0" "unknown" interp-env)
+    (match (Defn-e interpreter)
+      [(Match (Var p) cls)
+       (let* ((prim (lookup p interp-env))
+               (env-clause (find-clause-interp-prim0 cls prim interp-env)))
+         (eval-i (cdr env-clause) (car env-clause) prog-env interp-fns))])))
+
 ;;Evaluate an expression associated with the interpreter
 ;;Expr IEnv PEnv (Listof Defn) -> Expr
 (define (eval-i e interp-env prog-env interp-fns)
@@ -89,6 +114,7 @@
       [(Int i) e]
       [(Bool b) e]
       [(Char c) e]
+      [(Eof) e]
       [(Var v) ;;This (Var v) is not from the program. This is the interpreter attempting to return the value of a variable v
        (let ((value (lookup v interp-env)))
          (match value
@@ -112,9 +138,19 @@
               (env-clause (find-clause-i cls expr interp-env)))
          ;;Evaluate the body of the match clause in the updated environment
          (eval-i (cdr env-clause) (car env-clause) prog-env interp-fns))]
+      [(Begin2 e1 e2)
+       (let ((v1 (eval-i e1 interp-env prog-env interp-fns))
+             (v2 (eval-i e2 interp-env prog-env interp-fns)))
+         v2)]
       [(App 'interp (list p))
        (let ((v (eval-i p interp-env prog-env interp-fns)))
          (eval-interp 'interp interp-fns v interp-env prog-env))]
+      [(App 'interp-prim0 (list prim))
+       (let* ((prim (Symbol-s (eval-i prim interp-env prog-env interp-fns)))
+              (v (match prim
+                   [(or 'read-byte 'peek-byte) (Red (Prim0 prim))]
+                   [_ (Green (Prim0 prim))])))
+         (eval-interp 'interp-prim0 interp-fns v interp-env prog-env))]
       [(App 'interp-prim1 (list prim e))
        (let* ((prim (Symbol-s (eval-i prim interp-env prog-env interp-fns)))
               (v (eval-i e interp-env prog-env interp-fns)))
@@ -127,12 +163,16 @@
        (Bool (zero? (Int-i (eval-i e interp-env prog-env interp-fns))))]
       [(Prim1 'char? e)
        (match (eval-i e interp-env prog-env interp-fns)
-          [(Char _) (Bool (char? (Char-c (eval-i e interp-env prog-env interp-fns))))]
+          [(Char c) (Bool #t)]
           [_        (Bool #f)])]
       [(Prim1 'integer->char e)
        (Char (integer->char (Int-i (eval-i e interp-env prog-env interp-fns))))]
       [(Prim1 'char->integer e)
-       (Int (char->integer (Char-c (eval-i e interp-env prog-env interp-fns))))])))
+       (Int (char->integer (Char-c (eval-i e interp-env prog-env interp-fns))))]
+      [(Prim1 'eof-object? e)
+       (Bool (Eof? (eval-i e interp-env prog-env interp-fns)))]
+      [(Prim0 'void)
+       (Void)])))
   
              
 
@@ -167,23 +207,47 @@
           (match expr
             [(Char char) (cons (extend sb char interp-env) b)]
             [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (Eof))
+          (match expr
+            [(Eof) (cons interp-env b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (Prim0 (? symbol? s)))
+          (match expr
+            [(Prim0 p)
+             (cons (extend s p interp-env) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
          [(Pat (Prim1 (? symbol? p) (? symbol? e)))
           (match expr
             [(Prim1 pr expr) (cons (extend p pr (extend e expr interp-env)) b)]
+            [_ (find-clause-interp-env clauses expr interp-env)])]
+         [(Pat (Begin2 (? symbol? s1) (? symbol? s2)))
+          (match expr
+            [(Begin2 e1 e2) (cons (extend s1 e1 (extend s2 e2 interp-env)) b)]
             [_ (find-clause-interp-env clauses expr interp-env)])])])))
 
 ;;Find the clause matching the provided prim
 ;;(Listof Clause) Symbol IEnv -> Clause
 (define (find-clause-interp-prim1 cls prim interp-env)
   (match cls
-    ['() (error "program contains and invalid expression: No clause matching prim")]
+    ['() (error (string-append "program contains an invalid expression: No clause matching prim " (symbol->string prim)))]
     [(cons (Clause p b) cls)
      (match p
        [(Symbol s)
         (if (equal? s prim)
             (cons interp-env b)
             (find-clause-interp-prim1 cls prim interp-env))])]))
-     
+
+;;Find the clause matching the provided prim
+;;(Listof Clause) Symbol IEnv -> Clause
+(define (find-clause-interp-prim0 cls prim interp-env)
+  (match cls
+    ['() (error (string-append "program contains an invalid expression: no clause matching prim " (symbol->string prim)))]
+    [(cons (Clause p b) cls)
+     (match p
+       [(Symbol s)
+        (if (equal? s prim)
+            (cons interp-env b)
+            (find-clause-interp-prim0 cls prim interp-env))])]))
 
 ;;Finds the first clause in a list of clauses that matches a given expression from the interpreter.
 ;;It returns a pair of the updated interp-env caused by variable bindings in the clause and the expression

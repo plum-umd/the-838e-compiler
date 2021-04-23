@@ -88,6 +88,7 @@
 (struct Prim4 (p e1 e2 e3 e4) #:prefab)
 (struct If    (e1 e2 e3)      #:prefab)
 (struct Begin (es)            #:prefab)
+(struct Begin2 (e1 e2)          #:prefab)
 (struct Let   (xs es e)       #:prefab)
 (struct Var   (x)             #:prefab)
 (struct App   (f es)          #:prefab)

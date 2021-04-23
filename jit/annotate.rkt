@@ -20,6 +20,7 @@
     [(Int i)  (Green (Int i))]
     [(Bool b) (Green (Bool b))]
     [(Char c) (Green (Char c))]
+    [(Eof) (Green (Eof))]
     [(If e1 e2 e3)
      (match (annotate-env e1 env)
        [(Green e1)
@@ -29,12 +30,22 @@
     [(Prim0 p) ;;All our prim0s require interaction with the user hence are red
      (match p
        ['read-byte (Red (Prim0 p))]
-       ['write-byte (Red (Prim0 p))]
+       ['void (Green (Prim0 p))]
        ['peek-byte (Red (Prim0 p))])]
     [(Prim1 p e)
-     (match (annotate-env e env) ;;All our prim1s are foldable hence green as long as their argument is green
-       [(Green e) (Green (Prim1 p (Green e)))]
-       [(Red e) (Red (Prim1 p (Red e)))])]))
+     (let ((v (annotate-env e env)))
+       (match p
+         ['write-byte (Red (Prim1 p v))]
+         [_
+          (match v ;;All other prim1s are foldable hence green as long as their argument is green
+            [(Green e) (Green (Prim1 p v))]
+            [(Red e) (Red (Prim1 p v))])]))]
+    [(Begin2 e1 e2)
+     (let ((e1 (annotate-env e1 env))
+           (e2 (annotate-env e2 env)))
+       (match (cons e1 e2)
+         [(cons (Green _) (Green _)) (Green (Begin2 e1 e2))]
+         [_ (Red (Begin2 e1 e2))]))]))
 
 ;;Return true if the argument is an annotation, false otherwise
 (define (annotation? e)
