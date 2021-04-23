@@ -14,6 +14,9 @@
 ;; type Defn* = (Defn* Id (Listof Id) Id Expr)
 (struct Defn* (f xs xs* e) #:prefab)
 
+(struct Mod/contract  (pvs rqs ds e) #:prefab)
+(struct Contract (id e) #:prefab)
+
 ;; type Expr = (Eof)
 ;;           | (Empty)
 ;;           | (Int Integer)

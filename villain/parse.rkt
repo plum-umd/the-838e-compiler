@@ -9,6 +9,8 @@
 ;; S-Expr -> Prog
 (define (parse-aux s)
   (match s
+    [(list 'begin (list 'provide (list 'contract-out cpvs ...)) (and ds (list 'define _ _)) ...)
+     (parse-mod-contract cpvs '() ds '(void))]
     [(list 'begin (list 'provide pvs ...) (list 'require rqs ...)
            (and ds (list 'define _ _)) ...)
      (parse-mod pvs rqs ds '(void))]
@@ -33,12 +35,21 @@
     [(list (list 'provide xs ...) (and ds (list 'define _ _)) ...)
      (Lib xs (map parse-d ds))]))
 
+(define (parse-mod-contract cpvs rqs ds e)
+  (Mod/contract
+    (map parse-contract cpvs)
+    '()
+    (map parse-d ds) (parse-e e)))
+
 (define (parse-mod pvs rqs ds e)
   (let ((pvs2 (if (equal? pvs '((all-defined-out)))
                   (parse-all-defined-out ds)
                    pvs)))
     (Mod pvs2 rqs (map parse-d ds) (parse-e e))))
                  
+(define (parse-contract cvps)
+   (match cvps
+     [(list id e) (Contract id (parse-e e))]))
 
 (define (parse-all-defined-out ds)
    (match ds
@@ -221,6 +232,7 @@
     [(Lam l xs e)       (Lam l xs (desugar e))]
     [(Lam* l xs xs* e)  (Lam* l xs xs* (desugar e))]
     [(Mod pvs rqs ds e) (Mod pvs rqs (map desugar-def ds) (desugar e))]
+    [(Mod/contract cpvs rqs ds e) (Mod cpvs rqs (map desugar-def ds) (desugar e))]
     [(Match e0 cs)
      (Match (desugar e0) (map (λ (c) (Clause (Clause-p c) (desugar (Clause-e c)))) cs))]))
 
