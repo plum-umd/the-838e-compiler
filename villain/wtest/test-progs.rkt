@@ -1,4 +1,4 @@
 #lang racket
 (require "test-programs/get-progs.rkt")
-(for-each test-prog (get-progs "abscond"))
+(for-each test-prog (get-progs "extort"))
 

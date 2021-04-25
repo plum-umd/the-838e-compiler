@@ -16,68 +16,20 @@
 */
 
 const imm_shift = 4;
-const box_type_tag    = 1;
-const cons_type_tag   = 2;
-const str_type_tag    = 3;
-const symbol_type_tag = 4;
-const port_type_tag   = 5;
-const vector_type_tag = 6;
-const flonum_type_tag = 7; 
-const prefab_type_tag = 8;
-const proc_type_tag   = 9;
-const bignum_type_tag = 10;
-
-const ptr_type_mask = ((1 << imm_shift) - 1);
-const ptr_addr_mask =  ~ptr_type_mask;
 const int_shift = (1 + imm_shift);
-const int_type_mask = ((1 << int_shift) - 1);
-const int_type_tag = (0 << (int_shift - 1));
 const nonint_type_tag = (1 << (int_shift - 1));
 const char_shift = (int_shift + 1);
-const char_type_mask = ((1 << char_shift) - 1);
-const char_type_tag = ((0 << (char_shift - 1)) | nonint_type_tag);
 const nonchar_type_tag = ((1 << (char_shift - 1)) | nonint_type_tag);
-const val_true = ((0 << char_shift) | nonchar_type_tag);
-const val_false = ((1 << char_shift) | nonchar_type_tag);
 const val_eof  = ((2 << char_shift) | nonchar_type_tag);
-const val_void = ((3 << char_shift) | nonchar_type_tag);
-const val_empty = ((4 << char_shift) | nonchar_type_tag);
-const void_answer = -1;
 
-function ans_str(result) {
-  var ret_answer;
-  if (cons_type_tag === (ptr_type_mask & result)) {
-    ret_answer = "(".concat(' ', ")");
-  } else if (box_type_tag === (ptr_type_mask & result)) {
-    ret_answer = "#&".concat(' ', "");
-  } else if (int_type_tag === (int_type_mask & result)) {
-    ret_answer = (result >> int_shift);
-  } else if (char_type_tag === (char_type_mask & result)) {
-    ret_answer = "#\\".concat('', String.fromCodePoint(result >> char_shift));
-  } else {
-    switch (result) {
-    case val_true:
-      ret_answer = "#t"; break;
-    case val_false:
-      ret_answer = "#f"; break;
-    case val_eof:
-      ret_answer = "#<eof>"; break;
-    case val_empty:
-      ret_answer = "()"; break;
-    case val_void:
-      ret_answer = -1; /* nothing */ break;
-    default:
-      ret_answer = -1;
-    }
-  }
-  return ret_answer;  
+var output = "";
+var unloaded_result = "";
+
+function writeBytejs(c) {  
+  output = output.concat('', String.fromCodePoint(c >> int_shift));
 }
 
 const fs = require('fs')
-
-function writeBytejs(c) {
-  fs.writeSync(process.stdout.fd, String.fromCodePoint(c >> int_shift));
-}
 
 var peek_flag = 0
 const peek_buffer = Buffer.alloc(1)
@@ -111,11 +63,13 @@ function peekBytejs() {
   } else {
     return buffer[0] << int_shift
   }
-}
+}  
 
 function errorjs() {
   const msg = "err"
   console.log(msg)
+  console.log(output)
+  console.log(unloaded_result)
   process.exit()
 }
 
@@ -147,10 +101,10 @@ const run = async () => {
   const buffer = readFileSync(process.argv[2]);
   const module = await WebAssembly.compile(buffer);
   const instance = await WebAssembly.instantiate(module, importObject);
-  var answer = ans_str(instance.exports.sendResult());
-  if (answer != -1) {
-    console.log(answer);
-  }
+  result = instance.exports.sendResult();
+  console.log(result);
+  console.log(output);
+  console.log(unloaded_result);
 };
 
 run();

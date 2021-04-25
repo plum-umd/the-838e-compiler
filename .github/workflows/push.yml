@@ -50,8 +50,7 @@ jobs:
         export PATH="$(pwd)/bin:$PATH"
         echo 'export PATH="'$(pwd)'/bin:$PATH"' >> ~/.bashrc
     - name: Install nodejs
-      run: |
-        sudo apt -y install nodejs
+      run: sudo apt -y install nodejs
     - name: Run tests
       run: |
         pwd
