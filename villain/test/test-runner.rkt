@@ -256,13 +256,168 @@
                         ['() 0]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
                  3)
-    (check-equal? (run
+  (check-equal? (run
                  '(begin
                     (define (len lst)
                       (match lst
                         [(cons h t) (+ 1 (len t))]))
                     (len (cons 1 (cons 2 (cons 3 '()))))))
-                 'err)
+                'err)
+  
+ (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct sprout (x y)) x])))
+                2)
+ 
+
+ (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(struct sprout (a b)) b])))
+                3)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct sprout (a b c)) c])))
+                1)
+
+  (check-equal? (run
+                 '(begin
+                    (struct empt () #:prefab)
+                    (match (empt)
+                      [(cons h t) h]
+                      [(struct empt ()) 5])))
+                5)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (struct beans (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct sprout (a b c)) 7]
+                      [(struct beans (a b c)) 6])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (struct beans (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct beans (a b c)) 6]
+                      [(struct sprout (a b c)) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (struct notSprout (x y) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(struct notSprout (a b)) 6]
+                      [(struct sprout (a b c)) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x) #:prefab)
+                    (struct sprout2 (x y) #:prefab)
+                    (struct sprout3 (x y z) #:prefab)
+                    (match (sprout1 2)
+                      [(struct sprout2 (a b)) 6]
+                      [(struct sprout3 (a b c)) 7])))
+                'err)
+
+  
+  (check-equal? (run
+                 '(begin
+                    (struct empt1 () #:prefab)
+                    (struct empt2 (x) #:prefab)
+                    (match (empt1)
+                      [(cons h t) h]
+                      [(struct empt2 (x)) 2])))
+                'err)
+
+  
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(sprout x y) x])))
+                2)
+ 
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y) #:prefab)
+                    (match (sprout 2 3)
+                      [(sprout a b) b])))
+                3)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(sprout a b c) c])))
+                1)
+
+  (check-equal? (run
+                 '(begin
+                    (struct empt () #:prefab)
+                    (match (empt)
+                      [(cons h t) h]
+                      [(empt) 5])))
+                5)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x y z) #:prefab)
+                    (struct sprout2 (x) #:prefab)
+                    (match (sprout1 2 3 1)
+                      [(sprout1 a b c) 7]
+                      [(sprout2 a) 6])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x y z) #:prefab)
+                    (struct sprout2 (x) #:prefab)
+                    (match (sprout1 2 3 1)
+                      [(sprout2 a) 6]
+                      [(sprout1 a b c) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout (x y z) #:prefab)
+                    (struct notSprout (a b) #:prefab)
+                    (match (sprout 2 3 1)
+                      [(notSprout a b) 6]
+                      [(sprout a b c) 7])))
+                7)
+
+  (check-equal? (run
+                 '(begin
+                    (struct sprout1 (x) #:prefab)
+                    (struct sprout2 (x y) #:prefab)
+                    (struct sprout3 (x y z) #:prefab)
+                    (match (sprout1 2)
+                      [(sprout2 a b) 6]
+                      [(sprout3 a b c) 7])))
+                'err)
+
+  
+  (check-equal? (run
+                 '(begin
+                    (struct empt1 () #:prefab)
+                    (struct empt2 (x) #:prefab)
+                    (match (empt1)
+                      [(cons h t) h]
+                      [(empt2 x) 2])))
+                'err)
 
   (check-equal? (run
                  '(begin (define (tri x)
@@ -293,7 +448,112 @@
   (check-equal? (run '(integer-length  16)) 5)
   (check-equal? (run '(integer-length -16)) 4)
 
+  ;;Prefab structure tests
+  (check-equal? (run '(make-prefab-struct 'coord 4 5)) (make-prefab-struct 'coord 4 5))
+  (check-equal? (run '(make-prefab-struct 'empty)) (make-prefab-struct 'empty))
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
 
+                        (extract-x (coord (box 1) (box 2)))))
+                (box 1))
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (struct empt () #:prefab)
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (extract-y (coord (box 1) (box 2)))))
+                (box 2))
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+                        (struct empt () #:prefab)
+                        (let ((c (coord (cons 1 (cons 2 '())) (cons 1 (cons 2 '())))))
+                          (coord? c))))
+                #t)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (let ((c (coord (cons 1 (cons 2 '())) (cons 1 (cons 2 '()))))
+                              (e (empt)))
+                          (coord? e))))
+                #f)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (let ((c (coord (cons 1 (cons 2 '())) (cons 1 (cons 2 '()))))
+                              (e (empt)))
+                          (empt? e))))
+                #t)
+  
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord? (box 1))))
+                #f)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord-x (box 1))))
+                'err)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord? (make-prefab-struct 'coord 1 2 3))))
+                #f)
+
+  (check-equal? (run '(begin
+                        (struct coord (x y) #:prefab)
+                        (struct empt () #:prefab)
+                        (define (extract-x c)
+                          (coord-x c))
+                        (define (extract-y c)
+                          (coord-y c))
+
+                        (coord? (make-prefab-struct 'coord 1 2))))
+                #t)
+  
+  
   (check-equal? (run
                  '(begin (define (even? x)
                            (if (zero? x)
@@ -754,7 +1014,7 @@
                        (g f))) 88)
 
  ;; Check (begin (define _ _) ..1 e ... es) -> letrec
-  (check-equal? (run '(begin
+ (check-equal? (run '(begin
                         (define (f x)
                           (match x
                             [z (begin
@@ -762,7 +1022,7 @@
                                  (define (g2 y) (+ z y))
                                  (+ z (g1 z)))]))
                         (f 2))) 7)
-  (check-equal? (run '(begin
+ (check-equal? (run '(begin
                         (define (f1 x) (add1 x))
                         (define (f2 x) (+ x 2))
                         (define (f3 x) (- x 3))
@@ -839,10 +1099,10 @@
   (check-equal? (run '(let ((z 7)) (apply (λ x z) '()))) 7)
   (check-equal? (run '(procedure? (λ (x) x))) #t)
   (check-equal? (run '(procedure? (cons 1 '()))) #f)
-
  ) 
 
 ;; Variable
+
 
 (define (test-runner-io run)
   ;; Evildoer examples

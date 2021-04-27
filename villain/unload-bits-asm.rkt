@@ -28,6 +28,12 @@
         (let ((length (unload-value (heap-ref i))))
           (let ((str-chars (string-loop length i)))
             (list->string (reverse str-chars)))))]
+    [(? prefab-bits? i)
+     (let ((p (bitwise-xor i type-prefab)))
+       (apply make-prefab-struct
+              (unload-value (heap-ref p))
+              (for/list ([k (in-range 2 (+ 2 (heap-ref (+ p (arithmetic-shift 1 imm-shift)))) 1)])
+                (unload-value (heap-ref (+ p (arithmetic-shift k imm-shift)))))))]
     [(? bignum-bits? i)
         (let ((b (bitwise-xor i type-bignum)))
           (let ((length-sign (unload-value (heap-ref-signed b))))
@@ -70,10 +76,12 @@
                              acc
                              (+ twoExp 1)))]))
 
+;;First shift to the left by 1 to dump any tag of msb. Then shift to the right by 1 more than
+;;the length of the number of bits used to tag a pointer at the bottom and back to the left, leaving
+;;zeros there in the least significant bits in question.
 (define (untag i)
   (arithmetic-shift (arithmetic-shift (arithmetic-shift i 4) (- (+ 4 (integer-length ptr-bottom-mask))))
                     (integer-length ptr-bottom-mask)))
-
 
 (define (heap-ref i)
   (ptr-ref (cast (untag i) _int64 _pointer) _uint64))

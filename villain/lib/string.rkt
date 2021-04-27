@@ -84,9 +84,11 @@
     ['() 'err]
     [(cons x xs) (if (empty? xs)
                      (if (string? x) #t 'err)
-                     (if (^string=? x (car xs))
-                         (if (string=?/acc xs) #t #f)
-                         #f))]))
+                     (if (string? x)
+                         (if (^string=? x (car xs))
+                             (if (string=?/acc xs) #t #f)
+                             #f)
+                         'err))]))
 
 (define (^string=? x y)
   (let ((len-x (string-length x))
