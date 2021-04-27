@@ -34,6 +34,7 @@
 (define (externs-d d)
   (match d
     [(Defn f xs e) (externs-e e)]
+    [(Struct s xs) '()]
     [(Defn* f xs xs* e) (externs-e e)]))
 
 (define (externs-e e)

@@ -37,13 +37,15 @@
     (let ((fs (read in-fs))
           (compiled-lib-letrec (deserialize (read in-letrec)))
           (ls-ids (deserialize (read in-ls-ids)))
-          (libexts (deserialize (read in-lib-exts))))                            
+          (libexts (deserialize (read in-lib-exts)))
+          (sts (structs p)))                            
       (begin
         (close-input-port in-fs)
         (close-input-port in-letrec)
         (close-input-port in-ls-ids)
         (close-input-port in-lib-exts)
-        (let ((lib-ls-ids-exts (seq (map (λ (id) (Extern id)) ls-ids))))
+        (let ((lib-ls-ids-exts (seq (map (λ (id) (Extern id)) ls-ids)))
+              (struct-labels (extract-struct-labels sts)))
           (prog (Global 'entry)
                 (Default 'rel)
                 (Section '.text)
@@ -59,18 +61,126 @@
                 (%% "start-of-compiled-library-functions-letrec-fs-ls")
                 (apply seq compiled-lib-letrec)
                 (%% "end-of-compilation-of-library-functions-letrec-fs-ls")
+
+                (%% "start-of-compilation-of-struct-function-closures")
+                (compile-struct-functions sts)
+                (compile-struct-functions-init sts (append struct-labels (reverse fs)))
+                (%% "end-of-compilation-of-struct-function-closures")
+                
                 (%% "start-of-compilation-of-program")
-                (compile-e-tail p (reverse fs))
-                (Add rsp (* 8 (length fs)))       ;; to pop lib fs off the stack
+                ;;(compile-e-tail p (reverse fs))
+                (compile-e-tail p (append struct-labels (reverse fs)))
+                ;;(Add rsp (* 8 (length fs)))
+                (Add rsp (* 8 (+ (length struct-labels) (length fs))))       ;; to pop lib fs and struct labels off the stack
                 (%% "end-of-compilation-of-program")
                 (Mov rdx rbx) ; return heap pointer in second return register
                 (Ret)
+                (%% "start-of-compiling-struct-definitions-of-program")
+                (compile-structs sts)
+                (%% "end-of-compilating-struct-definitions-of-program")
                 (%% "start-of-compiling-λ-definitions-of-program")
                 (compile-λ-definitions (λs p))
                 (%% "end-of-compiling-λ-definitions-of-program")
                 (Label 'raise_error_align)
                 (Sub rsp 8)
                 (Jmp 'raise_error)))))))
+
+(define (extract-struct-labels sts)
+  (match sts
+    ['() '()]
+    [(cons (Struct s xs) sts)
+     (let ((constructor-label s)
+           (predicate-label (string->symbol (string-append (symbol->string s) "?")))
+           (accessor-labels (map (λ (a) (string->symbol (string-append (symbol->string s) "-" (symbol->string a)))) xs)))
+       (append (extract-struct-labels sts) (reverse accessor-labels) (list predicate-label) (list constructor-label)))]))
+
+(define (compile-struct-functions sts)
+  (match sts
+    ['() (seq)]
+    [(cons (Struct s xs) sts)
+     (let ((constructor-label (symbol->label s))
+           (predicate-label (symbol->label (string->symbol (string-append (symbol->string s) "?"))))
+           (accessor-labels (map (λ (a) (symbol->label (string->symbol (string-append (symbol->string s) "-" (symbol->string a))))) xs)))
+     ;  (display l) (display "  fvs l:  ") (display (fvs l)) (display "\n\n")
+       (let ((length-fv-constructor 0)
+             (length-fv-predicate 0)
+             (length-fv-accessors 0))
+         (seq (Lea rax constructor-label)
+              (Mov (Offset rbx 0) rax)
+              (Mov r8 length-fv-constructor)
+              (Mov (Offset rbx 8) r8)
+              (Mov rax rbx)
+              (Mov r8 type-proc)
+              (Or rax r8)
+              (Add rbx (* 8 (+ 2 length-fv-constructor)))
+              (Push rax)
+
+              (Lea rax predicate-label)
+              (Mov (Offset rbx 0) rax)
+              (Mov r8 length-fv-predicate)
+              (Mov (Offset rbx 8) r8)
+              (Mov rax rbx)
+              (Mov r8 type-proc)
+              (Or rax r8)
+              (Add rbx (* 8 (+ 2 length-fv-predicate)))
+              (Push rax)
+
+              (compile-struct-accessors-labels accessor-labels length-fv-accessors)
+              
+              (compile-struct-functions sts))))]))
+
+(define (compile-struct-accessors-labels labels length-fv)
+  (match labels
+    ['() (seq)]
+    [(cons h labels)
+     (seq
+      (Lea rax h)
+      (Mov (Offset rbx 0) rax)
+      (Mov r8 length-fv)
+      (Mov (Offset rbx 8) r8)
+      (Mov rax rbx)
+      (Mov r8 type-proc)
+      (Or rax r8)
+      (Add rbx (* 8 (+ 2 length-fv)))
+      (Push rax)
+      (compile-struct-accessors-labels labels length-fv))]))
+
+
+(define (compile-struct-functions-init sts c)
+  (match sts
+    ['() '()]
+    [(cons (Struct s xs) sts)
+     (let ((constructor-label s)
+           (predicate-label (string->symbol (string-append (symbol->string s) "?")))
+           (accessor-labels (map (λ (a) (string->symbol (string-append (symbol->string s) "-" (symbol->string a)))) xs)))
+       (seq (Mov r9 (Offset rsp (lookup constructor-label c)))
+            (Mov r8 type-proc)
+            (Xor r9 r8)
+            (Add r9 16)
+            (copy-env-to-heap '() c 0)
+
+            (Mov r9 (Offset rsp (lookup predicate-label c)))
+            (Mov r8 type-proc)
+            (Xor r9 r8)
+            (Add r9 16)
+            (copy-env-to-heap '() c 0)
+
+
+            (compile-struct-functions-accessors-init accessor-labels c)
+            (compile-struct-functions-init sts c)))]))
+
+(define (compile-struct-functions-accessors-init labels c)
+  (match labels
+    ['() (seq)]
+    [(cons l labels)
+     (seq
+      (Mov r9 (Offset rsp (lookup l c)))
+      (Mov r8 type-proc)
+      (Xor r9 r8)
+      (Add r9 16)
+      (copy-env-to-heap '() c 0)
+      (compile-struct-functions-accessors-init labels c))]))
+     
 
 ;; Expr -> Asm
 (define (compile-library p)
@@ -260,12 +370,14 @@
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
     [(Prim3 p e1 e2 e3) (compile-prim3 p e1 e2 e3 c)]
+    [(Mps p rest)       (compile-mps p rest c)]
     [(If e1 e2 e3)      (compile-if e1 e2 e3 c tail?)]
     [(Begin e1 e2)      (compile-begin e1 e2 c tail?)]
     [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
     [(Letrec xs es e)   (compile-letrec xs es e c tail?)]
     [(Lam l xs e0)      (compile-λ l (fvs e) c)]
     [(Lam* l xs xs* e0) (compile-λ l (fvs e) c)]
+    [(Prog sts ds e) (compile-e e c tail?)]
     [(Match e0 cs)      (compile-match e0 cs c tail?)]))
 
 (define (compile-e-tail e c)
@@ -307,6 +419,7 @@
       [(Letrec xs es e)   (remq* xs (apply append (fvs e) (map fvs es)))]
       [(Lam l xs e)       (remq* xs (fvs e))]
       [(Lam* l xs xs* e)  (remq* (cons xs* xs) (fvs e))]
+      [(Prog sts ds e) (fvs e)]
       [(Match e0 cs)
        (append (fvs e0) (apply append (map (λ (c) (remq*
                 (match-p-fvs (Clause-p c)) (fvs (Clause-e c)))) cs)))]))
@@ -351,9 +464,16 @@
     [(Letrec xs es e)   (append (apply append (map λs es)) (λs e))]
     [(Lam  l xs e0)     (cons e (λs e0))]
     [(Lam* l xs xs* e0) (cons e (λs e0))]
+    [(Prog sts ds e) (λs e)]
     [(Match e0 cs)
      (append (λs e0) (apply append (map (λ (c) (λs (Clause-e c))) cs)))]  ;; TODO: (λs cs)
     [_  '()]))   ;      for '*  
+
+;;(Letrec (Lisof Id) (Listof Lambda) (Prog (Listof Struct) '() Expr)) -> (Listof Struct)
+(define (structs p)
+  (match p
+    [(Letrec names bodies (Prog sts '() rest)) sts ]
+    [_ '()]))
 
 ;; [Listof LLambda] -> Asm
 (define (compile-λ-definitions ls)
@@ -469,19 +589,23 @@
 ;; Id [Listof Expr] CEnv -> Asm
 (define (compile-tail-call f es c)
   (seq (%% "compile-tail-call ")
-       (compile-e-nontail f c)       
+       (compile-e-nontail f c)
        (Push rax)                    ; rax contains the pointer to λ closure
        (compile-es es (cons #f c))
        (Mov rax (Offset rsp (* 8 (length es))))
+       
        (assert-proc rax c)
        (Mov r8 type-proc)
        (Xor rax r8)
+       
        (%% "move args for tail call")
        (move-args (add1 (length c)) (length es))
        (Add rsp (* 8 (add1 (length c))))
+       
        (copy-closure-env-to-stack)
        (Mov rcx (imm->bits (length es)))
        (Mov rdx (Offset rax 0))
+       (Mov rax 0)
        (Jmp rdx)))      ; (Offset rax 0) contains the address of the label of λ
 
 
@@ -560,6 +684,91 @@
      (seq (compile-define d)
           (compile-defines ds))]))
 
+;;[Listof Struct] -> Asm
+(define (compile-structs sts)
+  (match sts
+    ['() (seq)]
+    [(cons s sts)
+     (seq (compile-struct s)
+          (compile-structs sts))]))
+
+;;Struct -> Asm
+(define (compile-struct s)
+  (match s
+    [(Struct s xs)
+     (let ((loop (gensym 'loop))
+           (end (gensym 'end))
+           (end2 (gensym 'end)))
+       (seq
+        (%% "Struct Constructor Function")
+        (Label (symbol->label s)) 
+        (Cmp rcx (imm->bits (length xs))) ; arity check
+        (Jne (error-label (reverse xs)))
+        (compile-e (Symbol s) (reverse xs) #f)
+        (Mov r8 (length xs))
+        (Mov (Offset rbx 8) r8);;Store the number of fields
+        (Mov (Offset rbx 0) rax) ;;Store the key i.e the symbol
+
+        (Mov r8 rbx)
+        (Mov r9 rsp)
+        (Add r9 (* 8 (sub1 (length xs))))
+        (Mov r10 0)
+
+        (Add r8 16) ;;Skip the number of fields and the key
+            
+        (Label loop)
+        (Cmp r10 (length xs))
+        (Je end) ;;No more args
+        (Mov rax (Offset r9 0))
+        (Mov (Offset r8 0) rax)
+        (Add r8 8)
+        (Sub r9 8)
+        (Add r10 1)
+        (Jmp loop)
+
+        (Label end)
+        (Mov rax rbx)
+        (Mov r8 type-prefab)
+        (Or rax r8)
+        (Add rbx (* 8 (+ 2 (length xs))))
+        ; return
+        ;;(Pop r8) ; save rp
+        (Add rsp (* 8 (length xs))) ; pop args
+        ;;(Push r8) ; replace rp
+        (Ret)
+            
+        (%% "Struct Predicate")
+        (Label (symbol->label (string->symbol (string-append (symbol->string s) "?"))))
+        (Cmp rcx (imm->bits 1)) ;arity check
+        (Jne (error-label (list #f)))
+        (Mov r8 (Offset rsp 0)) ;;Get the argument
+        (Mov r9 ptr-mask)
+        (And r8 r9)
+        (Mov r9 type-prefab)
+        (Cmp r8 r9)
+        (Mov rax val-false)
+        (Jne end2)
+        (compile-e (Symbol s) (parity (list #f #f)) #f)
+        (Mov r8 (Offset rsp 0))
+        (Mov r9 type-prefab)
+        (Xor r8 r9)
+        (Mov r9 (Offset r8 0))
+        (Cmp r9 rax)
+        (Mov rax val-false)
+        (Jne end2)
+        (Mov r9 (Offset r8 8))
+        (Cmp r9 (length xs))
+        (Jne end2)
+        (Mov rax val-true)
+            
+        (Label end2)
+        ; return
+        ;;(Pop r8) ; save rp
+        (Add rsp 8) ; pop args
+        ;;(Push r8) ; replace rp
+        (Ret)
+
+        (compile-struct-accessors s xs 0)))]))
 ;; Defn -> Asm
 (define (compile-define d)
   (match d
@@ -589,16 +798,62 @@
             (Mov (Offset rbx 8) rax)
             (Mov rax rbx)
             (Add rbx 16)
-            (Or rax type-cons)
+            (Mov r8 type-cons)
+            (Or rax r8)
             (Sub rcx (imm->bits 1))
             (Jmp loop)
             (Label end)
 
             (Push rax) ; push the rest list
             (compile-e-tail e (cons xs* (reverse xs)))
+            (Pop r8)
             ; return
-            (Add rsp (* 8 (add1 (length xs)))) ; pop args
+            (Add rsp (* 8 (length xs))) ; pop args
             (Ret)))]))
+
+;;Symbol [Listof Symbol] -> Asm
+(define (compile-struct-accessors s xs i)
+  (match xs
+    ['() (seq)]
+    [(cons x rest)
+     (let ((end (gensym 'end))
+           (accessor (string-append (symbol->string s) "-" (symbol->string x))))
+       (seq
+        (%% (string-append "Struct accessor for " accessor))
+        (Label (symbol->label (string->symbol accessor)))
+        (Cmp rcx (imm->bits 1)) ;arity check
+        (Jne (error-label (list #f)))
+        (Mov r8 (Offset rsp 0)) ;;Get the argument
+        (Mov r9 ptr-mask)
+        (And r8 r9)
+        (Mov r9 type-prefab)
+        (Cmp r8 r9)
+        (Jne (error-label (list #f #f)))
+        (compile-e (Symbol s) (parity (list #f #f)) #f)
+        (Mov r8 (Offset rsp 0))
+        (Mov r9 type-prefab)
+        (Xor r8 r9)
+        (Mov r9 (Offset r8 0))
+        (Cmp r9 rax)
+        (Jne (error-label (list #f #f)))
+        (Mov r9 (Offset r8 8))
+        (Cmp r9 (+ i (length xs)))
+        (Jne (error-label (list #f #f)))
+        (Mov rax (Offset r8 (* 8 (+ 2 i))))
+
+        (Label end)
+         ; return
+        ;;(Pop r8) ; save rp
+        (Add rsp 8) ; pop args
+        ;;(Push r8) ; replace rp
+        (Ret)
+
+        (compile-struct-accessors s rest (add1 i))))]))
+
+(define (parity c)
+  (if (even? (length c))
+      (append c (list #f))
+      c))
 
 ;; Value -> Asm
 (define (compile-value v)
@@ -610,7 +865,8 @@
          (Mov rax (flonum->bits f))
          (Mov (Offset rbx 0) rax)
                (Mov rax rbx)
-               (Or rax type-flonum)
+               (Mov r8 type-flonum)
+               (Or rax r8)
                (Add rbx 8))
   )
 
@@ -654,7 +910,8 @@
          (Mov r9 0)
          (compile-str-chars (string->list s) 3 0 1)
          (Mov rax rbx)
-         (Or rax type-string)
+         (Mov r8 type-string)
+         (Or rax r8)
          (Add rbx (* 8 (add1 (ceiling (/ len 3))))))))
 
 ;; Vec CEnv -> Asm
@@ -668,7 +925,8 @@
          (Add rbx (* 8 len)) ;; rbx now points to next open space on heap for future calls
          (compile-vec-elems ds c)
          (Mov rax r10)
-         (Or rax type-vector))))
+         (Mov r8 type-vector)
+         (Or rax r8))))
 
 ;; Recursively adds each element in the list vs
 (define (compile-vec-elems vs c)
@@ -955,8 +1213,10 @@
                 (Label end)))] 
          ['char?
           (let ((l1 (gensym)))
-            (seq (And rax mask-char)
-                 (Xor rax type-char)
+            (seq (Mov r8 mask-char)
+                 (And rax r8)
+                 (Mov r8 type-char)
+                 (Xor rax r8)
                  (Cmp rax 0)
                  (Mov rax val-true)
                  (Je l1)
@@ -970,7 +1230,8 @@
           (seq (assert-codepoint c)
                (Sar rax int-shift)
                (Sal rax char-shift)
-               (Xor rax type-char))]
+               (Mov r8 type-char)
+               (Xor rax r8))]
          ['eof-object? (eq-imm val-eof)]
          [(or 'char-whitespace? 'char-alphabetic?)
           (let ((l (gensym)))
@@ -994,7 +1255,8 @@
                  (Call (char-op->uc p))
                  (unpad-stack c)
                  (Sal rax char-shift)
-                 (Or rax type-char)))]
+                 (Mov r8 type-char)
+                 (Or rax r8)))]
          ['write-byte
           (seq (assert-byte c)
                (pad-stack c)
@@ -1012,38 +1274,48 @@
          ['box
           (seq (Mov (Offset rbx 0) rax)
                (Mov rax rbx)
-               (Or rax type-box)
+               (Mov r8 type-box)
+               (Or rax r8)
                (Add rbx 8))]
          ['unbox
           (seq (assert-box rax c)
-               (Xor rax type-box)
+               (Mov r8 type-box)
+               (Xor rax r8)
                (Mov rax (Offset rax 0)))]
          ['car
           (seq (assert-cons rax c)
-               (Xor rax type-cons)
+               (Mov r8 type-cons)
+               (Xor rax r8)
                (Mov rax (Offset rax 8)))]
          ['cdr
           (seq (assert-cons rax c)
-               (Xor rax type-cons)
+               (Mov r8 type-cons)
+               (Xor rax r8)
                (Mov rax (Offset rax 0)))]
          ['string-length
           (seq (assert-string rax c)
-               (Xor rax type-string)
+               (Mov r8 type-string)
+               (Xor rax r8)
                (Mov rax (Offset rax 0)))]
          ['string?
           (type-pred ptr-mask type-string)]
          ['string->symbol
-          (seq (assert-string rax c)
-               (Xor rax type-string)
+          (seq
+               (assert-string rax c)
+               (Mov r8 type-string)
+               (Xor rax r8)
                (pad-stack c)
                (Mov rdi rax)
                (Call 'str_to_symbol)
                (unpad-stack c)
-               (Or rax type-symbol))]
+               (Mov r8 type-symbol)
+               (Or rax r8))]
          ['symbol->string
           (seq (assert-symbol rax c)
-               (Xor rax type-symbol)     ; replace symbol tag with str
-               (Or rax type-string))]
+               (Mov r8 type-symbol)
+               (Xor rax r8)     ; replace symbol tag with str
+               (Mov r8 type-string)
+               (Or rax r8))]
          ['symbol?
           (type-pred ptr-mask type-symbol)]
          ['empty? (eq-imm val-empty)]
@@ -1080,7 +1352,8 @@
              (Add rbx (+ (- 8 (modulo (+ 11 port-buffer-bytes) 8)) 11
                          port-buffer-bytes))
              (Mov rax r8)
-             (Or rax type-port))]
+             (Mov r8 type-port)
+             (Or rax r8))]
          ['close-input-port
            (seq
              (assert-port rax c)
@@ -1108,10 +1381,12 @@
          ['vector? (type-pred ptr-mask type-vector)]
          ['vector-length
           (seq (assert-vector rax c)
-               (Xor rax type-vector)
+               (Mov r8 type-vector)
+               (Xor rax r8)
                (Mov rax (Offset rax 0))
                (Sal rax int-shift)
-               (Or rax type-int))]
+               (Mov r8 type-int)
+               (Or rax r8))]
          ['flonum?
           (type-pred ptr-mask type-flonum)])))
 
@@ -1284,7 +1559,8 @@
                  (assert-integer rax c)       ; rax = index
                  (Cmp rax 0)
                  (Jl (error-label c))
-                 (Xor r8 type-string)
+                 (Mov r9 type-string)
+                 (Xor r8 r9)
                  (Mov r9 (Offset r8 0))       ; r9 = length
                  (Sub r9 (imm->bits 1))       ; 0-indexing
                  (Cmp rax r9)
@@ -1325,7 +1601,8 @@
                  (Jmp l1)                           ;}
                  (Label l2)                         ;done writing
                  (Mov rax r10)
-                 (Or rax type-vector)))]
+                 (Mov r8 type-vector)
+                 (Or rax r8)))]
          ['vector-ref
           (seq (Pop r8)
                (assert-vector r8 c)         ; r8 = vector pointer
@@ -1333,7 +1610,8 @@
                (Sar rax int-shift)          ; unwrap index
                (Cmp rax 0)
                (Jl (error-label c))
-               (Xor r8 type-vector)
+               (Mov r9 type-vector)
+               (Xor r8 r9)
                (Mov r9 (Offset r8 0))       ; r9 = length
                (Add r8 8)                   ; r8 will now be pointing to the first element
                (Sub r9 1)                   ; 0-indexing
@@ -1388,26 +1666,31 @@
                  (Mov (Offset rbx -8) rax)
                  (Label l3)
                  (Mov rax r10)            ; pointer to word 0 of the str
-                 (Or rax type-string)))]
+                 (Mov r8 type-string)
+                 (Or rax r8)))]
          ['cons
           (seq (Mov (Offset rbx 0) rax)
                (Pop rax)
                (Mov (Offset rbx 8) rax)
                (Mov rax rbx)
-               (Or rax type-cons)
+               (Mov r8 type-cons)
+               (Or rax r8)
                (Add rbx 16))]
 
          ['fl+ (seq
                (Pop r8)
                (assert-flonum r8 c)
                (assert-flonum rax c)
-               (Xor rax type-flonum)              
-               (Xor r8 type-flonum)
+               (Mov r9 type-flonum)
+               (Xor rax r9)              
+               (Xor r8 r9)
                (Movsd xmm0 (Offset r8 0))
+
                (Addsd xmm0 (Offset rax 0))              
                (Movsd (Offset rbx 0) xmm0)
                (Mov rax rbx)
-               (Or rax type-flonum)
+               (Mov r9 type-flonum)
+               (Or rax r9)
                (Add rbx 8)
                )
                ]
@@ -1415,14 +1698,16 @@
                (Pop r8)
                (assert-flonum r8 c)
                (assert-flonum rax c)
-               (Xor rax type-flonum)
+               (Mov r9 type-flonum)
+               (Xor rax r9)
               
-               (Xor r8 type-flonum)
+               (Xor r8 r9)
                (Movsd xmm0 (Offset r8 0))
                (Subsd xmm0 (Offset rax 0))               
                (Movsd (Offset rbx 0) xmm0)
                (Mov rax rbx)
-               (Or rax type-flonum)
+               (Mov r9 type-flonum)
+               (Or rax r9)
                (Add rbx 8)
                )
                ]
@@ -1433,9 +1718,10 @@
             (seq (Pop r8)
                  (assert-flonum r8 c)
                  (assert-flonum rax c)
-                 (Xor rax type-flonum)
+                 (Mov r9 type-flonum)
+                 (Xor rax r9)
                  (Mov rax (Offset rax 0))
-                 (Xor r8 type-flonum)
+                 (Xor r8 r9)
                  (Mov r8 (Offset r8 0))
                  (Cmp rax r8)
                  (Mov rax (imm->bits #t))
@@ -1449,9 +1735,10 @@
             (seq (Pop r8)
                  (assert-flonum r8 c)
                  (assert-flonum rax c)
-                 (Xor rax type-flonum)
+                 (Mov r9 type-flonum)
+                 (Xor rax r9)
                  (Mov rax (Offset rax 0))
-                 (Xor r8 type-flonum)
+                 (Xor r8 r9)
                  (Mov r8 (Offset r8 0))
                  (Mov r9 (arithmetic-shift 1 63))
                  (Xor rax r9)
@@ -1481,7 +1768,8 @@
                  (assert-integer r10 c)
                  (assert-string r8 c)
                  (assert-char rax c)           ; 3rd arg in rax: char
-                 (Xor r8 type-string)
+                 (Mov r9 type-string)
+                 (Xor r8 r9)
                  (Mov r9 (Offset r8 0))        ; r9 = length
                  (Cmp r10 0)                   ; 0-indexing
                  (Jl (error-label c))
@@ -1522,7 +1810,8 @@
               (Sar r10 int-shift)          ; unwrap index
               (Cmp r10 0)
               (Jl (error-label c))
-              (Xor r8 type-vector)
+              (Mov r9 type-vector)
+              (Xor r8 r9)
               (Mov r9 (Offset r8 0))       ; r9 = length
               (Add r8 8)                   ; r8 will now be pointing to the first element
               (Sub r9 1)                   ; 0-indexing
@@ -1539,6 +1828,89 @@
       (compile-tail-app f es c)
       (compile-nontail-app f es c)))
 
+
+;;Prefab-Key [Listof Expr] CEnv -> Asm
+(define (compile-mps prefab-key rest c)
+  (match prefab-key
+     [(Prefab-Key s n1 (list n2 v2) muts)
+      (let ((buildPrefab (gensym "buildPrefab"))
+            (end (gensym "end")))
+        (seq
+         (compile-prefab-key prefab-key c) ;;Place all the prefab key values on the stack
+         (compile-prefab-values rest (cons #f c)) ;;Place all the struct values on the stack
+         
+         (Mov r8 (length rest))
+         (Mov (Offset rbx 0) r8) ;;The number of fields
+         
+         (Mov rax (* 8 (+ 1 (length rest))))
+
+         (Label buildPrefab)
+         (Pop r8)
+         (Mov r9 rbx)
+         (Add r9 rax)
+         (Mov (Offset r9 0) r8)
+         (Sub rax 8)
+         (Cmp rax 0)
+         (Je end)
+         (Jmp buildPrefab)
+         
+         (Label end)
+
+         ;;Swap the placement of the number of fields and the keys
+         (Mov r8 (Offset rbx 8)) ;;The key
+         (Mov r9 (Offset rbx 0)) ;;The number of fields
+
+         (Mov (Offset rbx 0) r8)
+         (Mov (Offset rbx 8) r9)
+
+         ;;Return a pointer to the struct
+         (Mov rax rbx)
+         (Mov r8 type-prefab) 
+         (Or rax r8) ;;If type-prefab is not moved into a 64-bit register, then it is not treated as a 64-bit value in this or
+         (Add rbx (* 8 (+ 2 (length rest))))))]))
+
+;;CEnv integer -> CEnv
+;;Given a compile time environment and a size, add size number of #f to the environment.
+(define (extend c size)
+  (if (> size 0)
+      (cons #f (extend c (- size 1)))
+      c))
+    
+;;Prefab-Key CEnv -> Asm
+(define (compile-prefab-key prefab-key c)
+  (match prefab-key
+    [(Prefab-Key s n1 (list n2 v2) muts)
+     (seq
+      (compile-e s c #f)
+      (Push rax)
+      ;;Ignore the rest of the key for now
+      #|(compile-e n1 (cons #f c))
+      (Push rax)
+      (compile-e n2 (cons #f (cons #f c)))
+      (Push rax)
+      (compile-e v2 (cons #f (cons #f (cons #f c))))
+      (Push rax)
+              
+      (compile-prefab-muts muts (cons #f (cons #f (cons #f (cons #f c))))|#)]))
+
+;;[Listof Integer] CEnv -> Asm
+(define (compile-prefab-muts muts c)
+  (match muts
+    [(cons (Int i) muts)
+     (seq (compile-e (Int i) c #f)
+          (Push rax)
+          (compile-prefab-muts muts (cons #f c)))]
+    ['() (seq)]))
+
+
+(define (compile-prefab-values values c)
+  (match values
+    [(cons e1 values)
+     (seq (compile-e e1 c #f)
+          (Push rax)
+          (compile-prefab-values values (cons #f c)))]
+    ['() (seq)]))
+     
 ;; Id [Listof Expr] CEnv -> Asm
 (define (compile-tail-app f es c)
   (seq (compile-es es c)
@@ -1690,7 +2062,8 @@
              (Add rsp 8)
              (Jmp return))]
        [(Lit l)
-        (seq (Cmp rax (imm->bits l))
+        (seq (Mov r9 (imm->bits l))
+             (Cmp rax r9)
              (Jne next)
              (compile-e e c tail?)
              (Jmp return))]
@@ -1707,9 +2080,10 @@
         (seq (Mov r8 rax)
              (Mov r9 ptr-mask)
              (And r8 r9)
-             (Cmp r8 type-box)
+             (Mov r9 type-box)
+             (Cmp r8 r9)
              (Jne next)
-             (Xor rax type-box)
+             (Xor rax r9)
              (Mov r8 (Offset rax 0))
              (Push r8)
              (compile-e e (cons x c) tail?)
@@ -1719,16 +2093,70 @@
         (seq (Mov r8 rax)
              (Mov r9 ptr-mask)
              (And r8 r9)
-             (Cmp r8 type-cons)
+             (Mov r9 type-cons)
+             (Cmp r8 r9)
              (Jne next)
-             (Xor rax type-cons)
+             (Xor rax r9)
              (Mov r8 (Offset rax 0))
              (Push r8)
              (Mov r8 (Offset rax 8))
              (Push r8)
              (compile-e e (cons x1 (cons x2 c)) tail?)
              (Add rsp 16)
-             (Jmp return))])]))
+             (Jmp return))]
+       [(Strct k xs)
+        (let ((loop (gensym "loop"))
+              (end (gensym "end")))
+          (seq           
+           ;;Check if it is a prefab structure
+           (Mov r8 rax)
+           (Mov r9 ptr-mask)
+           (And r8 r9)
+           (Mov r9 type-prefab)
+           (Cmp r8 r9)
+           (Jne next)
+
+           ;;Check if the key of the struct is the same as the key in the pattern
+           (Xor rax r9)
+           (Push rax)
+           (compile-symbol k (cons #f c))
+           (Mov r8 rax)
+           (Pop rax)
+           (Mov r9 (Offset rax 0))
+           (Mov r10 type-prefab)
+           (Or rax r10)
+           (Cmp r8 r9)
+           (Jne next)
+
+           ;;Check if the number of fields in the pattern is the same as the number of fields of the struct
+           (Mov r10 type-prefab)
+           (Xor rax r10)
+           (Mov r8 (length xs))
+           (Mov r9 (Offset rax 8))
+           (Mov r10 type-prefab)
+           (Or rax r10)
+           (Cmp r8 r9)
+           (Jne next)
+
+           ;;Place the fields on the stack
+           (Mov r10 type-prefab)
+           (Xor rax r10)
+           (Mov r9 (Offset rax 8))
+           (Add rax 16)
+
+           (Label loop)
+           (Cmp r9 0)
+           (Jle end)
+           (Mov r8 (Offset rax 0))
+           (Push r8)
+           (Sub r9 1)
+           (Add rax 8)
+           (Jmp loop)
+           
+           (Label end)
+           (compile-e e (append (reverse xs) c) tail?)
+           (Add rsp (* 8 (length xs)))
+           (Jmp return)))])]))
 
 ;; CEnv -> Asm
 ;; Pad the stack to be aligned for a call with stack arguments
@@ -1765,29 +2193,30 @@
 
 (define (assert-type mask type)
   (λ (arg c)
-    (seq (Push rdx)
+    (seq (Push r8)
          (Push r9)
          (Mov r9 arg)
-         (Mov rdx mask)
-         (And r9 rdx)
-         (Mov rdx type)
-         (Cmp r9 rdx)
+         (Mov r8 mask)
+         (And r9 r8)
+         (Mov r8 type)
+         (Cmp r9 r8)
          (Pop r9)
-         (Pop rdx)
+         (Pop r8)
          (Jne (error-label c)))))
 
 (define (type-pred mask type)
   (let ((l (gensym)))
-    (seq (Push rdx)
-         (Mov rdx mask)
-         (And rax rdx)
-         (Mov rdx type)
-         (Cmp rax rdx)
-         (Mov rax (imm->bits #t))
+    (seq (Push r8)
+         (Mov r8 mask)
+         (And rax r8)
+         (Mov r8 type)
+         (Cmp rax r8)
+         (Mov r8 (imm->bits #t))
+         (Mov rax r8)
          (Je l)
          (Mov rax (imm->bits #f))
          (Label l)
-         (Pop rdx))))
+         (Pop r8))))
 
 (define assert-integer
   (assert-type mask-int type-int))
