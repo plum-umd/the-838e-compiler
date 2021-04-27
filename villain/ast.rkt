@@ -1,15 +1,18 @@
 #lang racket
 (provide (all-defined-out))
 
-;; type Prog = (Prog (Listof Defn) Expr)
+;; type Prog = (Prog (Listof Struct) (Listof Defn) Expr)
 ;;           | (Lib  (Listof Id) (Listof Defn))
-(struct Prog (ds e)  #:prefab)
+(struct Prog (sts ds e)  #:prefab)
 (struct Lib  (xs ds) #:prefab)
 (struct Mod  (pvs rqs ds e) #:prefab)
 (struct CMod (pv-exts pvs fs ls dfλs e) #:prefab) ; for compiling a module 
 
-;; type Defn = (Defn Id (Listof Id) Expr)
-(struct Defn (f xs e) #:prefab) 
+;; type Defn   = (Defn Id (Listof Id) Expr)
+;; type Struct = (Struct Id (Listof Id))
+
+(struct Defn (f xs e) #:prefab)
+(struct Struct (s xs) #:prefab)
 
 ;; type Defn* = (Defn* Id (Listof Id) Id Expr)
 (struct Defn* (f xs xs* e) #:prefab)
@@ -26,7 +29,8 @@
 ;;           | (Symbol Symbol)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
-;;           | (Prim2 Op2 Expr Expr)      
+;;           | (Prim2 Op2 Expr Expr)
+;;           | (Mps Prefab-Key Expr...)     
 ;;           | (Prim3 Op3 Expr Expr Expr)     
 ;;           | (If Expr Expr Expr)
 ;;           | (Begin Expr Expr)
@@ -59,9 +63,11 @@
 ;;           | (Sym Symbol)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
+;;           | (Struct s xs)
 
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
+;; type Prefab-Key = (Symbol Integer (Pairof Integer Expr) (Listof Integer))
 ;; type Formals = (Listof Id)
 ;; type Formal = Id
 ;; type LExpr = Expr    
@@ -84,6 +90,8 @@
 (struct Prim2 (p e1 e2)       #:prefab)
 (struct Prim3 (p e1 e2 e3)    #:prefab)
 (struct Prim4 (p e1 e2 e3 e4) #:prefab)
+(struct Mps (pk rest) #:prefab)
+(struct Prefab-Key (s n1 auto mut) #:prefab)
 (struct If    (e1 e2 e3)      #:prefab)
 (struct Begin (e1 e2)         #:prefab)
 (struct Let   (xs es e)       #:prefab)
@@ -105,3 +113,4 @@
 (struct Sym (s)               #:prefab)
 (struct Cons (p1 p2)          #:prefab)
 (struct Box (p)               #:prefab)
+(struct Strct (s xs)          #:prefab)

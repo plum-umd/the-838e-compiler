@@ -3,6 +3,7 @@
 
 (define imm-shift           3)
 (define imm-mask        #b111)
+
 (define ptr-mask        #x7000000000000007)
 (define ptr-top-mask    #x7000000000000000)
 (define ptr-bottom-mask #x0000000000000007)
@@ -13,8 +14,11 @@
 (define type-port       #x0000000000000005)
 (define type-vector     #x0000000000000006)
 (define type-flonum     #x0000000000000007)
+
+(define type-prefab     #x1000000000000001)
 (define type-proc       #x1000000000000002)
 (define type-bignum     #x1000000000000003)
+
 
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
@@ -150,6 +154,9 @@
 (define (symbol-bits? v)
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-symbol)))
 
+(define (prefab-bits? v)
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-prefab)))
+
 (define (bignum? v) 
   (or (>= v (arithmetic-shift 1 (- 63 int-shift)))
       (<  v (- (arithmetic-shift 1 (- 63 int-shift))))))
@@ -161,8 +168,7 @@
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-port)))
 
 (define (vector-bits? v)
-  (zero? (bitwise-xor (bitwise-and v imm-mask) type-vector)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-vector)))
 
 (define (proc-bits? v)
-  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-proc)))
-  
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-proc)))  
