@@ -17,7 +17,6 @@
 
 (define type-prefab     #x1000000000000001)
 (define type-proc       #x1000000000000002)
-(define proc-mask       #x7000000000000002)
 (define type-bignum     #x1000000000000003)
 
 
@@ -172,4 +171,5 @@
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-vector)))
 
 (define (proc-bits? v)
-  (zero? (bitwise-xor (bitwise-and v proc-mask) type-proc)))
+  (zero? (bitwise-xor (bitwise-and v ptr-mask) type-proc)))
+

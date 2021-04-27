@@ -20,6 +20,8 @@ vl_type vl_typeof(vl_val x)
     return VL_PREFAB;
   case bignum_type_tag:
     return VL_BIGNUM;
+  case proc_type_tag:
+    return VL_PROC;
 
   default:
     if ((int_type_mask & x) == int_type_tag)

@@ -200,7 +200,7 @@
          integer->char char->integer box unbox empty? car cdr
          integer-length integer? 
          char-alphabetic? char-whitespace? char-upcase char-downcase char-titlecase
-         string-length string? integer?
+         string-length string? integer? procedure?
          flonum?
          symbol->string string->symbol symbol?
          vector? vector-length
@@ -266,7 +266,6 @@
     [(Var x)            e]
     [(Mps k f)          e]
     [(LCall e es)       (LCall (desugar e) (map desugar es))]
-;    [(App f es)         (App f (map desugar es))]
     [(Apply f e)        (Apply (desugar f) (desugar e))]
     [(Prim0 p)          e]
     [(Prim1 p e)        (Prim1 p (desugar e))]

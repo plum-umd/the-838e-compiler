@@ -25,6 +25,7 @@ typedef enum vl_type {
   VL_VEC,
   VL_FLONUM,
   VL_PORT,
+  VL_PROC,
   VL_PREFAB,
   VL_BIGNUM
 } vl_type;
