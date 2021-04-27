@@ -731,7 +731,6 @@
 
         (compile-struct-accessors s xs 0)))]))
 
-
 ;;Symbol [Listof Symbol] -> Asm
 (define (compile-struct-accessors s xs i)
   (match xs
@@ -1718,7 +1717,6 @@
               (Add r8 r10)
               (Mov (Offset r8 0) rax)
               (Mov rax val-void))])))
-
 
 ;;Prefab-Key [Listof Expr] CEnv -> Asm
 (define (compile-mps prefab-key rest c)

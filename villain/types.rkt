@@ -172,4 +172,4 @@
 
 (define (proc-bits? v)
   (zero? (bitwise-xor (bitwise-and v ptr-mask) type-proc)))
-  
+
