@@ -46,6 +46,7 @@
     [(? boolean? b) (Bool b)]
     [(? char? c) (Char c)]
     [(list 'quote (? symbol? s)) (Symbol s)]
+    ['_ (Wild)]
     [(list 'Int s) (Pat (Int s))]
     [(list 'Bool s) (Pat (Bool s))]
     [(list 'Char s) (Pat (Char s))]

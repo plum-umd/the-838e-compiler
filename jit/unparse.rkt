@@ -10,7 +10,8 @@
     [(Int i)    i]
     [(Bool b)   b]
     [(Char c)   c]
-    [(Eof)'eof]
+    [(Eof) 'eof]
+    [(Err) 'err]
     [(Void) (void)]
     [(If e1 e2 e3)
      (list 'if (unparse e1) (unparse e2) (unparse e3))]

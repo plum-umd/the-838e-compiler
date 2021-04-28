@@ -13,13 +13,18 @@
       [(Eof) eof]
       [(Prim0 p)
        (interp-prim0 p)]
-      [(Prim1 p e)
-       (interp-prim1 p (interp e))]
+      [(Prim1 p e0)
+       (match (interp e0)
+         ['err 'err]
+         [v (interp-prim1 p (interp e))])]
       [(If e1 e2 e3)
-       (if (interp e1)
-           (interp e2)
-           (interp e3))]
+       (match (interp e1)
+         ['err 'err]
+         [v
+          (if v
+              (interp e2)
+              (interp e3))])]
       [(Begin2 e1 e2)
-       (begin
-         (interp e1)
-         (interp e2))])))
+       (match (interp e1)
+         ['err 'err]
+         [_ (interp e2)])])))

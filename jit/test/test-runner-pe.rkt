@@ -59,7 +59,18 @@
                 '(begin (eof-object? (read-byte)) #t))
   (check-equal? (run '(add1 (peek-byte))) '(add1 (peek-byte)))
   (check-equal? (run '(if (zero? 0) (read-byte) 1)) '(read-byte))
-  (check-equal? (run '(if (zero? 1) (read-byte) (void))) (void)))
+  (check-equal? (run '(if (zero? 1) (read-byte) (void))) (void))
+
+;;Extort Examples
+   (check-equal? (run '(add1 #f)) 'err)
+   (check-equal? (run '(sub1 #f)) 'err)
+   (check-equal? (run '(zero? #f)) 'err)
+   (check-equal? (run '(char->integer #f)) 'err)
+   (check-equal? (run '(integer->char #f)) 'err)
+   (check-equal? (run '(integer->char -1)) 'err)
+   (check-equal? (run '(write-byte #f)) 'err)
+   (check-equal? (run '(write-byte -1)) 'err)
+   (check-equal? (run '(write-byte 256)) 'err))
 
 
   

@@ -12,11 +12,16 @@
   ;; Op Integer -> Integer
   (define (interp-prim1 op v)
     (match op
-      ['add1          (add1 v)]
-      ['sub1          (sub1 v)]
-      ['zero?         (zero? v)]
-      ['char?         (char? v)]    
-      ['integer->char (integer->char v)]
-      ['char->integer (char->integer v)]
-      ['write-byte (write-byte v)]
-      ['eof-object? (eof-object? v)])))
+      ['add1          (if (integer? v) (add1 v) 'err)]
+      ['sub1          (if (integer? v) (sub1 v) 'err)]
+      ['zero?         (if (integer? v) (zero? v) 'err)]
+      ['char?         (char? v)]
+      ['char->integer (if (char? v) (char->integer v) 'err)]
+      ['integer->char (if (codepoint? v) (integer->char v) 'err)]
+      ['eof-object?   (eof-object? v)]
+      ['write-byte    (if (byte? v) (write-byte v) 'err)]))
+
+  (define (codepoint? v)
+    (and (integer? v)
+         (or (<= 0 v 55295)
+             (<= 57344 v 1114111)))))
