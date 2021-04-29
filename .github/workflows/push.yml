@@ -57,10 +57,7 @@ jobs:
       run: |
         pwd
         export PATH="/home/runner/work/the-838e-compiler/wabt/bin:$PATH"
-        export PATH="/home/runner/work/the-838e-compiler/.wasmtime/bin:$PATH"
+        export PATH="/home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin:$PATH"
         echo $PATH
-        chmod 755 /home/runner/work/the-838e-compiler/.wasmtime/bin/wasmtime
-        /home/runner/work/the-838e-compiler/.wasmtime/bin/wasmtime /home/runner/work/the-838e-compiler/.wasmtime/bin/demo.wat
-        which wasmtime
-        wasmtime /home/runner/work/the-838e-compiler/.wasmtime/bin/demo.wat
+        ls /home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin -al
         raco test -p the-838e-compiler
