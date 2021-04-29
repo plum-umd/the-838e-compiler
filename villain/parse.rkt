@@ -69,6 +69,7 @@
 ;; S-Expr -> Expr
 (define (parse-e s)
   (match s
+    [(list '-> es ...) (FnContract (map parse-e es))]
     [(? integer?)                  (if (bignum? s) (Bignum s) (Int s))]
     [(? boolean?)                  (Bool s)]
     [(? char?)                     (Char s)]

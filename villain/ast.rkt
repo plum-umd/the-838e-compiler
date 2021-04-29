@@ -16,6 +16,7 @@
 
 (struct Mod/contract  (pvs rqs ds e) #:prefab)
 (struct Contract (id e) #:prefab)
+(struct FnContract (es) #:prefab)
 
 ;; type Expr = (Eof)
 ;;           | (Empty)
