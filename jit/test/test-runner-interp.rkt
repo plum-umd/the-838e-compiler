@@ -46,15 +46,16 @@
   (check-equal? (run '(if (char? (integer->char 60)) #\b #\c)) #\b)
   
   ;;; ;; Extort examples
-  ;;; (check-equal? (run '(add1 #f)) 'err)
-  ;;; (check-equal? (run '(sub1 #f)) 'err)
-  ;;; (check-equal? (run '(zero? #f)) 'err)
-  ;;; (check-equal? (run '(char->integer #f)) 'err)
-  ;;; (check-equal? (run '(integer->char #f)) 'err)
-  ;;; (check-equal? (run '(integer->char -1)) 'err)
-  ;;; (check-equal? (run '(write-byte #f)) 'err)
-  ;;; (check-equal? (run '(write-byte -1)) 'err)
-  ;;; (check-equal? (run '(write-byte 256)) 'err)
+  (check-equal? (run '(add1 #f)) 'err)
+  (check-equal? (run '(sub1 #f)) 'err)
+  (check-equal? (run '(zero? #f)) 'err)
+  (check-equal? (run '(char->integer #f)) 'err)
+  (check-equal? (run '(integer->char #f)) 'err)
+  (check-equal? (run '(integer->char -1)) 'err)
+  (check-equal? (run '(write-byte #f)) 'err)
+  (check-equal? (run '(write-byte -1)) 'err)
+  (check-equal? (run '(write-byte 256)) 'err)
+  
   ;;; ;; Fraud examples
   ;;; (check-equal? (run '(let ((x 7)) x)) 7)
   ;;; (check-equal? (run '(let ((x 7)) 2)) 2)

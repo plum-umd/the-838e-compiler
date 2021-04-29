@@ -13,6 +13,12 @@
     [(? char? c) (Char c)]
     ['eof (Eof)]
     [(? symbol? s) (Var s)]
+    [(list 'quote 'err) (Err)]
+    [(list 'quote (? symbol? s)) (Symbol s)]
+    [(list 'or es ...)
+     (Or (map parse es))]
+    [(list 'and es ...)
+     (And (map parse es))]
     [(list 'if e1 e2 e3)
      (If (parse e1) (parse e2) (parse e3))]
     [(list (? prim1? prim) e)
@@ -45,6 +51,8 @@
     [(? integer? i) (Int i)]
     [(? boolean? b) (Bool b)]
     [(? char? c) (Char c)]
+    [(? symbol? s) (Var s)]
+    [(list 'quote 'err) (Err)]
     [(list 'quote (? symbol? s)) (Symbol s)]
     ['_ (Wild)]
     [(list 'Int s) (Pat (Int s))]

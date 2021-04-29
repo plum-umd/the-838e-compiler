@@ -16,7 +16,7 @@
       [(Prim1 p e0)
        (match (interp e0)
          ['err 'err]
-         [v (interp-prim1 p (interp e))])]
+         [v (interp-prim1 p v)])]
       [(If e1 e2 e3)
        (match (interp e1)
          ['err 'err]

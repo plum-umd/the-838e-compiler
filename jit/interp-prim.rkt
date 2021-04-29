@@ -6,7 +6,7 @@
   (define (interp-prim0 op)
     (match op
       ['read-byte (read-byte)]
-      ['peedk-byte (peek-byte)]
+      ['peek-byte (peek-byte)]
       ['void (void)]))
     
   ;; Op Integer -> Integer
