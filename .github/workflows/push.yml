@@ -50,7 +50,13 @@ jobs:
         export PATH="$(pwd)/bin:$PATH"
         echo 'export PATH="'$(pwd)'/bin:$PATH"' >> ~/.bashrc
     - name: Install nodejs
-      run: sudo apt -y install nodejs
+      run: |
+        sudo apt -y install nodejs
+        which nodejs
+    - name: Install wasmtime
+      run: |
+        curl https://wasmtime.dev/install.sh -sSf | bash
+        which wasmtime
     - name: Run tests
       run: |
         pwd

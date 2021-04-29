@@ -65,9 +65,8 @@ function ans_str(result) {
     case val_empty:
       ret_answer = "()"; break;
     case val_void:
-      ret_answer = -1; /* nothing */ break;
+      /* nothing */ break;
     default:
-      ret_answer = -1;
     }
   }
   return ret_answer;  
@@ -147,9 +146,9 @@ const run = async () => {
   const buffer = readFileSync(process.argv[2]);
   const module = await WebAssembly.compile(buffer);
   const instance = await WebAssembly.instantiate(module, importObject);
-  var answer = ans_str(instance.exports.sendResult());
-  if (answer != -1) {
-    console.log(answer);
+  var result = instance.exports.sendResult();
+  if (result != val_void) {
+    console.log(ans_str(result));
   }
 };
 
