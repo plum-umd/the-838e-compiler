@@ -6,6 +6,13 @@
 (struct Prog (ds e)  #:prefab)
 (struct Lib  (xs ds) #:prefab)
 (struct Mod  (pvs rqs ds e) #:prefab)
+
+;; pv-ext: provided by external module
+;; pvs:    provided by this module
+;; fs:     all functions available
+;; ls:     all lambdas
+;; dfλs:   definition lambda in this module
+;; e:      module result expression
 (struct CMod (pv-exts pvs fs ls dfλs e) #:prefab) ; for compiling a module 
 
 ;; type Defn = (Defn Id (Listof Id) Expr)
