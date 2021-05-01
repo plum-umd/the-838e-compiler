@@ -2,19 +2,46 @@
 (provide (all-defined-out))
 (require "ast.rkt" "parse.rkt" "wtypes.rkt" "../wasm/printer.rkt")
 
+(define word-size 4)  ;; in bytes
+
+;; Note about addressing and type tags:
+
+;; Our current word-size for compilation to WebAssembly is 4 bytes (32 bits),
+;; and current heap addresses can potentially go from 0 to 2^26. But in order to
+;; avoid overwriting the stack which grows downward from the address 2^26 - 4,
+;; we should not allow the heap addresses to go beyond 2^25 and also should not
+;; allow the stack address to go below 2^25.
+
+;; So, bits 1 and 2 of heap addresses from the right (LSB) are 0, and the
+;; component of addresses in bits 3 to 25 can go from 0 to 2^23. So, bits 1, 2,
+;; and 26 to 31 of addresses can be used as tag bits. We currently use bits 1,
+;; 2, 29, 30, and 31 as tag bits (please see wtypes.rkt). Bit 32 is the sign bit.
+
+;; We have a stack in memory that grows downward from the highest address of our
+;; memory.  This is different from the implicit operand stack that the stack
+;; machine of WebAssemblyuses.  The stack that we refer to should be clear from
+;; the context. Explicity, we use stack in memory (or mem.) to refer to the
+;; stack we have in memory, and the operand (or op.) stack to refer to the
+;; operand stack of WebAssembly.
+
+;; $b is used as scratch register in compile-string, string-ref, and make string.
+;; As such, it should not be used in compile-string-chars and assert-type.
+
 ;; Expr -> Wasm
 (define (compile e)
   (match e
     [(Letrec _ _  e)
      (let ((fn `(func $sendResult (result i32)
-                  (local $a i32)
-                  (local $sp i32)        ;; start of stack pointer (top address)     
+                  (local $a i32)         ;; scratch local variable
+                  (local $b i32)         ;; 
+                  (local $c i32)         ;; 
+                  (local $sp i32)        ;; start of stack ptr in mem. (top address)     
                   (local $hp i32)                  
-                   i32.const 67108860
-                   local.set $sp         ;; set the local var for the top address
+                  (i32.const 67108860)
+                  (local.set $sp)        ;; set the local var for the top address
                                          ;; for the start of stack (fixed for now)
-                   i32.const 0
-                   local.set $hp         ;; set the local var for start of heap                 
+                  (i32.const 0)
+                  (local.set $hp)        ;; set the local var for start of heap                 
                   ,@(compile-e e '()))))
        `(module
           (import "writeBytejs" "writeByte" (func $writeByte (param i32)))
@@ -34,6 +61,8 @@
     [(Bool b)           (compile-value b)]
     [(Char c)           (compile-value c)]
     [(Eof)              (compile-value eof)]
+    [(Empty)            (compile-value '())]
+    [(String s)         (compile-string s)]
     [(Prim0 p)          (compile-prim0 p)]
     [(Prim1 p e)        (compile-prim1 p e c)]
     [(Prim2 p e1 e2)    (compile-prim2 p e1 e2 c)]
@@ -78,7 +107,6 @@
        end
        local.get $a))]
     ['integer?
-     (append (assert-integer)
      `(i32.const ,mask-int
        i32.and
        i32.const ,type-int
@@ -90,10 +118,12 @@
        i32.const ,val-true
        local.set $a
        end
-       local.get $a))]
+       local.get $a)]
     ['integer-length
      (append (assert-integer)
-     `(local.set $a
+     `(i32.const ,int-shift
+       i32.shr_s          
+       local.set $a
        local.get $a
        i32.const 31
        i32.shr_s
@@ -103,7 +133,9 @@
        local.set $a
        i32.const 32
        local.get $a
-       i32.sub))]
+       i32.sub
+       i32.const ,int-shift
+       i32.shl))]
     ['char?
      `(i32.const ,mask-char
        i32.and
@@ -137,15 +169,54 @@
      (append assert-byte
      `(call $writeByte
        i32.const ,val-void))]
+    ['box
+     `(local.set $a          ;; Store result of (compile-e e c) on heap.
+       local.get $hp
+       local.get $a
+       i32.store              
+       local.get $hp         ;; tag the heap ptr
+       i32.const ,type-box    
+       i32.or                 
+       local.set $a
+       local.get $hp         ;; Advance heap ptr by word size in bytes.
+       i32.const ,word-size
+       i32.add                
+       local.set $hp          
+       local.get $a)]        ;; return the tagged ptr
+    ['unbox
+     (append (assert-box)
+     `(i32.const ,type-box
+       i32.xor
+       i32.load))]
+    ['car
+     (append (assert-cons)
+     `(i32.const ,type-cons  ;; get the address of pair from the tagged ptr
+       i32.xor               
+       i32.const ,word-size  ;; get the address of car (in higher address)
+       i32.add               
+       i32.load))]           ;; get the car
+    ['cdr
+     `(i32.const ,type-cons  ;; get the address of pair from the tagged ptr
+       i32.xor                             
+       i32.load)]            ;; get the cdr (in lower word of the pair)
+    ['empty? (eq-imm val-empty)]
+    ['string?
+     (type-pred ptr-mask type-string)]
+    ['string-length
+     (append (assert-string)
+     `(i32.const ,type-string
+       i32.xor
+       i32.load))]
+    
 )))
 
-;; Op2 Expr Expr CEnv -> Asm
+;; Op2 Expr Expr CEnv -> Wasm
 (define (compile-prim2 p e1 e2 c)
   (append
    `(,@(compile-e e1 c)
      local.set $a
      local.get $sp
-     i32.const ,(* 4 (length c))
+     i32.const ,(* word-size (length c))
      i32.sub
      local.get $a
      i32.store)       
@@ -154,7 +225,7 @@
       `(,@(compile-e e2 (cons #f c))
         local.set $a
         local.get $sp
-        i32.const ,(* 4 (length c))
+        i32.const ,(* word-size (length c))
         i32.sub
         i32.load
         local.get $a       
@@ -163,11 +234,137 @@
       `(,@(compile-e e2 (cons #f c))
         local.set $a
         local.get $sp
-        i32.const ,(* 4 (length c))
+        i32.const ,(* word-size (length c))
         i32.sub
         i32.load
         local.get $a       
-        i32.sub)])))
+        i32.sub)]
+     ['eq?
+      `(,@(compile-e e2 (cons #f c))
+        local.set $a         
+        local.get $sp
+        i32.const ,(* word-size (length c))
+        i32.sub
+        i32.load
+        local.get $a
+        i32.eq
+        if
+        i32.const ,val-true
+        local.set $a
+        else
+        i32.const ,val-false
+        local.set $a
+        end
+        local.get $a)]
+     ['cons
+      `(,@(compile-e e2 (cons #f c))
+        local.set $a              ;; store cdr in heap
+        local.get $hp
+        local.get $a
+        i32.store
+        local.get $hp             ;; tag the heap ptr
+        i32.const ,type-cons    
+        i32.or                 
+        local.set $b              ;; local var $b contains the reutrn result
+        local.get $hp             ;; Advance heap ptr by word size in bytes.
+        i32.const ,word-size
+        i32.add                
+        local.set $hp          
+        local.get $sp             ;; get the car from operand stack
+        i32.const ,(* word-size (length c))
+        i32.sub
+        i32.load               
+        local.set $a
+        local.get $hp             ;; store car in the advanced heap ptr
+        local.get $a
+        i32.store
+        local.get $hp             ;; Advance heap ptr by word size in bytes.
+        i32.const ,word-size
+        i32.add                
+        local.set $hp
+        local.get $b)]            ;; return the result
+     ['string-ref
+      `(,@(compile-e e2 (cons #f c))
+        ,@(assert-integer)
+        local.set $b              ;; $ b = the integer of index
+        local.get $sp           ;; get the tagged str ptr from the stack in mem. 
+        i32.const ,(* word-size (length c))
+        i32.sub
+        i32.load
+        ,@(assert-string)         ;; $b should not be used in assert-type
+        i32.const ,type-string
+        i32.xor
+        local.set $a              ;; $a = the start address of string on heap
+        local.get $a              ;; get the length of string from str_addr[0]
+        i32.load        
+        local.set $c              ;; $c = the length of the str
+        local.get $b              ;; call $error if the int parameter < 0
+        i32.const ,(imm->bits 0)
+        i32.lt_s
+        if
+        call $error
+        end
+        local.get $b              ;; call $error if the int parameter >= str len
+        local.get $c
+        i32.ge_s
+        if
+        call $error
+        end
+        local.get $a              ;; put str_addr on the operand stack
+        local.get $b              ;; Add 1 to the index, as length is at index 0
+        i32.const ,(imm->bits 1)
+        i32.add          
+        i32.const ,int-shift
+        i32.shl                   ;; shift the index to the left by int-shift
+        i32.const ,word-size
+        i32.shr_s                 ;; then shift it to the right by word-size
+        i32.add                   ;; add this to the str_addr
+        i32.load)]                ;; get str_addr[index] = char of str at index
+     ['make-string
+      `(,@(compile-e e2 (cons #f c))
+        ,@(assert-char)
+        local.set $b              ;; $ b = the char parameter
+        local.get $sp       ;; get the first parameter (integer) from stack in mem.
+        i32.const ,(* word-size (length c))
+        i32.sub
+        i32.load
+        ,@(assert-integer)        ;; $b should not be used in assert-type
+        local.set $a              ;; $a = the int parameter
+        local.get $a
+        i32.const ,(imm->bits 0)  ;; call $error if the int parameter < 0 
+        i32.lt_s
+        if
+        call $error
+        end
+        local.get $hp             ;; put the heap ptr on op. stack
+        local.get $a
+        i32.store               ;; store the length on the heap at str_addr = $hp
+        local.get $hp           ;; create the tagged ptr to the str
+        i32.const ,type-string
+        i32.or
+        local.set $c         ;; $ c = the tagged ptr to the start of str on heap
+        block               
+        loop                      ;; start of the loop
+        local.get $hp             ;; advance the heap pointer by the word-size
+        i32.const ,word-size
+        i32.add
+        local.set $hp
+        local.get $a            ;; the counter starts from the length (≡ cnt i = 0)
+                                ;; the counter counts down by word-size (≡ i++)
+        i32.eqz                 ;; check if counter = 0
+        br_if 1                 ;; if so, break to the outer block (with index 1)
+        local.get $hp
+        local.get $b
+        i32.store                 ;; store the char in str_addr[i]
+        local.get $a
+        i32.const ,(imm->bits 1)  ;; decrement the counter
+        i32.sub
+        local.set $a
+        br 0                      ;; continue with the loop (with index 0)
+        end                       ;; end of the loop (with index 0)
+        end                       ;; end of the outer block (with index 0)
+        local.get $c)]            ;; return the tagged ptr to the start of str
+     )))
 
 
 ;; Expr Expr Expr CEnv -> Wasm
@@ -184,11 +381,13 @@
     end
     local.get $a))
 
+;; Expr Expr CEnv -> Wasm
 (define (compile-begin e1 e2 c)
   (append (compile-e e1 c)
           `(drop)
           (compile-e e2 c)))
 
+;; Imm -> Wasm 
 (define (eq-imm imm)
   `(i32.const ,imm
     i32.eq
@@ -206,10 +405,10 @@
   (append (compile-es es c)
           (compile-e e (append (reverse xs) c))))
 ;;          (local.set $a
-;;           i32.const ,(* 4 (length xs))
+;;           i32.const ,(* word-size (length xs))
 ;;           local.get $sp
 ;;           i32.add
-;;           local.set $sp      ;; consider changing the stack ptr
+;;           local.set $sp      ;; consider changing the memory stack ptr
 ;;           local.get $a)))
                      
 
@@ -221,9 +420,9 @@
      (append (compile-e e c)
      `(local.set $a
        local.get $sp          
-       i32.const ,(* 4 (length c))
+       i32.const ,(* word-size (length c))
        i32.sub
-;;     i32.set $sp       ;; consider decrementing the stack ptr (akin to push)
+;;     i32.set $sp     ;; consider decrementing the mem. stack ptr (akin to push)
 ;;     i32.get $sp
        local.get $a
        i32.store)
@@ -235,21 +434,53 @@
     ['() (error "undefined variable:" x)]
     [(cons y rest)
      (match (eq? x y)
-       [#t (* 4 (sub1 len-c))]         ;; consider changing the stack ptr
-       [#f (- (lookup x rest len-c) 4)])]))
+       [#t (* word-size (sub1 len-c))]   ;; consider changing the mem. stack ptr
+       [#f (- (lookup x rest len-c) word-size)])]))
 
 ;; Id CEnv -> Wasm
 (define (compile-variable x c)
   (let ((i (lookup x c (length c))))
-    `(local.get $sp    ;; the local var for the top address for start of stack
+    `(local.get $sp    ;; the local var for top address of start of stack in mem.
       i32.const ,i
-      i32.sub          ;; top address - (4 * ((length c) -  offset))
+      i32.sub          ;; top address - (word-size * ((length c) -  offset))
       i32.load)))
 
+;; String -> Wasm
+(define (compile-string s)  
+  (let ((len (string-length s)))
+    `(local.get $hp                 ;; store length of string on heap 
+      i32.const ,(imm->bits len)
+      i32.store
+      local.get $hp                 ;; store tagged heap pointer in $b
+      i32.const ,type-string
+      i32.or
+      local.set $b        
+      local.get $hp                 ;; advance heap pointer
+      i32.const ,word-size
+      i32.add
+      local.set $hp
+      ,@(compile-string-chars (string->list s))
+      local.get $b)))
+   
+;; [Listof Char] Nat -> Wasm
+(define (compile-string-chars cs)   ;; $b should not be used in this function
+  (match cs
+    ['() '()]
+    [(cons c cs)
+     `(local.get $hp               ;; store char on heap
+       i32.const ,(imm->bits c)
+       i32.store 
+       local.get $hp                 ;; advance heap pointer
+       i32.const ,word-size
+       i32.add
+       local.set $hp
+       ,@(compile-string-chars cs))]))
+
+;; Integer Integer -> (() -> Wasm)
 (define (assert-type mask type)
-  (λ ()
-  `(local.set $a
-    local.get $a          
+  (λ ()      
+  `(local.set $a           ;; $b should not be used in this function              
+    local.get $a           ;; due to use in string-ref 
     i32.const ,mask
     i32.and
     i32.const ,type
@@ -259,6 +490,22 @@
     end
     local.get $a)))
 
+;; Integer Integer -> Wasm
+(define (type-pred mask type)
+  `(i32.const ,mask
+    i32.and
+    i32.const ,type
+    i32.eq
+    if
+    i32.const ,val-true
+    local.set $a
+    else
+    i32.const ,val-false
+    local.set $a
+    end
+    local.get $a))
+
+;; Integer Integer -> (() -> Wasm)
 (define assert-integer
   (assert-type mask-int type-int))
 (define assert-char
@@ -267,7 +514,10 @@
   (assert-type ptr-mask type-box))
 (define assert-cons
   (assert-type ptr-mask type-cons))
+(define assert-string
+  (assert-type ptr-mask type-string))
 
+;; Wasm
 (define assert-byte
   (append (assert-integer)
    `(local.set $a
@@ -285,6 +535,7 @@
      end
      local.get $a)))
 
+;; Wasm
 (define assert-codepoint
   (append (assert-integer)
    `(local.set $a
@@ -301,11 +552,11 @@
      call $error
      end
      local.get $a
-     i32.const ,(imm->bits 55295)
+     i32.const ,(imm->bits 55296)
      i32.ge_s
      if
      local.get $a
-     i32.const ,(imm->bits 57344)
+     i32.const ,(imm->bits 57343)
      i32.le_s
      if
      call $error

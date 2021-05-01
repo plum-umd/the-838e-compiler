@@ -1,31 +1,45 @@
 #lang racket
 (provide (all-defined-out))
 
-(define imm-shift            4)
-(define imm-mask        #b1111)
-(define ptr-mask        #b1111)
-(define type-box        #b0001)
-(define type-cons       #b0010)
-(define type-string     #b0011)  
-(define type-symbol     #b0100)
-(define type-port       #b0101)
-(define type-vector     #b0110)
-(define type-flonum     #b0111)
-(define type-prefab     #b1000)
-(define type-proc       #b1001)
-(define type-bignum     #b1010)
+(define imm-shift          2)
+(define imm-mask        #b11)
+(define ptr-mask  #x70000003) ;; Current word-size for compilation to WebAssembly
+                              ;; is 4 bytes (32 bits), and current heap addresses
+                              ;; can potentially go from 0 to 2^26 (but in order
+                              ;; to avoid overwriting the stack which grows downward
+                              ;; from the address 2^26 - 4, we should not allow the
+                              ;; heap addresses to go beyond 2^25).
+                              ;; So, bits 1 and 2 of heap addresses from the right
+                              ;; (LSB) are 0, and the component of addresses in
+                              ;; bits 3 to 25 can go from 0 to 2^23. So, bits 1, 2,
+                              ;; and 26 to 31 of addresses can be used as tag bits.
+                              ;; We currently use bits 1, 2, 29, 30, and 31 as tag
+                              ;; bits. Bit 32 is the sign bit.
+
+(define ptr-top-mask    #x70000000)
+(define ptr-bottom-mask #x00000003)
+(define type-box        #x00000001)
+(define type-cons       #x00000002)
+(define type-string     #x00000003)  
+(define type-symbol     #x10000001)
+(define type-port       #x10000002)
+(define type-vector     #x10000003)
+(define type-flonum     #x20000001)
+(define type-prefab     #x20000002)
+(define type-proc       #x20000003)
+(define type-bignum     #x30000001)
 
 (define int-shift  (+ 1 imm-shift))
 (define char-shift (+ 2 imm-shift))
-(define type-int       #b00000)
-(define mask-int       #b11111)
-(define type-char     #b010000)
-(define mask-char     #b111111)
-(define val-true    #b00110000)
-(define val-false   #b01110000)
-(define val-eof     #b10110000)
-(define val-void    #b11110000)
-(define val-empty  #b100110000)
+(define type-int       #b000)
+(define mask-int       #b111)
+(define type-char     #b0100)
+(define mask-char     #b1111)
+(define val-true    #b001100)
+(define val-false   #b011100)
+(define val-eof     #b101100)
+(define val-void    #b111100)
+(define val-empty  #b1001100)
 
 ;; Buffer size will get padded so that port structure aligns to 8 byte
 ;; boundary. Kept low intentionally to test buffering code.

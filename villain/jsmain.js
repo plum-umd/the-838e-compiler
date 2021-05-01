@@ -6,26 +6,27 @@
   - Pointers
 
   Immediates are either
-  - Integers:   end in  #b00 000
-  - Characters: end in #b010 000
-  - True:              #b110 000
-  - False:           #b1 110 000
-  - Eof:            #b10 110 000
-  - Void:           #b11 110 000
-  - Empty:         #b100 110 000
+  - Integers:   end in  #b000
+  - Characters: end in #b0100
+  - True:              #b1100
+  - False:           #b1 1100
+  - Eof:            #b10 1100
+  - Void:           #b11 1100
+  - Empty:         #b100 1100
 */
 
-const imm_shift = 4;
-const box_type_tag    = 1;
-const cons_type_tag   = 2;
-const str_type_tag    = 3;
-const symbol_type_tag = 4;
-const port_type_tag   = 5;
-const vector_type_tag = 6;
-const flonum_type_tag = 7; 
-const prefab_type_tag = 8;
-const proc_type_tag   = 9;
-const bignum_type_tag = 10;
+const imm_shift = 2;
+const word_size = 4;
+const box_type_tag    = 0x00000001;
+const cons_type_tag   = 0x00000002;
+const str_type_tag    = 0x00000003;
+const symbol_type_tag = 0x10000001;
+const port_type_tag   = 0x10000002;
+const vector_type_tag = 0x10000003;
+const flonum_type_tag = 0x20000001; 
+const prefab_type_tag = 0x20000002;
+const proc_type_tag   = 0x20000003;
+const bignum_type_tag = 0x30000001;
 
 const ptr_type_mask = ((1 << imm_shift) - 1);
 const ptr_addr_mask =  ~ptr_type_mask;
@@ -42,40 +43,115 @@ const val_false = ((1 << char_shift) | nonchar_type_tag);
 const val_eof  = ((2 << char_shift) | nonchar_type_tag);
 const val_void = ((3 << char_shift) | nonchar_type_tag);
 const val_empty = ((4 << char_shift) | nonchar_type_tag);
-const void_answer = -1;
 
-function ans_str(result) {
-  var ret_answer;
+function ans_str(result, ui32array) {
+  var str;
   if (cons_type_tag === (ptr_type_mask & result)) {
-    ret_answer = "(".concat(' ', ")");
-  } else if (box_type_tag === (ptr_type_mask & result)) {
-    ret_answer = "#&".concat(' ', "");
+    if (process.argv[3] == "io") {
+      str = cons_ans_str_io(result, ui32array)
+    } else {
+      str = "'(".concat(cons_ans_str(result, ui32array, 1))
+    }    
+  } else if (box_type_tag === (ptr_type_mask & result)) {    
+    str = "#&".concat(ans_str(ui32array[(box_type_tag ^ result) / word_size], ui32array));
   } else if (int_type_tag === (int_type_mask & result)) {
-    ret_answer = (result >> int_shift);
+    str = (result >> int_shift);
   } else if (char_type_tag === (char_type_mask & result)) {
-    ret_answer = "#\\".concat('', String.fromCodePoint(result >> char_shift));
+    str = "#\\".concat(String.fromCodePoint(result >> char_shift));
+  } else if (str_type_tag === (ptr_type_mask & result)) {
+    str = "\"".concat(string_ans_str(result, ui32array), "\"");
   } else {
     switch (result) {
     case val_true:
-      ret_answer = "#t"; break;
+      str = "#t"; break;
     case val_false:
-      ret_answer = "#f"; break;
+      str = "#f"; break;
     case val_eof:
-      ret_answer = "#<eof>"; break;
+      str = "#<eof>"; break;
     case val_empty:
-      ret_answer = "()"; break;
+      if (process.argv[3] == "io") {
+        str = "'()"; break;
+      } else {
+        str = "()"; break;
+      } 
     case val_void:
-      /* nothing */ break;
+      if (process.argv[3] == "io") {
+        str = "(void)"; break;
+      } else {
+        /* nothing */ break;
+      }
     default:
     }
   }
-  return ret_answer;  
+  return str;  
+}
+
+function cons_ans_str(result, ui32array, rp_flag) {
+  var car = ui32array[((cons_type_tag ^ result) / word_size) + 1]
+  var cdr = ui32array[(cons_type_tag ^ result) / word_size]
+  var str
+  var next_rp_flag = 0
+
+  if ((car & ptr_type_mask) === cons_type_tag) {
+    next_rp_flag = 1
+    var carstr = "(".concat(cons_ans_str(car, ui32array, next_rp_flag))
+  } else {
+    var carstr = ans_str(car, ui32array).toString()
+  }
+
+  if (cdr === val_empty) {
+    str = carstr
+  } else if (cons_type_tag === (ptr_type_mask & cdr)) {
+    str = carstr.concat(" ", cons_ans_str(cdr, ui32array, next_rp_flag))
+  } else {
+    str = carstr.concat(" . ", ans_str(cdr, ui32array))
+  }
+
+  if (rp_flag === 1) {
+    return str.concat(")")
+  } else {
+    return str
+  }
+}
+
+function cons_ans_str_io(result, ui32array) {
+  var car = ui32array[((cons_type_tag ^ result) / word_size) + 1]
+  var cdr = ui32array[(cons_type_tag ^ result) / word_size]
+  var str
+  var carstr = "(cons ".concat(ans_str(car, ui32array))
+
+  if (cdr === val_empty) {
+    str = carstr.concat(" '()")
+  } else if ((ptr_type_mask & cdr) === cons_type_tag) {
+    str = carstr.concat(" ", ans_str(cdr, ui32array))
+  } else {
+    str = carstr.concat(" ", ans_str(cdr, ui32array))
+  }
+  return str.concat(")")
+}
+
+function string_ans_str(result, ui32array) {
+  let st_idx = (str_type_tag ^ result) / word_size
+  let end_idx = st_idx + ans_str(ui32array[st_idx])
+  var answer = ""
+  for (var i = st_idx + 1; i <= end_idx; i++){
+    answer = answer.concat(String.fromCodePoint(ui32array[i] >> char_shift))
+  }
+  return answer
 }
 
 const fs = require('fs')
 
+if (process.argv[3] == "io") {
+  var output = "";
+}
+
 function writeBytejs(c) {
-  fs.writeSync(process.stdout.fd, String.fromCodePoint(c >> int_shift));
+  if (process.argv[3] == "io") {
+    output = output.concat('', String.fromCodePoint(c >> int_shift));
+  } else {
+    fs.writeSync(process.stdout.fd, String.fromCodePoint(c >> int_shift));
+  }
 }
 
 var peek_flag = 0
@@ -115,6 +191,9 @@ function peekBytejs() {
 function errorjs() {
   const msg = "err"
   console.log(msg)
+  if (process.argv[3] == "io") {
+    console.log(output)
+  }
   process.exit()
 }
 
@@ -143,12 +222,24 @@ const run = async () => {
       }
     }
   };
+  
   const buffer = readFileSync(process.argv[2]);
   const module = await WebAssembly.compile(buffer);
   const instance = await WebAssembly.instantiate(module, importObject);
   var result = instance.exports.sendResult();
-  if (result != val_void) {
-    console.log(ans_str(result));
+  var i32 = new Uint32Array(instance.exports.memory.buffer);
+  
+  if (process.argv[3] == "io") {
+    if ((result & ptr_type_mask) === 0) {
+      console.log(result);
+    } else {
+      console.log(ans_str(result, i32));
+    }
+    console.log(output);
+  } else {
+    if (result != val_void) {
+      console.log(ans_str(result, i32));
+    }
   }
 };
 

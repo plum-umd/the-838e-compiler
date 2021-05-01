@@ -57,9 +57,5 @@ jobs:
         export PATH="/home/runner/work/the-838e-compiler/wabt/bin:$PATH"
         export PATH="/home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin:$PATH"
         echo $PATH
-        ls -al
-        ls /home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin -al
-        which wasmtime
-        /home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin/wasmtime /home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin/demo.wat
         wasmtime /home/runner/work/the-838e-compiler/the-838e-compiler/.wasmtime/bin/demo.wat
         raco test -p the-838e-compiler
