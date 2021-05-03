@@ -21,9 +21,9 @@
 ;; type Defn* = (Defn* Id (Listof Id) Id Expr)
 (struct Defn* (f xs xs* e) #:prefab)
 
-(struct Mod/contract  (pvs rqs ds e) #:prefab)
 (struct Contract (id e) #:prefab)
 (struct FnContract (es) #:prefab)
+(struct Defn/contract (f xs c e) #:prefab) 
 
 ;; type Expr = (Eof)
 ;;           | (Empty)
@@ -81,6 +81,8 @@
 ;; type LabelledLambda = Lambda
 
 
+(struct Pass  ()              #:prefab)
+(struct Error ()              #:prefab)
 (struct Eof   ()              #:prefab)
 (struct Empty ()              #:prefab)
 (struct Int   (i)             #:prefab)
@@ -105,6 +107,9 @@
 (struct Match (e0 cs)         #:prefab)
 (struct Vec   (es)            #:prefab)
 (struct Lam   (l xs e)        #:prefab)
+;(struct Lam/contract-l (l xs e)        #:prefab)
+(struct Lam/contract
+              (l xs c e)      #:prefab)
 ;(struct Lam-l (l xs e)        #:prefab)
 (struct Lam*  (l xs xs* e)    #:prefab)
 ;(struct Lam*-l (l xs xs* e)   #:prefab)

@@ -1,6 +1,6 @@
 #lang racket
 (provide parse parse-e desugar desugar-def parse-library desugar-def-lib)
-(require "ast.rkt" "types.rkt")
+(require racket/pretty "ast.rkt" "types.rkt")
 
 ;; S-Expr -> (Letrec (Lisof Id) (Listof Lambda) Expr)
 (define (parse s)
@@ -36,10 +36,19 @@
      (Lib xs (map parse-d ds))]))
 
 (define (parse-mod-contract cpvs rqs ds e)
-  (Mod/contract
-    (map parse-contract cpvs)
+  (let ((contracts (map parse-contract cpvs)))
+  (Mod
+    (map car contracts)
     '()
-    (map parse-d ds) (parse-e e)))
+    (map (lambda (d)
+           (match d
+             [(Defn f xs e)
+              (match (assoc f contracts)
+                [#f d]
+                [c (Defn/contract f xs (cdr c) e)])]
+             [(Defn* f xs xs* e) d]))
+      (map parse-d ds))
+    (parse-e e))))
 
 (define (parse-mod pvs rqs ds e)
   (let ((pvs2 (if (equal? pvs '((all-defined-out)))
@@ -49,7 +58,7 @@
                  
 (define (parse-contract cvps)
    (match cvps
-     [(list id e) (Contract id (parse-e e))]))
+     [(list id e) (cons id (parse-e e))]))
 
 (define (parse-all-defined-out ds)
    (match ds
@@ -196,6 +205,7 @@
 (define (desugar-def d)
   (match d
     [(Defn f xs e) (cons f (Lam (gensym) xs (desugar e)))]
+    [(Defn/contract f xs c e) (cons f (Lam/contract (gensym) xs c (desugar e)))]
     [(Defn* f xs xs* e) (cons f (Lam* (gensym) xs xs* (desugar e)))]))
 
 (define (desugar-def-lib d)
@@ -233,7 +243,7 @@
     [(Lam l xs e)       (Lam l xs (desugar e))]
     [(Lam* l xs xs* e)  (Lam* l xs xs* (desugar e))]
     [(Mod pvs rqs ds e) (Mod pvs rqs (map desugar-def ds) (desugar e))]
-    [(Mod/contract cpvs rqs ds e) (Mod cpvs rqs (map desugar-def ds) (desugar e))]
     [(Match e0 cs)
-     (Match (desugar e0) (map (λ (c) (Clause (Clause-p c) (desugar (Clause-e c)))) cs))]))
+     (Match (desugar e0) (map (λ (c) (Clause (Clause-p c) (desugar (Clause-e c)))) cs))]
+    [(FnContract cs)    (FnContract (map desugar cs))]))
 

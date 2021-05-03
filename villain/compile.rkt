@@ -1,7 +1,7 @@
 #lang racket
 (provide (all-defined-out))
 (require "ast.rkt" "parse.rkt" "types.rkt" "externs.rkt"
-         racket/serialize
+         racket/serialize racket/pretty
          a86/ast
          a86/printer (submod a86/printer private))
 
@@ -129,7 +129,9 @@
                (Lam-l l)
                (if (Lam*? l)
                    (Lam*-l l)
-                   (error "error in λ-ids \n")))
+                   (if (Lam/contract? l)
+                     (Lam/contract-l l)
+                     (error "error in λ-ids \n"))))
            (λs-labels ls))]))
 
 ;; [Listof Id] -> Asm
@@ -164,7 +166,10 @@
                       (Lam-l l)
                       (if (Lam*? l)
                           (Lam*-l l)
-                          (error "error in compile--module-provides"))))
+                          (if (Lam/contract? l)
+                            (Lam/contract-l l)
+                            (error "error in λ-ids \n")))))
+  
           (compile-module-provides ls))]))
 
 (define (compile-module-externs ls)
@@ -175,7 +180,9 @@
                       (Lam-l l)
                       (if (Lam*? l)
                           (Lam*-l l)
-                          (error "error in compile-module-externs"))))
+                          (if (Lam/contract? l)
+                            (Lam/contract-l l)
+                            (error "error in compile-module-externs")))))
           (compile-module-externs ls))]))
 
 (define (compile-module p root)
@@ -234,6 +241,8 @@
 ;; Expr CEnv Boolean -> Asm
 (define (compile-e e c tail?)
   (match e
+    [(Error)            (compile-error e)]
+    [(Pass)             (seq '())]
     [(Int i)            (compile-value i)]
     [(Bool b)           (compile-value b)]
     [(Char c)           (compile-value c)]
@@ -265,6 +274,8 @@
     [(Let x e1 e2)      (compile-let x e1 e2 c tail?)]
     [(Letrec xs es e)   (compile-letrec xs es e c tail?)]
     [(Lam l xs e0)      (compile-λ l (fvs e) c)]
+    [(Lam/contract l xs c e0)
+                        (compile-λ l (fvs e) c)]
     [(Lam* l xs xs* e0) (compile-λ l (fvs e) c)]
     [(Match e0 cs)      (compile-match e0 cs c tail?)]))
 
@@ -306,6 +317,7 @@
                                 (remq* x (fvs e2)))]
       [(Letrec xs es e)   (remq* xs (apply append (fvs e) (map fvs es)))]
       [(Lam l xs e)       (remq* xs (fvs e))]
+      [(Lam/contract l xs c e)       (remq* xs (fvs e))]
       [(Lam* l xs xs* e)  (remq* (cons xs* xs) (fvs e))]
       [(Match e0 cs)
        (append (fvs e0) (apply append (map (λ (c) (remq*
@@ -350,9 +362,11 @@
     [(Let x e1 e2)      (append (apply append (map λs e1)) (λs e2))]
     [(Letrec xs es e)   (append (apply append (map λs es)) (λs e))]
     [(Lam  l xs e0)     (cons e (λs e0))]
+    [(Lam/contract  l xs c e0)     (cons e (append (λs c) (λs e0)))]
     [(Lam* l xs xs* e0) (cons e (λs e0))]
     [(Match e0 cs)
      (append (λs e0) (apply append (map (λ (c) (λs (Clause-e c))) cs)))]  ;; TODO: (λs cs)
+    [(FnContract es) (apply append (map λs es))]
     [_  '()]))   ;      for '*  
 
 ;; [Listof LLambda] -> Asm
@@ -366,6 +380,37 @@
 ;; LLambda -> Asm
 (define (compile-λ-definition l)
   (match l
+    [(Lam/contract f xs c e0)
+     ; TODO: do stuff here
+     (seq 
+          (%% "compile-λ-definition contract")
+          (Label f)          
+          (Cmp rcx (imm->bits (length xs))) ; arity check
+          (Jne 'raise_error)
+
+          (match c
+            [(FnContract cs)
+             (apply append
+                    (map (lambda (x c)
+                           (if (FnContract? c)
+                             (seq (%% "fn contract ignored"))
+                             (seq (%% "flat contract")
+                                  (compile-e-nontail
+                                    (If (LCall c (list (Var x)))
+                                        (Pass)
+                                        (Error))
+                                    (reverse (append xs (fvs l)))
+                                    ))))
+                         xs (reverse (cdr (reverse cs)))))]
+            [c (seq)])
+
+
+          (compile-e-tail e0 (reverse (append xs (fvs l))))
+          ; return
+          (Add rsp (* 8 (+ (length xs) (length (fvs l))))) ; pop args & fvs
+          (Mov rdx rbx)
+          (Ret))]
+
     [(Lam f xs e0)
      (seq (%% "compile-λ-definition ")
           (Label f)          
@@ -600,6 +645,9 @@
             (Add rsp (* 8 (add1 (length xs)))) ; pop args
             (Ret)))]))
 
+(define (compile-error e)
+  (seq (Jmp 'raise_error)))
+
 ;; Value -> Asm
 (define (compile-value v)
   (seq (Mov rax (imm->bits v))))
@@ -713,7 +761,9 @@
 ;; Id CEnv -> Asm
 (define (compile-variable x c)
   (let ((i (lookup x c)))
-    (seq (Mov rax (Offset rsp i)))))
+    (seq 
+      (%% "lookup variable")
+      (Mov rax (Offset rsp i)))))
 
 ;; LExpr LExpr CEnv Boolean -> Asm
 (define (compile-applyL e0 e1 c tail?)
@@ -1632,7 +1682,9 @@
                       (Lam-l l)
                       (if (Lam*? l)
                           (Lam*-l l)
-                          (error "a right-hand-side in letrec not λ")))))
+                          (if (Lam/contract? l)
+                            (Lam/contract-l l)
+                            (error "a right-hand-side in letrec not λ"))))))
      ;  (display l) (display "  fvs l:  ") (display (fvs l)) (display "\n\n")
        (let ((length-ys (length (fvs l))))
          (seq (Lea rax label)

@@ -1,6 +1,7 @@
 #lang racket
 (provide build-mgraph)
 (require a86/printer "parse.rkt" "compile.rkt" "read.rkt" "ast.rkt"
+         racket/pretty
          (submod a86/printer private))
 (define mgraph '())       ; dependency graph of the modules in adjacency list format
 (define mlist '())        ; list of the needed .o files of the required modules
@@ -13,6 +14,7 @@
 ;; String(of filename) [Listof String] [Listof String] [Listof (Cons Id Lambda)]
 ;; Expr -> CMod (Struct)
 (define (build-mgraph fn pvs rqs fls e)
+  ;(pretty-print fls (current-error-port))
   (build-mgraph-aux fn pvs rqs fls e '())
   (write-s-files mgraph fn)
   (write-obj-file-list mlist)
@@ -60,7 +62,9 @@
                        (begin
                          (build-mgraph-aux rq pvs new-rqs fls e anscestors)
                          )]
-                      [_ (error (format "the file ~a required is not a module" p))]))
+                      [_ 
+                        (begin (pretty-print s)
+                        (error (format "the file ~a required is not a module" p)))]))
                     (close-input-port p)))))
                (build-next-layer rqs anscestors)))]))
 
@@ -89,7 +93,8 @@
               #:exists 'truncate
               (λ ()
                 (parameterize ((current-shared? #t))
-                 (displayln (asm-string (compile-module
+                 (displayln (asm-string 
+                              (compile-module
                                           (CMod pv-exts (Mnode-pvs mnode)
                                                 fs ls ls
                                                (Mnode-e mnode)) #f)))))))))))))

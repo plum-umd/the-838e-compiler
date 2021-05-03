@@ -72,8 +72,13 @@
      (append (externs-e e)
              (externs-cs cs))]
     [(Lam l xs e) (externs-e e)]
+    [(Lam/contract l xs c e)
+     (append (externs-e c)
+             (externs-e e))]
     [(Lam* l xs xs* e) (externs-e e)]
     [(Var x) '()]  ;(externs-f x)]
+    [(FnContract es)
+     (apply append (map externs-e es))]
     [_ '()]))
 
 ;; [Listof Clause] -> [Listof Id]
