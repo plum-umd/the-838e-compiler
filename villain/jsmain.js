@@ -102,7 +102,7 @@ function cons_ans_str(result, ui32array, rp_flag) {
   if (cdr === val_empty) {
     str = carstr
   } else if (cons_type_tag === (ptr_type_mask & cdr)) {
-    str = carstr.concat(" ", cons_ans_str(cdr, ui32array, next_rp_flag))
+    str = carstr.concat(" ", cons_ans_str(cdr, ui32array, 0))
   } else {
     str = carstr.concat(" . ", ans_str(cdr, ui32array))
   }

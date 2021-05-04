@@ -94,6 +94,16 @@
                           (+ (+ (- (+ (+ x 4) (+ y 5)) 5) (+ x x)) (+ y y)))))
                 46)
   (check-equal? (run '(let ((x (add1 #f))) 0)) 'err)
+
+  ;; n-ary let
+  (check-equal? (run '(let () 4)) 4)
+  (check-equal? (run '(let ((x 4)) 3)) 3)
+  (check-equal? (run '(let ((x 4)) x)) 4)
+  (check-equal? (run '(let ((x 4) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((x (let ((y 4)) y)) (y 6)) (+ x y))) 10)
+  (check-equal? (run '(let ((y 6) (x (let ((y 4)) y))) (+ x y))) 10)
+  (check-equal? (run '(let ((y (let ((y 4)) y)) (x (let ((z 4)) z)) (z 2)) (+ z (+ x y)))) 10)
+  (check-equal? (run '(let ((x (add1 12)) (y 9)) (let ((x (add1 x)) (z y)) (+ z x)))) 23)
   
   ;; Hustle examples
   (check-equal? (run ''()) '())
@@ -131,6 +141,41 @@
   (check-equal? (run '(cons 1 (cons (sub1 0) (cons -226 '()))))
                 (list 1 -1 -226))
 
+  (check-equal? (run
+    '(let ((str (make-string (if (string? "") (add1 6) 1) #\a)))
+       (let ((x (car (cdr (cons 8 (cons 10 '()))))))
+         (if (string?         
+              (let ((y (cons 5 (cons 3 '()))))
+                (let ((z (let ((k #\a)) k)))
+                  (let ((w 10))
+                    (make-string (- x 5) (string-ref str (car (cdr y))))))))    
+             (make-string (- (string-length "abcdefghij") (string-length str))
+                          (integer->char (+ (string-length (make-string x #\a))
+                                            (char->integer (string-ref "true" 3)))))
+             "false"))))
+   "ooo")
+
+  (check-equal? (run
+    '(let ((X (cons 19 (cons 18 (cons (box 4) (cons 17 '())))))
+           (x (box 6))
+           (u 2)
+           (t 1)
+           (Y (let ((u 1)
+                    (t 2)
+                    (q 7)
+                    (w (unbox (box (unbox (box (unbox
+                                                (box (make-string (unbox (box 5)) #\o))))))))
+                    (z 5))
+                (let ((o 5)
+                      (p (string-ref w t))
+                      (i 4)
+                      (t (string-length w))
+                      (r 8))
+                  (unbox (box (cons u (cons (box (unbox (box q)))
+                     (cons w (cons z (cons o (cons p (cons i (cons (box t) r))))))))))))))
+       Y))
+                '(1 #&7 "ooooo" 5 5 #\o 4 #&5 . 8))
+
   ;; String examples 
   (check-equal? (run "Racket") "Racket")
   (check-equal? (run "Rack") "Rack")
@@ -155,6 +200,44 @@
   (check-equal? (run '(make-string 1 #\y)) "y")
   (check-equal? (run '(make-string 0 #\y)) "")
   (check-equal? (run '(make-string -1 #\y)) 'err)
+  
+  ;; Iniquity tests
+  (check-equal? (run
+                 '(begin (define (f x) x)
+                         (f 5)))
+                5)
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri 9)))
+                45)
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (if (empty? lst)
+                          0
+                          (+ 1 (len (cdr lst)))))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                3)
+  (check-equal? (run
+                 '(begin (define (f x1 x2 x3 x4 x5) (- (+ x1 x2) (+ x3 x4)))
+                         (define (g x1 x2) (+ (+ x1 x2) (f 2 4 3 5 1)))
+                         (define (h x1 x2) (make-string (+ (+ x1 x2) (g 2 3))
+                                              (string-ref "qwerty" (g 1 2))))
+                         (h 1 2)))
+                 "wwwwww")
+  (check-equal? (run
+                 '(begin (define (f x1 x2 x3 x4 x5) (cons x1 (cons x2
+                                                      (cons x3 (cons x4 '())))))
+                         (define (g x1 x2) (cons x2 (+ x2 (car x1))))
+                         (define (h x1 x2) (cons x2 (cons
+                                               (+ x2 (car (g (f 1 2 3 4 5) x2)))
+                                               (g (cons 6 7) 8))))
+                         (let ((y (f 7 8 9 10 11)))
+                           (cons (f 2 3 4 5 6) (cons (g y 2) (h y 2))))))
+                '((2 3 4 5) (2 . 9) 2 4 8 . 14))                
   )
 
 (define (test-runner-io run)
@@ -212,4 +295,17 @@
 
   (check-equal? (run '(cons 1 (begin (write-byte 97) 2)) "")
                 (cons (cons 1 2) "a"))
+  (check-equal? (run '(cons '() (cons (cons 1 (cons 2 (cons 3 '())))
+                                      (cons (add1 5) (cons 1 '())))) "")
+                (cons '(() (1 2 3) 6 1) ""))
+  
+  ;; Iniquity examples
+  (check-equal? (run '(begin (define (print-alphabet i)
+                               (if (zero? i)
+                                   (void)
+                                   (begin (write-byte (- 123 i))
+                                          (print-alphabet (sub1 i)))))
+                             (print-alphabet 26))
+                     "")
+                (cons (void) "abcdefghijklmnopqrstuvwxyz"))
   )

@@ -19,7 +19,7 @@
 
 ;; We have a stack in memory that grows downward from the highest address of our
 ;; memory.  This is different from the implicit operand stack that the stack
-;; machine of WebAssemblyuses.  The stack that we refer to should be clear from
+;; machine of WebAssembly uses.  The stack that we refer to should be clear from
 ;; the context. Explicity, we use stack in memory (or mem.) to refer to the
 ;; stack we have in memory, and the operand (or op.) stack to refer to the
 ;; operand stack of WebAssembly.
@@ -30,19 +30,13 @@
 ;; Expr -> Wasm
 (define (compile e)
   (match e
-    [(Letrec _ _  e)
-     (let ((fn `(func $sendResult (result i32)
-                  (local $a i32)         ;; scratch local variable
-                  (local $b i32)         ;; 
-                  (local $c i32)         ;; 
-                  (local $sp i32)        ;; start of stack ptr in mem. (top address)     
-                  (local $hp i32)                  
-                  (i32.const 67108860)
-                  (local.set $sp)        ;; set the local var for the top address
-                                         ;; for the start of stack (fixed for now)
-                  (i32.const 0)
-                  (local.set $hp)        ;; set the local var for start of heap                 
-                  ,@(compile-e e '()))))
+    [(Letrec fs ls e)
+     (let ((main-prog-fn
+               `(func $sendResult (result i32)
+                  (local $a i32)         ;; local var (used as virtual register)
+                  (local $b i32)         ;; virtual register
+                  (local $c i32)         ;; virtual registe
+                  ,@(compile-e e '())))) 
        `(module
           (import "writeBytejs" "writeByte" (func $writeByte (param i32)))
           (import "readBytejs" "readByte" (func $readByte (result i32)))
@@ -50,7 +44,12 @@
           (import "errorjs" "error" (func $error))
           (memory 1024)  ;; 1024 pages of memory = 2^26 bytes 
           (export "memory" (memory 0))
-            ,fn
+          (global $sp (mut i32) (i32.const 67108860))  ;; global variable $sp is
+                ;; the stack ptr initially pointing to the top address in memory 0.
+          (global $hp (mut i32) (i32.const 0))         ;; global variable $hp is
+                           ;; the heap pointer with start addr of 0 in memory 0.
+            ,main-prog-fn
+            ,@(compile-defines fs ls)
           (export "sendResult" (func $sendResult))
           ))]))
 
@@ -69,6 +68,7 @@
     [(If e1 e2 e3)      (compile-if e1 e2 e3 c)]
     [(Begin e1 e2)      (compile-begin e1 e2 c)]
     [(Let x e1 e2)      (compile-let x e1 e2 c)]
+    [(LCall e es)       (compile-call (symbol->wa-label (Var-x e)) es c)]
     [(Var x)            (compile-variable x c)]
      ))
 
@@ -79,6 +79,7 @@
 ;; Op0 -> Wasm
 (define (compile-prim0 p)
   (match p
+    ['void  `(i32.const ,val-void)]
     ['read-byte
      `(call $readByte)]
     ['peek-byte
@@ -171,17 +172,17 @@
        i32.const ,val-void))]
     ['box
      `(local.set $a          ;; Store result of (compile-e e c) on heap.
-       local.get $hp
+       global.get $hp
        local.get $a
        i32.store              
-       local.get $hp         ;; tag the heap ptr
+       global.get $hp         ;; tag the heap ptr
        i32.const ,type-box    
        i32.or                 
        local.set $a
-       local.get $hp         ;; Advance heap ptr by word size in bytes.
+       global.get $hp         ;; Advance heap ptr by word size in bytes.
        i32.const ,word-size
        i32.add                
-       local.set $hp          
+       global.set $hp          
        local.get $a)]        ;; return the tagged ptr
     ['unbox
      (append (assert-box)
@@ -215,7 +216,7 @@
   (append
    `(,@(compile-e e1 c)
      local.set $a
-     local.get $sp
+     global.get $sp
      i32.const ,(* word-size (length c))
      i32.sub
      local.get $a
@@ -224,7 +225,7 @@
      ['+
       `(,@(compile-e e2 (cons #f c))
         local.set $a
-        local.get $sp
+        global.get $sp
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -233,7 +234,7 @@
      ['-
       `(,@(compile-e e2 (cons #f c))
         local.set $a
-        local.get $sp
+        global.get $sp
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -242,7 +243,7 @@
      ['eq?
       `(,@(compile-e e2 (cons #f c))
         local.set $a         
-        local.get $sp
+        global.get $sp
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -259,35 +260,35 @@
      ['cons
       `(,@(compile-e e2 (cons #f c))
         local.set $a              ;; store cdr in heap
-        local.get $hp
+        global.get $hp
         local.get $a
         i32.store
-        local.get $hp             ;; tag the heap ptr
+        global.get $hp             ;; tag the heap ptr
         i32.const ,type-cons    
         i32.or                 
         local.set $b              ;; local var $b contains the reutrn result
-        local.get $hp             ;; Advance heap ptr by word size in bytes.
+        global.get $hp             ;; Advance heap ptr by word size in bytes.
         i32.const ,word-size
         i32.add                
-        local.set $hp          
-        local.get $sp             ;; get the car from operand stack
+        global.set $hp          
+        global.get $sp             ;; get the car from operand stack
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load               
         local.set $a
-        local.get $hp             ;; store car in the advanced heap ptr
+        global.get $hp             ;; store car in the advanced heap ptr
         local.get $a
         i32.store
-        local.get $hp             ;; Advance heap ptr by word size in bytes.
+        global.get $hp             ;; Advance heap ptr by word size in bytes.
         i32.const ,word-size
         i32.add                
-        local.set $hp
+        global.set $hp
         local.get $b)]            ;; return the result
      ['string-ref
       `(,@(compile-e e2 (cons #f c))
         ,@(assert-integer)
         local.set $b              ;; $ b = the integer of index
-        local.get $sp           ;; get the tagged str ptr from the stack in mem. 
+        global.get $sp           ;; get the tagged str ptr from the stack in mem. 
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -324,7 +325,7 @@
       `(,@(compile-e e2 (cons #f c))
         ,@(assert-char)
         local.set $b              ;; $ b = the char parameter
-        local.get $sp       ;; get the first parameter (integer) from stack in mem.
+        global.get $sp       ;; get the first parameter (integer) from stack in mem.
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -336,24 +337,24 @@
         if
         call $error
         end
-        local.get $hp             ;; put the heap ptr on op. stack
+        global.get $hp             ;; put the heap ptr on op. stack
         local.get $a
         i32.store               ;; store the length on the heap at str_addr = $hp
-        local.get $hp           ;; create the tagged ptr to the str
+        global.get $hp           ;; create the tagged ptr to the str
         i32.const ,type-string
         i32.or
         local.set $c         ;; $ c = the tagged ptr to the start of str on heap
         block               
         loop                      ;; start of the loop
-        local.get $hp             ;; advance the heap pointer by the word-size
+        global.get $hp             ;; advance the heap pointer by the word-size
         i32.const ,word-size
         i32.add
-        local.set $hp
+        global.set $hp
         local.get $a            ;; the counter starts from the length (≡ cnt i = 0)
                                 ;; the counter counts down by word-size (≡ i++)
         i32.eqz                 ;; check if counter = 0
         br_if 1                 ;; if so, break to the outer block (with index 1)
-        local.get $hp
+        global.get $hp
         local.get $b
         i32.store                 ;; store the char in str_addr[i]
         local.get $a
@@ -406,9 +407,9 @@
           (compile-e e (append (reverse xs) c))))
 ;;          (local.set $a
 ;;           i32.const ,(* word-size (length xs))
-;;           local.get $sp
+;;           global.get $sp
 ;;           i32.add
-;;           local.set $sp      ;; consider changing the memory stack ptr
+;;           global.set $sp      ;; consider changing the memory stack ptr
 ;;           local.get $a)))
                      
 
@@ -419,7 +420,7 @@
     [(cons e es)
      (append (compile-e e c)
      `(local.set $a
-       local.get $sp          
+       global.get $sp          
        i32.const ,(* word-size (length c))
        i32.sub
 ;;     i32.set $sp     ;; consider decrementing the mem. stack ptr (akin to push)
@@ -440,7 +441,7 @@
 ;; Id CEnv -> Wasm
 (define (compile-variable x c)
   (let ((i (lookup x c (length c))))
-    `(local.get $sp    ;; the local var for top address of start of stack in mem.
+    `(global.get $sp    ;; the local var for top address of start of stack in mem.
       i32.const ,i
       i32.sub          ;; top address - (word-size * ((length c) -  offset))
       i32.load)))
@@ -448,17 +449,17 @@
 ;; String -> Wasm
 (define (compile-string s)  
   (let ((len (string-length s)))
-    `(local.get $hp                 ;; store length of string on heap 
+    `(global.get $hp                 ;; store length of string on heap 
       i32.const ,(imm->bits len)
       i32.store
-      local.get $hp                 ;; store tagged heap pointer in $b
+      global.get $hp                 ;; store tagged heap pointer in $b
       i32.const ,type-string
       i32.or
       local.set $b        
-      local.get $hp                 ;; advance heap pointer
+      global.get $hp                 ;; advance heap pointer
       i32.const ,word-size
       i32.add
-      local.set $hp
+      global.set $hp
       ,@(compile-string-chars (string->list s))
       local.get $b)))
    
@@ -467,13 +468,13 @@
   (match cs
     ['() '()]
     [(cons c cs)
-     `(local.get $hp               ;; store char on heap
+     `(global.get $hp               ;; store char on heap
        i32.const ,(imm->bits c)
        i32.store 
-       local.get $hp                 ;; advance heap pointer
+       global.get $hp                 ;; advance heap pointer
        i32.const ,word-size
        i32.add
-       local.set $hp
+       global.set $hp
        ,@(compile-string-chars cs))]))
 
 ;; Integer Integer -> (() -> Wasm)
@@ -564,4 +565,52 @@
      end
      local.get $a)))
 
-     
+(define (compile-call f es c)
+  (let ((h (* word-size (length c))))
+   `(,@(compile-es es c)     ;; put the arguments on the stack
+     global.get $sp          ;; change stack ptr to point to top of stack in mem (to
+     i32.const ,h            ;; the addr after env c, where first arg to f is)
+     i32.sub
+     global.set $sp
+     call ,f
+     global.get $sp
+     i32.const ,h
+     i32.add
+     global.set $sp)))       ;; return the stack ptr to where it was before the call 
+
+(define (compile-defines fs ls)
+  (match* (fs ls)
+    [('() '()) '()] 
+    [((cons f fs) (cons (Lam l xs e) ls))
+     `(,(compile-define f xs e)
+       ,@(compile-defines fs ls))]))
+
+(define (compile-define f xs e)
+  (let ((wa-f (symbol->wa-label f)))
+    `(func ,wa-f (result i32)
+       (local $a i32)         ;; local var (used as virtual register)
+       (local $b i32)         ;; virtual register
+       (local $c i32)         ;; virtual registe 
+       ,@(compile-e e (reverse xs)))))
+
+;; Symbol -> Wasm Identifier
+;; Produce a symbol that is a valid Wasm symbolic identifier. (Based on section
+;; 6.3.5 of WebAssembly Specification, Release 1.1. The characters `'| are also
+;; valid, but are excluded here because of use in Racket.)
+;; 
+(define (symbol->wa-label s)
+  (string->symbol
+   (string-append
+    "$label_"
+    (list->string
+     (map (λ (c)
+            (if (or (char<=? #\a c #\z)
+                    (char<=? #\A c #\Z)
+                    (char<=? #\0 c #\9)
+                    (memq c '(#\_ #\$ #\# #\@ #\~ #\. #\? #\! #\% #\& #\^
+                              #\* #\+ #\- #\/ #\: #\< #\= #\> #\\)))
+                c
+                #\_))
+         (string->list (symbol->string s))))
+    "_"
+    (number->string (eq-hash-code s) 16))))       

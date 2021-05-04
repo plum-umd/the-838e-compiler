@@ -65,5 +65,6 @@
          (if (equal? x '(void))
              (cons (void) (cons->result y))
              (cons (cons->result x) (cons->result y))))]
+    [`',x      x]
     [_   s]))
  
