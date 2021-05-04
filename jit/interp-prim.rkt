@@ -1,15 +1,15 @@
 #lang racket
 (begin
-  (provide interp-prim0 interp-prim1)
+  (provide interp-prim0 interp-prim1 interp-prim2)
 
-  ;; Op -> Integer
+  ;; Op -> Answer
   (define (interp-prim0 op)
     (match op
       ['read-byte (read-byte)]
       ['peek-byte (peek-byte)]
       ['void (void)]))
     
-  ;; Op Integer -> Integer
+  ;; Op Value -> Answer
   (define (interp-prim1 op v)
     (match op
       ['add1          (if (integer? v) (add1 v) 'err)]
@@ -20,6 +20,12 @@
       ['integer->char (if (codepoint? v) (integer->char v) 'err)]
       ['eof-object?   (eof-object? v)]
       ['write-byte    (if (byte? v) (write-byte v) 'err)]))
+
+  ;; Op Value Value -> Answer
+  (define (interp-prim2 op v1 v2)
+    (match op
+      ['+          (if (and (integer? v1) (integer? v2)) (+ v1 v2) 'err)]
+      ['-          (if (and (integer? v1) (integer? v2)) (- v1 v2) 'err)]))
 
   (define (codepoint? v)
     (and (integer? v)

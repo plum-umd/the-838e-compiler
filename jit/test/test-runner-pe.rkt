@@ -35,6 +35,7 @@
   (check-equal? (run '(if  0 3 4)) 3)
   (check-equal? (run '(zero? 4)) #f)
   (check-equal? (run '(zero? 0)) #t)
+
   ;; Dodger examples
   (check-equal? (run #\a) #\a)
   (check-equal? (run #\b) #\b)
@@ -56,28 +57,52 @@
   (check-equal? (run '(if (read-byte) (add1 1) (sub1 2)))
                 '(match
                      (read-byte)
-                   (('err 'err) (v (if v (interp (add1 1)) (interp (sub1 2)))))))
+                   (('err 'err) (v (if v (interp-e (add1 1) '()) (interp-e (sub1 2) '()))))))
   (check-equal? (run '(if (zero? (read-byte)) (add1 1) (sub1 2)))
                 '(match
                      (match (read-byte) (('err 'err) (v (interp-prim1 'zero? v))))
-                   (('err 'err) (v (if v (interp (add1 1)) (interp (sub1 2)))))))
+                   (('err 'err) (v (if v (interp-e (add1 1) '()) (interp-e (sub1 2) '()))))))
   (check-equal? (run '(begin (eof-object? (read-byte)) (begin 2 (eof-object? eof))))
-                '(match (match (read-byte) (('err 'err) (v (interp-prim1 'eof-object? v)))) (('err 'err) (_ (interp (begin 2 (eof-object? eof)))))))
+                '(match (match (read-byte) (('err 'err) (v (interp-prim1 'eof-object? v)))) (('err 'err) (_ (interp-e (begin 2 (eof-object? eof)) '())))))
   (check-equal? (run '(add1 (peek-byte)))
                 '(match (peek-byte) (('err 'err) (v (interp-prim1 'add1 v)))))
   (check-equal? (run '(if (zero? 0) (read-byte) 1)) '(read-byte))
   (check-equal? (run '(if (zero? 1) (read-byte) (void))) (void))
 
-;;Extort Examples
-   (check-equal? (run '(add1 #f)) ''err)
-   (check-equal? (run '(sub1 #f)) ''err)
-   (check-equal? (run '(zero? #f)) ''err)
-   (check-equal? (run '(char->integer #f)) ''err)
-   (check-equal? (run '(integer->char #f)) ''err)
-   (check-equal? (run '(integer->char -1)) ''err)
-   (check-equal? (run '(write-byte #f)) ''err)
-   (check-equal? (run '(write-byte -1)) ''err)
-   (check-equal? (run '(write-byte 256)) ''err))
+  ;;Extort Examples
+  (check-equal? (run '(add1 #f)) ''err)
+  (check-equal? (run '(sub1 #f)) ''err)
+  (check-equal? (run '(zero? #f)) ''err)
+  (check-equal? (run '(char->integer #f)) ''err)
+  (check-equal? (run '(integer->char #f)) ''err)
+  (check-equal? (run '(integer->char -1)) ''err)
+  (check-equal? (run '(write-byte #f)) ''err)
+  (check-equal? (run '(write-byte -1)) ''err)
+  (check-equal? (run '(write-byte 256)) ''err)
+
+  ;; Fraud Examples  
+  (check-equal? (run '(let ((x 7)) x)) 7)
+  (check-equal? (run '(let ((x 7)) 2)) 2)
+  (check-equal? (run '(let ((x 7)) (add1 x))) 8)
+  (check-equal? (run '(let ((x (add1 7))) x)) 8)
+  (check-equal? (run '(let ((x 7)) (let ((y 2)) x))) 7)
+  (check-equal? (run '(let ((x 7)) (let ((x 2)) x))) 2)
+  (check-equal? (run '(let ((x 7)) (let ((x (add1 x))) x))) 8)
+  (check-equal? (run '(let ((x 0))
+                        (if (zero? x) 7 8)))
+                7)
+  (check-equal? (run '(let ((x 1))
+                        (add1 (if (zero? x) 7 8))))
+                9)
+  (check-equal? (run '(+ 3 4)) 7)
+  (check-equal? (run '(- 3 4)) -1)
+  (check-equal? (run '(+ (+ 2 1) 4)) 7)
+  (check-equal? (run '(+ (+ 2 1) (+ 2 2))) 7)
+  (check-equal? (run '(let ((x (+ 1 2)))
+                        (let ((z (- 4 x)))
+                          (+ (+ x x) z))))
+                7)
+)
 
 
   

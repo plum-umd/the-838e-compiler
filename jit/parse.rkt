@@ -12,15 +12,20 @@
     [(? boolean? b) (Bool b)]
     [(? char? c) (Char c)]
     ['eof (Eof)]
+    [(list 'quote (list))          (Empty)]
     [(? symbol? s) (Var s)]
     [(list 'quote 'err) (Err)]
     [(list 'quote (? symbol? s)) (Symbol s)]
+    [(list 'let (list (list (? symbol? x) e1)) e2)
+     (Let x (parse e1) (parse e2))] ; do we want to do n-ary let?
     [(list 'or es ...)
      (Or (map parse es))]
     [(list 'and es ...)
      (And (map parse es))]
     [(list 'if e1 e2 e3)
      (If (parse e1) (parse e2) (parse e3))]
+    [(list (? prim2? prim) e1 e2)
+     (Prim2 prim (parse e1) (parse e2))]
     [(list (? prim1? prim) e)
      (Prim1 prim (parse e))]
     [(list (? prim0? prim))
@@ -48,24 +53,34 @@
 
 (define (parse-pat  pat)
   (match pat
-    [(? integer? i) (Int i)]
-    [(? boolean? b) (Bool b)]
-    [(? char? c) (Char c)]
-    [(? symbol? s) (Var s)]
-    [(list 'quote 'err) (Err)]
-    [(list 'quote (? symbol? s)) (Symbol s)]
-    ['_ (Wild)]
-    [(list 'Int s) (Pat (Int s))]
-    [(list 'Bool s) (Pat (Bool s))]
-    [(list 'Char s) (Pat (Char s))]
-    [(list 'Eof)    (Pat (Eof))]
-    [(list 'Prim0 p) (Pat (Prim0 p))]
-    [(list 'Begin2 e1 e2) (Pat (Begin2 e1 e2))]
-    [(list 'Prim1 s1 s2) (Pat (Prim1 s1 s2))]
-    [(list 'If s1 s2 s3) (Pat (If s1 s2 s3))]))
+    [(? integer? i)               (Int i)]
+    [(? boolean? b)               (Bool b)]
+    [(? char? c)                  (Char c)]
+    [(? symbol? s)                (Var s)]
+    [(list 'quote 'err)           (Err)]
+    [(list 'quote (? symbol? s))  (Symbol s)]
+    ['_                           (Wild)]
+    [(list 'Int s)                (Pat (Int s))]
+    [(list 'Bool s)               (Pat (Bool s))]
+    [(list 'Char s)               (Pat (Char s))]
+    [(list 'Var x)                (Pat (Var x))]
+    [(list 'Eof)                  (Pat (Eof))]
+    [(list 'Prim0 p)              (Pat (Prim0 p))]
+    [(list 'Begin2 e1 e2)         (Pat (Begin2 e1 e2))]
+    [(list 'Prim1 s1 s2)          (Pat (Prim1 s1 s2))]
+    [(list 'Prim2 s1 s2 s3)       (Pat (Prim2 s1 s2 s3))]
+    [(list 'If s1 s2 s3)          (Pat (If s1 s2 s3))]
+    [(list 'Let s1 s2 s3)         (Pat (Let s1 s2 s3))]
+    [(list 'cons (list 'list (? symbol? x1) (? symbol? x2)) (? symbol? r))
+                                  (Env-Cons x1 x2 r)]))
 
 ;;Given a symbol, determine if it is a primitive of the language
 ;;Symbol -> boolean
+(define (prim2? s)
+  (if (member s (list '+ '- 'cons))
+      #t
+      #f))
+
 (define (prim1? s)
   (if (member s (list 'write-byte 'eof-object? 'add1 'sub1 'zero? 'char? 'integer->char 'char->integer))
       #t
