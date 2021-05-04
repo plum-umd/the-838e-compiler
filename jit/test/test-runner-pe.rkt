@@ -102,6 +102,20 @@
                         (let ((z (- 4 x)))
                           (+ (+ x x) z))))
                 7)
+
+  (check-equal? (run '(let ((x 97)) (write-byte x)))    '(write-byte 97))
+  (check-equal? (run '(let ((x 97)) (begin (write-byte x) x)))
+    '(match (write-byte 97)
+        (('err 'err) 
+        (_ (interp-e x (cons (cons 'x (cons 97 '())) '()))))))
+  (check-equal? (run '(let ((x 97)) (begin (read-byte) x)))
+    '(match (read-byte)
+        (('err 'err) 
+        (_ (interp-e x (cons (cons 'x (cons 97 '())) '()))))))
+  (check-equal? (run '(let ((x 97)) (begin (peek-byte) x)))
+    '(match (peek-byte)
+        (('err 'err) 
+        (_ (interp-e x (cons (cons 'x (cons 97 '())) '()))))))
 )
 
 

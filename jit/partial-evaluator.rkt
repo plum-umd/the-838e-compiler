@@ -128,7 +128,8 @@
       [(Let x b e)
         (let ((v (eval-i b interp-env prog-env interp-fns))) 
           (match v
-            [(Green v1)   (eval-i e interp-env (extend x v1 prog-env) interp-fns)]
+            [(Green v1)   (eval-i e (extend x v1 interp-env) prog-env interp-fns)] 
+                          ;; extend the interp-env because this is a let in interp
             [(Red v1)     (Red (Let x v1 e))]))]
       [(App f es)
        (eval-i-app f es interp-env prog-env interp-fns)])))
