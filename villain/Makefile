@@ -36,26 +36,26 @@ bignums.o: villain.h types.h
 	@ racket -t formdps.rkt -m make $@
 
 %.run2: %.o runtime.o 
-	gcc runtime.o $(shell cat modulefiles) $< -o $@ $(libs) -lgmp # -lm 
+	gcc -g runtime.o $(shell cat modulefiles) $< -o $@ $(libs) -lgmp # -lm 
 	@ racket -t formdps.rkt -m mv $@
 	rm -f formdps $(shell cat modulefiles) modulefiles
 	find . -name "*.s" -not -name libraries-lmdefs.s -delete
 
 runtime.o: $(objs) libraries-lmdefs.o
-	ld -r $(objs) libraries-lmdefs.o -o runtime.o
+	ld -g -r $(objs) libraries-lmdefs.o -o runtime.o
 
 libraries-lmdefs.o: libraries-lmdefs.s
-	nasm -f $(format) -o $@ $<
+	nasm -g -f $(format) -o $@ $<
 
 libraries-lmdefs.s: libraries-letrec
 
 .SUFFIXES: .c .s .o .rkt
 
 .c.o:
-	gcc -fPIC -c -o $@ $<
+	gcc -g -fPIC -c -o $@ $<
 
 .s.o:
-	nasm -f $(format) -o $@ $<
+	nasm -g -f $(format) -o $@ $<
 
 lib/%.s: lib/%.rkt
 	racket -t compile-library.rkt -m $< > $@
