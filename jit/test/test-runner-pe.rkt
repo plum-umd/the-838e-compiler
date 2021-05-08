@@ -169,7 +169,9 @@
                 `(cons 1 (cons 2 (box 1))))
 
   (check-equal? (run '(box (cons 1 (cons 2 (box 1)))))
-                `(box (cons 1 (cons 2 (box 1))))))
+                `(box (cons 1 (cons 2 (box 1)))))
+  (check-equal? (run '(cons (+ 1 2) (box (if #t (zero? 0) 4))))
+                '(cons 3 (box #t))))
 
 
   
