@@ -21,7 +21,7 @@
 ;; type Defn* = (Defn* Id (Listof Id) Id Expr)
 (struct Defn* (f xs xs* e) #:prefab)
 
-(struct Contract (id e) #:prefab)
+;;(struct Contract (id e) #:prefab)
 (struct FnContract (es) #:prefab)
 (struct Defn/contract (f xs c e) #:prefab) 
 

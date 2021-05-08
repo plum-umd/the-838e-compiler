@@ -382,34 +382,61 @@
   (match l
     [(Lam/contract f xs c e0)
      ; TODO: do stuff here
+     (let ((env (reverse (append xs (fvs l)))))
      (seq 
           (%% "compile-λ-definition contract")
           (Label f)          
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
 
+          (%% "BEGIN contracts")
           (match c
             [(FnContract cs)
              (apply append
                     (map (lambda (x c)
-                           (if (FnContract? c)
-                             (seq (%% "fn contract ignored"))
-                             (seq (%% "flat contract")
-                                  (compile-e-nontail
-                                    (If (LCall c (list (Var x)))
-                                        (Pass)
-                                        (Error))
-                                    (reverse (append xs (fvs l)))
-                                    ))))
+                           (match c
+                             [(FnContract cs) 
+                               (seq (%% "BEGIN fn contract")
+                                    (Mov rax (Offset rsp (lookup x env)))
+                                    (assert-proc rax env)
+                                    (Mov r8 type-proc)
+                                    (Xor rax r8) ;; rax contains closure pointer
+                                    (Mov r8 (Offset rax 8))
+                                    (Add rax 16) ;; move past fn pointer and arg count
+                                    (Add rax r8) ;; move past env on heap
+
+                                    (Mov (Offset rax 0) rbx) ;; Pointer to a new contract list structure
+                                    (Mov r8 rbx)
+                                    (Add rbx 16)
+
+                                    ;; Initialize contract list
+                                    (Mov (Offset r8 0) rbx) ;; Pointer to a new fn_contract
+                                    (Mov rax 0)
+                                    (Mov (Offset r8 8) rax) ;; Null pointer to tail
+
+                                    (compile-contract c)
+                                    (Mov rdi rax)
+                                    (Mov rsi 0)
+                                    (Call 'print_contract)
+                                    (%% "END fn contract"))]
+                             [_ 
+                               (seq (%% "BEGIN flat contract")
+                                    (compile-e-nontail
+                                      (If (LCall c (list (Var x)))
+                                          (Pass)
+                                          (Error))
+                                      env)
+                                    (%% "END flat contract"))]))
                          xs (reverse (cdr (reverse cs)))))]
             [c (seq)])
+          (%% "END contracts")
 
 
-          (compile-e-tail e0 (reverse (append xs (fvs l))))
+          (compile-e-nontail e0 env)
           ; return
           (Add rsp (* 8 (+ (length xs) (length (fvs l))))) ; pop args & fvs
           (Mov rdx rbx)
-          (Ret))]
+          (Ret)))]
 
     [(Lam f xs e0)
      (seq (%% "compile-λ-definition ")
@@ -478,6 +505,52 @@
             (Mov (Offset rsp 0) rdx)
             (reposition-env-vars (sub1 n)))]))
 
+(define (compile-contract c)
+  (match c
+    [(FnContract cs) (seq
+     (%% "BEGIN compile function contract")
+     (Push rbx)
+     (Mov r8 (length cs))
+     (Mov (Offset rbx 0) r8)
+     (Add rbx (* 8 (add1 (length cs))))
+     (apply append (map (lambda (ci i) (seq
+                           (%% "BEGIN compile arg contract for function contract")
+                           (compile-contract ci)
+                           (Pop r8)
+                           (Mov (Offset r8 (* 8 (add1 i))) rax) 
+                           (Push r8)
+                           (%% "END compile arg contract for function contract")))
+          cs (range (length cs))))
+     (Pop rax)
+     (%% "END compile function contract")
+     )]
+    [(Lam l _ _) (seq
+     (%% "BEGIN compile flat contract")
+     (compile-λ l '() '())
+     (%% "END compile flat contract"))]))
+
+;; struct colusure {
+;;   void *fn_ptr;
+;;   int64_t num_free_vars;
+;;   int64_t environment[num_free_vars];
+;;   struct contract_list *cs;
+;; }
+
+;; struct contract_list {
+;;   struct fn_contract *c;
+;;   struct contract_list *next;
+;; }
+
+;; struct fn_contract {
+;;   int64_t count;
+;;   union contract *param_contracts[count];
+;; }
+
+;; union contract {
+;;   void *fn_ptr;
+;;   struct fn_contract *fnc;
+;; }
+
 ;; LLambda [Listof Id] CEnv -> Asm
 (define (compile-λ l fvs c)
   (seq (%% "compile-λ ")
@@ -493,7 +566,9 @@
        (Mov rax rbx)
        (Mov r8 type-proc)
        (Or rax r8)
-       (Add rbx (* 8 (+ 2 (length fvs))))
+       (Mov r8 0) 
+       (Mov (Offset rbx (* 8 (+ 2 (length fvs)))) r8) ;; Null contract pointer
+       (Add rbx (* 8 (+ 3 (length fvs))))
        (%% "compile-λ done ")))
 
 ;; [Listof Id] CEnv Integer -> Asm

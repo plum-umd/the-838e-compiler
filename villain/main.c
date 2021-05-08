@@ -143,3 +143,18 @@ int main(int argc, char** argv)
   free(heap);
   return 0;
 }
+
+void print_contract(vl_val contract, int64_t indent) {
+  if ((contract & 0x7000000000000002) == 0x1000000000000002) {
+    for (int i = 0; i < indent; i++) {printf(" ");}
+    printf("FlatContract\n");
+  } else {
+    int64_t count = *((int64_t*)contract);
+    for (int i = 0; i < indent; i++) {printf(" ");}
+    printf("FnContract (arg count: %ld)\n", count);
+    for (int i = 0; i < count; i++) {
+      int64_t next = ((int64_t*)contract)[i + 1];
+      print_contract(next, indent + 1);
+    }
+  }
+}

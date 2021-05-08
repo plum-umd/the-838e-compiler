@@ -16,7 +16,7 @@
      (let ((exts (apply set (append (externs-es ls)
                                     (externs-e e))))
            (prvs (set))) ;(apply set (map Extern (map symbol->label pv-exts)))))
-       (set->list (set-subtract exts prvs)))]
+       (cons (Extern 'print_contract) (set->list (set-subtract exts prvs))))]
 
     [(Lib ps ds)
      ; provided ids aren't external
