@@ -56,15 +56,19 @@
     [(? integer? i)               (Int i)]
     [(? boolean? b)               (Bool b)]
     [(? char? c)                  (Char c)]
+    ['_                           (Wild)]
     [(? symbol? s)                (Var s)]
     [(list 'quote 'err)           (Err)]
+    [(list 'quote (list))          (Empty)]
     [(list 'quote (? symbol? s))  (Symbol s)]
-    ['_                           (Wild)]
+    [(list 'cons (? symbol? f) (? symbol? s)) (Cons f s)] 
     [(list 'Int s)                (Pat (Int s))]
     [(list 'Bool s)               (Pat (Bool s))]
     [(list 'Char s)               (Pat (Char s))]
     [(list 'Var x)                (Pat (Var x))]
     [(list 'Eof)                  (Pat (Eof))]
+    [(list 'Empty)                (Pat (Empty))]
+    [(list '? (? symbol? p))        (Pred p)]
     [(list 'Prim0 p)              (Pat (Prim0 p))]
     [(list 'Begin2 e1 e2)         (Pat (Begin2 e1 e2))]
     [(list 'Prim1 s1 s2)          (Pat (Prim1 s1 s2))]
@@ -72,7 +76,16 @@
     [(list 'If s1 s2 s3)          (Pat (If s1 s2 s3))]
     [(list 'Let s1 s2 s3)         (Pat (Let s1 s2 s3))]
     [(list 'cons (list 'list (? symbol? x1) (? symbol? x2)) (? symbol? r))
-                                  (Env-Cons x1 x2 r)]))
+                                  (Env-Cons x1 x2 r)]
+    [(list 'list (list 'quote (? symbol? s1)) (list '? (? symbol? ps) (? symbol? vs)) ...) ;;To deal with patterns like (list 'add1 (? integer? i))
+     (List-S-PWVs s1 (map (λ (p v) (PWV p v)) ps vs))]
+    [(list 'list (list 'quote (? symbol? s1)) (list '? (? symbol? ps)) ...) ;;To deal with patterns like (list 'integer->char (? integer?))
+     (List-S-Ps s1 ps)]
+    [(list 'list (list 'quote (? symbol? s1)) (? symbol? vs) ...) ;;To deal with patterns like (list 'char? v)
+     (List-S-Vs s1 vs)]
+    [(list 'list (list 'quote (? symbol? s1)) (list 'list (list 'quote (? symbol? s2)) (? symbol? i))) ;;To deal with patterns like (list 'car (list 'cons v))
+     (List-S-LSV s1 (list s2 i))]))
+     
 
 ;;Given a symbol, determine if it is a primitive of the language
 ;;Symbol -> boolean
@@ -82,7 +95,7 @@
       #f))
 
 (define (prim1? s)
-  (if (member s (list 'write-byte 'eof-object? 'add1 'sub1 'zero? 'char? 'integer->char 'char->integer))
+  (if (member s (list 'write-byte 'eof-object? 'add1 'sub1 'zero? 'char? 'integer->char 'char->integer 'box 'unbox 'car 'cdr 'empty?))
       #t
       #f))
 

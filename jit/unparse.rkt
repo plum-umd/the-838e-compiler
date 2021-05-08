@@ -12,10 +12,11 @@
     [(Char c)   c]
     [(Eof) 'eof]
     [(Err) ''err]
-    [(Empty) ''()]
+    [(Empty) '()]
     [(Void) (void)]
     [(Var v) v]
     [(Symbol s) (list 'quote s)]
+    [(Box b) (box (unparse b))]
     [(Let x b e)
       (list 'let (list (list x (unparse b))) (unparse e)) ]
     [(If e1 e2 e3)
@@ -49,6 +50,25 @@
     [(Symbol s) (list 'quote s)]
     [(Wild) '_]
     [(Err) ''err]
+    [(Empty) ''()]
+    [(Box b) (list 'box b)]
+    [(Cons h t) (list 'cons h t)]
+    [(Pred p) (list '? p)]
+    [(PWV p v) (list '? p v)]
+    [(List-S-PWVs s pwvs)
+     (cons (list 'quote s)
+           (map (λ (pwv)
+                  (match pwv
+                    [(PWV p v) (list '? p v)]))))]
+    [(List-S-Vs s vs)
+     (cons (list 'quote s) vs)]
+    [(List-S-Ps s ps)
+     (cons (list 'quote s)
+           (map (λ (p)
+                  (match p
+                    [(Pred p) (list '? p)]))))]
+    [(List-S-LSV s1 (list s2 var))
+     (list (list 'quote s1) (list 'quote s2) var)]
     [(Pat (Int s)) (Int s)]
     [(Pat (Bool s)) (Bool s)]
     [(Pat (Char s)) (Char s)]

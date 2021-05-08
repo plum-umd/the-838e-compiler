@@ -1,6 +1,6 @@
 #lang racket
 (provide interp/io)
-(require "interp.rkt")
+(require "interp-heap.rkt")
 
 ;; Expr String -> String
 ;; Interpret e with given string as input,

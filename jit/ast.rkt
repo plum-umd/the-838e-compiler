@@ -25,6 +25,7 @@
 ;;           | (String String)
 ;;           | (Vec (Listof Expr))
 ;;           | (Symbol Symbol)
+;;           | (List l)
 ;;           | (Prim0 Op0)
 ;;           | (Prim1 Op1 Expr)
 ;;           | (Prim2 Op2 Expr Expr)      
@@ -41,6 +42,7 @@
 ;;           | (Lam* Label Formals Formal Expr)
 ;;           | (LCall Expr (Listof Expr))
 ;;           | (Letrec (Lisof Id) (Listof Lambda) Expr)
+;;           | (List (Listof any))
 
 ;; type Id   = Symbol
 ;; type Label = Symbol
@@ -62,6 +64,16 @@
 ;;           | (Sym Symbol)
 ;;           | (Cons Id Id)
 ;;           | (Box Id)
+;;           | (Pat p)
+;;           | (Env-Cons p1 p2 ec)
+;;           | (Err)
+;;           | (Pred p)
+;;           | (PredV p v)
+;;           | (List-S-PWVs Symbol (Listof (Listof Id Id))) ;;stands for List of (Symbol, Predicates with Variables)
+;;           | (List-S-Ps Symbol Id) ;;stands for List of (Symbol, Predicates)
+;;           | (List-S-Vs Symbol Id) ;;stands for List of (Symbol, Variables)
+;;           | (List-S-LSV Symbol (Listof Symbol Id)) ;;stands for List of (Symbol, List  of Symbol and Variable)
+
 
 ;; type Litral = Boolean | '() | Char | Integer
 ;; type Binding = (Binding Id Expr)
@@ -116,9 +128,15 @@
 (struct Box (p)               #:prefab)
 (struct Err ()                #:prefab)
 (struct Pat (p)               #:prefab)
+(struct Pred (p)              #:prefab)
+(struct PWV (p v)           #:prefab)
 (struct Env-Cons (p1 p2 ec)   #:prefab) ; Added this pattern for when we are matching in the environment (cons (cons x val) r)
+(struct List-S-PWVs (s pwvs)           #:prefab)
+(struct List-S-Ps (s ps)             #:prefab)
+(struct List-S-LSV (s l)           #:prefab)
+(struct List-S-Vs (s vs)             #:prefab)         
 
 (define (ast-expr? v)
   (or (Eof? v) (Void? v) (Empty? v) (Int? v) (Bool? v) (Char? v) (Flonum? v) (String? v) (Bignum? v) (Symbol? v) (Prim0? v) (Prim1? v) (Prim2? v) (Prim3? v) (Prim4? v)
       (If? v) (Begin? v) (Begin2? v) (Or? v) (And? v) (Let? v) (Var? v) (App? v) (LCall? v) (Apply? v) (Match? v) (Vec? v) (Lam? v) (Lam*? v) (Letrec? v) (Clause? v) (Wild? v) (Lit? v) (Sym? v)
-      (Cons? v) (Env-Cons? v) (Box? v) (Err? v) (Pat? v)))
+      (Cons? v) (Env-Cons? v) (Box? v) (Err? v) (Pat? v) (Pred? v) (PWV? v) (List-S-PWVs? v) (List-S-Ps? v) (List-S-LSV? v) (List-S-Vs? v)))
