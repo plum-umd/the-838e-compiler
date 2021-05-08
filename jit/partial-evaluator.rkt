@@ -238,9 +238,9 @@
     ['box
      (match (eval-i e interp-env prog-env interp-fns)
        [(Green v)
-        (Green (Box v))]
+        (Green (Prim1 'box v))]
        [(Red v)
-        (Red (Prim2 'box v))])]))
+        (Red (Prim1 'box v))])]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;Primitives that accept two arguments;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;Symbol Expr Expr IEnv PEnv (Listof Defn) -> Annotation

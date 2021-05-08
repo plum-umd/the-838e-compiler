@@ -16,7 +16,6 @@
     [(Void) (void)]
     [(Var v) v]
     [(Symbol s) (list 'quote s)]
-    [(Box b) (box (unparse b))]
     [(Let x b e)
       (list 'let (list (list x (unparse b))) (unparse e)) ]
     [(If e1 e2 e3)
