@@ -8,11 +8,21 @@ else
   format=elf64
 endif
 
+# Rule to make the %.wrun executable that will make the %.wasm file from the compiled 
+# %.wat WebAssembly code for the program and run it with node.js Javascript runtime 
 %.wrun:  %.wat
 	./watjs2run $@
 
 %.wat:  %.rkt
 	racket -t compile-wat-file.rkt -m $< > $@
+	rm -f $(patsubst %.wat, %.wasm, $@)
+
+# Rule to compile the program to WebAssembly code and write in a %_2.wat using 
+# compile-wasm_2.rkt and compile-wat-file_2.rkt and then to make the %_2.wasm 
+# file from this. The %_2.wasm file can then be run with wasmtime runtime.
+%.wasm2: %.rkt
+	racket -t compile-wat-file_2.rkt -m $< > $(patsubst %.wasm2, %_2.wat, $@)
+	wat2wasm $(patsubst %.wasm2, %_2.wat, $@)
 
 clean:
-	rm -f *.wat *.wasm *.wrun
+	find . -name "*.wat" -delete -or -name "*.wasm" -delete	-or -name "*.wrun" -delete

@@ -25,6 +25,18 @@
     [(list 'func (? symbol? s) (list 'result (? symbol? i)) as ...)
      (string-append "   (func " (symbol->string s) "  (result "
                     (symbol->string i) ")\n " (wasm-string-aux as) "   )" "\n ")]
+    [(list 'func (? symbol? s) (list 'export (? string? e)) as ...)
+     (string-append "   (func " (symbol->string s) "  (export \""
+                     e "\")\n " (wasm-string-aux as) "   )" "\n ")]
+    [(list 'func (? symbol? s) (and pms (list 'param _ _)) ...
+           (list 'result (? symbol? i2)) as ...)
+     (string-append "   (func " (symbol->string s)
+        (foldl (λ (x acc) (string-append acc (param->string x))) " " pms) 
+        " (result " (symbol->string i2) ")\n "  (wasm-string-aux as) "   )" "\n ")]
+    [(list 'func (? symbol? s) (and pms (list 'param _ _)) ... as ...)
+     (string-append "   (func " (symbol->string s) 
+        (foldl (λ (x acc) (string-append acc (param->string x))) " " pms) "\n "
+        (wasm-string-aux as) "   )" "\n ")]    
     [(list 'param as ...)  (string-append "(param " (wasm-string-aux as) ") ")]
     [(list 'result as ...) (string-append "(result " (wasm-string-aux as) ")" "\n ")]
     [(list 'local _ ...) (string-append "     " (s-exp2string a) "\n ")]
@@ -64,11 +76,17 @@
     ['global.get "      global.get "]
     ['call       "      call "]
     ['drop       "      drop\n "]
+    ['return     "      return\n "]
     ['$a         "$a\n "]
     [(? integer? i) (string-append (number->string i) "\n ")]
     [(list 'export as ...) (string-append "   " (s-exp2string a) "\n ")]
     [(list 'import as ...) (string-append "   " (s-exp2string a) "\n ")]
     [(? string? _) (string-append "\"" a "\" ")] 
     [(? symbol? s) (string-append (symbol->string s) "\n ")]))
+
+(define (param->string pm)
+  (match pm
+    [(list 'param (? symbol? id) (? symbol? i))
+     (string-append " (param " (symbol->string id) " " (symbol->string i) ")")]))
 
 
