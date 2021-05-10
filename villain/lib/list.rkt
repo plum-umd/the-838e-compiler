@@ -23,7 +23,9 @@
          seventh
          sixth
          tenth
-         third)
+         third
+         index-of
+         index-of-aux)
 
 ;; needs to be generalized to n-ary case eventually
 (define (append xs ys)
@@ -38,6 +40,17 @@
      (if (eq? (car p) v)
          p
          (assq v xs))]))
+
+(define (index-of-aux lst x idx)
+
+  (match lst
+    ['() #f]
+    [(cons h t) (if (eq? h x) idx (index-of-aux t x (+ idx 1)))])
+)
+
+(define (index-of lst x)
+  (index-of-aux lst x 0))
+
 
 (define (eighth xs)
   (list-ref xs 7))
