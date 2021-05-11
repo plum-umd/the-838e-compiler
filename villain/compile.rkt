@@ -258,7 +258,7 @@
 ;    [(LCall e es)       (if (and (Var? e) (memq (Var-x e) stdlib-ids))
 ;                            (compile-app (Var-x e) es c tail?)
 ;                            (compile-call e es c tail?))]
-    [(App f es)         (compile-app f es c tail?)]
+;    [(App f es)         (compile-app f es c tail?)]
     [(Apply e0 e1)      (compile-applyL e0 e1 c tail?)]
 ;    [(Apply e0 e1)      (if (and (Var? e0) (memq (Var-x e0) stdlib-ids))
 ;                            (compile-apply (Var-x e0) e1 c tail?)
@@ -351,7 +351,7 @@
     [(Vec ds)           '()]
     [(Var x)            '()]
     [(LCall e es)       (append (λs e) (apply append (map λs es)))]
-    [(App f es)         (apply append (map λs es))]
+    ;[(App f es)         (apply append (map λs es))]
     [(Apply f e)        (append (λs f) (λs e))]
     [(Prim0 p)          '()]
     [(Prim1 p e)        (λs e)]
@@ -1681,42 +1681,42 @@
               (Mov rax val-void))])))
 
 ;; Id [Listof Expr] CEnv Boolean -> Asm
-(define (compile-app f es c tail?)
-  (if tail?
-      (compile-tail-app f es c)
-      (compile-nontail-app f es c)))
-
-;; Id [Listof Expr] CEnv -> Asm
-(define (compile-tail-app f es c)
-  (seq (compile-es es c)
-       (%% "move args for tail call")
-       (move-args (length c) (length es))
-       (Add rsp (* 8 (length c)))
-       (Mov rcx (imm->bits (length es)))
-       (Jmp (symbol->label f))))
-
-
-
-;; Id [Listof Expr] CEnv -> Asm
-;; The return address is placed above the arguments, so callee pops
-;; arguments and return address is next frame
-(define (compile-nontail-app f es c)
-  (let ((ret (gensym 'ret)))
-    (if (odd? (length c))
-        (seq (Lea r8 ret)
-             (Push r8)
-             (compile-es es (cons #f c))
-             (Mov rcx (imm->bits (length es)))
-             (Jmp (symbol->label f))
-             (Label ret))
-        (seq (Sub rsp 8)
-             (Lea r8 ret)
-             (Push r8)
-             (compile-es es (cons #f (cons #f c)))
-             (Mov rcx (imm->bits (length es)))
-             (Jmp (symbol->label f))
-             (Label ret)
-             (Add rsp 8)))))
+;(define (compile-app f es c tail?)
+;  (if tail?
+;      (compile-tail-app f es c)
+;      (compile-nontail-app f es c)))
+;
+;;; Id [Listof Expr] CEnv -> Asm
+;(define (compile-tail-app f es c)
+;  (seq (compile-es es c)
+;       (%% "move args for tail call")
+;       (move-args (length c) (length es))
+;       (Add rsp (* 8 (length c)))
+;       (Mov rcx (imm->bits (length es)))
+;       (Jmp (symbol->label f))))
+;
+;
+;
+;;; Id [Listof Expr] CEnv -> Asm
+;;; The return address is placed above the arguments, so callee pops
+;;; arguments and return address is next frame
+;(define (compile-nontail-app f es c)
+;  (let ((ret (gensym 'ret)))
+;    (if (odd? (length c))
+;        (seq (Lea r8 ret)
+;             (Push r8)
+;             (compile-es es (cons #f c))
+;             (Mov rcx (imm->bits (length es)))
+;             (Jmp (symbol->label f))
+;             (Label ret))
+;        (seq (Sub rsp 8)
+;             (Lea r8 ret)
+;             (Push r8)
+;             (compile-es es (cons #f (cons #f c)))
+;             (Mov rcx (imm->bits (length es)))
+;             (Jmp (symbol->label f))
+;             (Label ret)
+;             (Add rsp 8)))))
 
 ;; [Listof Expr] CEnv -> Asm
 (define (compile-es es c)
