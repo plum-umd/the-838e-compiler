@@ -4,7 +4,7 @@
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
-  (match p
+  (append (list (Extern 'call_test) (Extern 'print_closure) (Extern 'print_contract)) (match p
      [(Letrec fs ls e)
         (remove-duplicates (append (externs-es ls)
                                    (externs-e e)))]
@@ -16,13 +16,13 @@
      (let ((exts (apply set (append (externs-es ls)
                                     (externs-e e))))
            (prvs (set))) ;(apply set (map Extern (map symbol->label pv-exts)))))
-       (append (list (Extern 'print_closure) (Extern 'print_contract)) (set->list (set-subtract exts prvs))))]
+       (set->list (set-subtract exts prvs)))]
 
     [(Lib ps ds)
      ; provided ids aren't external
      (let ((exts (apply set (externs-ds ds)))
            (prvs (apply set (map Extern (map symbol->label ps)))))
-       (set->list (set-subtract exts prvs)))]))
+       (set->list (set-subtract exts prvs)))])))
 
 (define (externs-ds ds)
   (match ds

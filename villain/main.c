@@ -31,6 +31,11 @@ vl_str *symbol_to_str(vl_symbol s);
 
 void print_result(vl_val x)
 {
+
+  if ((x & 0x7000000000000002) == 0x1000000000000002) {
+    printf("#<closure: 0x%lX>", x);
+    return;
+  }
   switch (vl_typeof(x)) {
   case VL_INT:
     printf("%" PRId64, vl_unwrap_int(x));
@@ -181,4 +186,5 @@ void print_closure(int64_t *closure) {
   }
   printf("contracts:\n");
   print_contract_list((int64_t*)closure[2 + free_vars]);
+  printf("\n");
 }
