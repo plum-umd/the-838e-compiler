@@ -381,7 +381,6 @@
 (define (compile-λ-definition l)
   (match l
     [(Lam/contract f xs c e0)
-     ; TODO: do stuff here
      (let ((env (reverse (append xs (fvs l)))))
      (seq 
           (%% "compile-λ-definition contract")
@@ -399,12 +398,16 @@
                                (seq (%% "BEGIN fn contract")
                                     (Mov rax (Offset rsp (lookup x env)))
                                     (assert-proc rax env)
+
                                     (Mov r8 type-proc)
                                     (Xor rax r8) ;; rax contains closure pointer
-                                    (Mov r8 (Offset rax 8))
+
+                                    (Mov r8 (Offset rax 8)) ;; get size of heap
+                                    (Sal r8 3)
                                     (Add rax 16) ;; move past fn pointer and arg count
                                     (Add rax r8) ;; move past env on heap
 
+                                    ;; FIXME: handle non-empty lists
                                     (Mov (Offset rax 0) rbx) ;; Pointer to a new contract list structure
                                     (Mov r8 rbx)
                                     (Add rbx 16)
@@ -413,11 +416,13 @@
                                     (Mov (Offset r8 0) rbx) ;; Pointer to a new fn_contract
                                     (Mov rax 0)
                                     (Mov (Offset r8 8) rax) ;; Null pointer to tail
-
                                     (compile-contract c)
-                                    (Mov rdi rax)
-                                    (Mov rsi 0)
-                                    (Call 'print_contract)
+
+                                    (Mov rdi (Offset rsp (lookup x env)))
+                                    (Mov r8 type-proc)
+                                    (Xor rdi r8)
+                                    (Call 'print_closure)
+
                                     (%% "END fn contract"))]
                              [_ 
                                (seq (%% "BEGIN flat contract")
@@ -529,7 +534,7 @@
      (compile-λ l '() '())
      (%% "END compile flat contract"))]))
 
-;; struct colusure {
+;; struct closure {
 ;;   void *fn_ptr;
 ;;   int64_t num_free_vars;
 ;;   int64_t environment[num_free_vars];
@@ -563,11 +568,11 @@
        (%% "copy-env-to-heap ")
        (copy-env-to-heap fvs c 0)
        (%% "copy-env-to-heap-done ")
+       (Mov r8 0) 
+       (Mov (Offset rbx (* 8 (+ 2 (length fvs)))) r8) ;; Null contract list pointer
        (Mov rax rbx)
        (Mov r8 type-proc)
        (Or rax r8)
-       (Mov r8 0) 
-       (Mov (Offset rbx (* 8 (+ 2 (length fvs)))) r8) ;; Null contract pointer
        (Add rbx (* 8 (+ 3 (length fvs))))
        (%% "compile-λ done ")))
 
@@ -614,6 +619,9 @@
               (Mov (Offset rsp (* 8 (+ c-ct (sub1 i)))) r8)
               (move-args c-ct (sub1 i)))]))
 
+
+;; TODO: on calls 
+
 ;; Id [Listof Expr] CEnv -> Asm
 ;; The return address is placed above the arguments, so callee pops
 ;; arguments and return address is next frame
@@ -630,6 +638,20 @@
              (assert-proc rax c)
              (Mov r8 type-proc)
              (Xor rax r8)
+
+             ;; TODO: here we have the function arguments on the stack and the
+             ;;       closure pointer in rax. Read the contract out of the
+             ;;       closure and check each arugment.
+             ;;       alg: 
+             ;;         * assert contract is function contract
+             ;;         * assert sub contract count == (length es)
+             ;;         * loop over sub contracts
+             ;;           * if flat contract (is_proc):
+             ;;             * exec function on corresponding arg
+             ;;           * otherwise it's a fn contract:
+             ;;             * assert-proc corresonding arg
+             ;;             * append to contract list
+
              (copy-closure-env-to-stack)
              (Mov rcx (imm->bits (length es)))
              (Mov rdx (Offset rax 0))

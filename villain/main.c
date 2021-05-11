@@ -87,7 +87,7 @@ void print_result(vl_val x)
     break;
   case VL_INVALID:
   default:
-    error_exit();
+    printf("Unknown type: 0x%lX", x);
     break;
   }
 }
@@ -157,4 +157,28 @@ void print_contract(vl_val contract, int64_t indent) {
       print_contract(next, indent + 1);
     }
   }
+}
+
+void print_contract_list(int64_t *contract_list) {
+  if (contract_list == 0) {
+    printf("end of list\n");
+  } else {
+    print_contract(contract_list[0], 0);
+    print_contract_list((int64_t*)contract_list[1]);
+  }
+}
+
+void print_closure(int64_t *closure) {
+  printf("Closure:\n");
+  int64_t free_vars = closure[1];
+  printf("num_free_vars: %ld\n", free_vars);
+  printf("environment:\n");
+  int64_t *env = closure + 2;
+  for (int i = 0; i < free_vars; i++) {
+    printf(" ");
+    print_result(env[i]);
+    printf(" (0x%lX)\n",env[i]);
+  }
+  printf("contracts:\n");
+  print_contract_list((int64_t*)closure[2 + free_vars]);
 }
