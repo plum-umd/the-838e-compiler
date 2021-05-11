@@ -208,13 +208,14 @@
            (bignum-externs)
            (Label 'entry)
            (Mov rbx rdi) ; recv heap pointer
+           ;(begin (pretty-print ls (current-error-port)) '())
            (compile-e-tail (Letrec (append fs+ fs) (append ls+ ls) e) '())
            (Mov rdx rbx) ; return heap pointer in second return register           
            (Ret)
            (Label 'raise_error_align)
            (Sub rsp 8)
            (Jmp 'raise_error)
-           (compile-λ-definitions (λs e))
+           (compile-λ-definitions (append (λs e) (required-contract-λs ls)))
            (compile-λ-definitions (apply append (map λs ls+)))
            (compile-λ-definitions (apply append (map λs dfλs))))]))
 
@@ -336,6 +337,21 @@
     [(Cons x1 x2) (list x1 x2)]))
 
 
+(define (required-contract-λs mod-λs)
+  (match mod-λs
+    ['() '()]
+    [(cons h t)
+     (append
+       (required-contract-λs t)
+       (if (Lam/contract? h)
+         (contract-λs(Lam/contract-c h))
+         '()))]))
+
+(define (contract-λs c)
+  (if (FnContract? c)
+    (apply append (map contract-λs (FnContract-es c)))
+    (λs c)))
+
 ;; LExpr -> [Listof LLambda]
 (define (λs e)
   (match e
@@ -362,11 +378,12 @@
     [(Let x e1 e2)      (append (apply append (map λs e1)) (λs e2))]
     [(Letrec xs es e)   (append (apply append (map λs es)) (λs e))]
     [(Lam  l xs e0)     (cons e (λs e0))]
-    [(Lam/contract  l xs c e0)     (cons e (append (λs c) (λs e0)))]
+    ;; TODO: maybe don't include contract lambdas here
+    [(Lam/contract  l xs c e0)     (cons e (λs e0))]
     [(Lam* l xs xs* e0) (cons e (λs e0))]
     [(Match e0 cs)
      (append (λs e0) (apply append (map (λ (c) (λs (Clause-e c))) cs)))]  ;; TODO: (λs cs)
-    [(FnContract es) (apply append (map λs es))]
+    ;[(FnContract es) (apply append (map λs es))]
     [_  '()]))   ;      for '*  
 
 ;; [Listof LLambda] -> Asm
@@ -388,54 +405,53 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
 
-          (%% "BEGIN contracts")
-          (match c
-            [(FnContract cs)
-             (apply append
-                    (map (lambda (x c)
-                           (match c
-                             [(FnContract cs) 
-                               (seq (%% "BEGIN fn contract")
-                                    (Mov rax (Offset rsp (lookup x env)))
-                                    (assert-proc rax env)
+          ;(%% "BEGIN contracts")
+          ;(match c
+          ;  [(FnContract cs)
+          ;   (apply append
+          ;          (map (lambda (x c)
+          ;                 (match c
+          ;                   [(FnContract cs) 
+          ;                     (seq (%% "BEGIN fn contract")
+          ;                          (Mov rax (Offset rsp (lookup x env)))
+          ;                          (assert-proc rax env)
 
-                                    (Mov r8 type-proc)
-                                    (Xor rax r8) ;; rax contains closure pointer
+          ;                          (Mov r8 type-proc)
+          ;                          (Xor rax r8) ;; rax contains closure pointer
 
-                                    (Mov r8 (Offset rax 8)) ;; get size of heap
-                                    (Sal r8 3)
-                                    (Add rax 16) ;; move past fn pointer and arg count
-                                    (Add rax r8) ;; move past env on heap
+          ;                          (Mov r8 (Offset rax 8)) ;; get size of heap
+          ;                          (Sal r8 3)
+          ;                          (Add rax 16) ;; move past fn pointer and arg count
+          ;                          (Add rax r8) ;; move past env on heap
 
-                                    ;; FIXME: handle non-empty lists
-                                    (Mov (Offset rax 0) rbx) ;; Pointer to a new contract list structure
-                                    (Mov r8 rbx)
-                                    (Add rbx 16)
+          ;                          ;; FIXME: handle non-empty lists
+          ;                          (Mov (Offset rax 0) rbx) ;; Pointer to a new contract list structure
+          ;                          (Mov r8 rbx)
+          ;                          (Add rbx 16)
 
-                                    ;; Initialize contract list
-                                    (Mov (Offset r8 0) rbx) ;; Pointer to a new fn_contract
-                                    (Mov rax 0)
-                                    (Mov (Offset r8 8) rax) ;; Null pointer to tail
-                                    (compile-contract c)
+          ;                          ;; Initialize contract list
+          ;                          (Mov (Offset r8 0) rbx) ;; Pointer to a new fn_contract
+          ;                          (Mov rax 0)
+          ;                          (Mov (Offset r8 8) rax) ;; Null pointer to tail
+          ;                          (compile-contract c)
 
-                                    (Mov rdi (Offset rsp (lookup x env)))
-                                    (Mov r8 type-proc)
-                                    (Xor rdi r8)
-                                    (Call 'print_closure)
+          ;                          ;(Mov rdi (Offset rsp (lookup x env)))
+          ;                          ;(Mov r8 type-proc)
+          ;                          ;(Xor rdi r8)
+          ;                          ;(Call 'print_closure)
 
-                                    (%% "END fn contract"))]
-                             [_ 
-                               (seq (%% "BEGIN flat contract")
-                                    (compile-e-nontail
-                                      (If (LCall c (list (Var x)))
-                                          (Pass)
-                                          (Error))
-                                      env)
-                                    (%% "END flat contract"))]))
-                         xs (reverse (cdr (reverse cs)))))]
-            [c (seq)])
-          (%% "END contracts")
-
+          ;                          (%% "END fn contract"))]
+          ;                   [_ 
+          ;                     (seq (%% "BEGIN flat contract")
+          ;                          (compile-e-nontail
+          ;                            (If (LCall c (list (Var x)))
+          ;                                (Pass)
+          ;                                (Error))
+          ;                            env)
+          ;                          (%% "END flat contract"))]))
+          ;               xs (reverse (cdr (reverse cs)))))]
+          ;  [c (seq)])
+          ;(%% "END contracts")
 
           (compile-e-nontail e0 env)
           ; return
@@ -587,7 +603,7 @@
 
 ;; Id [Listof Expr] CEnv Boolean -> Asm
 (define (compile-call f es c tail?)
-  (if tail?
+  (if #f ;tail? ; TODO: can we still do tail calls?
       (compile-tail-call f es c)
       (compile-nontail-call f es c)))
 
@@ -639,6 +655,12 @@
              (Mov r8 type-proc)
              (Xor rax r8)
 
+             (Mov rdi rax)
+             (Call 'print_closure)
+             (Mov rax (Offset rsp (* 8 (add1 (length es)))))
+             (Mov r8 type-proc)
+             (Xor rax r8)
+
              ;; TODO: here we have the function arguments on the stack and the
              ;;       closure pointer in rax. Read the contract out of the
              ;;       closure and check each arugment.
@@ -669,6 +691,13 @@
              (assert-proc rax c)
              (Mov r8 type-proc)
              (Xor rax r8)
+
+             (Mov rdi rax)
+             (Call 'print_closure)
+             (Mov rax (Offset rsp (* 8 (add1 (length es)))))
+             (Mov r8 type-proc)
+             (Xor rax r8)
+
              (copy-closure-env-to-stack)
              (Mov rcx (imm->bits (length es)))
              (Mov rdx (Offset rax 0))
@@ -864,7 +893,7 @@
 
 ;; LExpr LExpr CEnv Boolean -> Asm
 (define (compile-applyL e0 e1 c tail?)
-  (if tail?
+  (if #f ;tail?
       (compile-tail-applyL e0 e1 c)
       (compile-nontail-applyL e0 e1 c)))
 
@@ -1781,17 +1810,41 @@
                           (Lam*-l l)
                           (if (Lam/contract? l)
                             (Lam/contract-l l)
-                            (error "a right-hand-side in letrec not λ"))))))
+                            (error "a right-hand-side in letrec not λ")))))
+           (param-c (if (Lam/contract? l) (drop-right (FnContract-es (Lam/contract-c l)) 1) '()))
+           (ret-c   (if (Lam/contract? l) (take-right (FnContract-es (Lam/contract-c l)) 1) '())))
      ;  (display l) (display "  fvs l:  ") (display (fvs l)) (display "\n\n")
        (let ((length-ys (length (fvs l))))
-         (seq (Lea rax label)
+         (seq (Push rbx) ;; store what will eventualy be closure pointer
+              (Lea rax label)
               (Mov (Offset rbx 0) rax)
               (Mov r8 length-ys)
               (Mov (Offset rbx 8) r8)
               (Mov rax rbx)
+              (Add rbx (* 8 (+ 3 length-ys)))
+
+              (if (Lam/contract? l)
+                (seq
+                  (%% "BEGIN fn contract")
+                  (Mov (Offset rax (* 8 (+ 2 length-ys))) rbx) ;; Pointer to a new contract list structure
+                  (Mov r8 rbx)
+                  (Add rbx 16)
+
+                  ;; Initialize contract list
+                  (Mov (Offset r8 0) rbx) ;; Pointer to a new fn_contract
+                  (Mov rax 0)
+                  (Mov (Offset r8 8) rax) ;; Null pointer to tail
+                  (compile-contract (Lam/contract-c l))
+
+                  (%% "END fn contract"))
+                (seq
+                  (Mov r8 0)
+                  (Mov (Offset rbx 16) r8)))
+
+              (Pop rax);; retrieve closure pointer 
+
               (Mov r8 type-proc)
               (Or rax r8)
-              (Add rbx (* 8 (+ 2 length-ys)))
               (Push rax)
               (compile-letrec-λs ls c))))]))
 
