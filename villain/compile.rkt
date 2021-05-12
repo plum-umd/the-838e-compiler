@@ -731,7 +731,9 @@
            (let ((fn-c (gensym 'fn_c))
                  (done-c (gensym 'done_c))
                  (ret (gensym 'ret))
-                 (pass-c (gensym 'pass_c)))
+                 (pass-c (gensym 'pass_c))
+                 (loop-start (gensym 'loop_start))
+                 (loop-end (gensym 'loop_end)))
            ;; r9: ptr to contract of called closure (asssumed to be fn constract) (should no mutate)
            (seq (%% "begin checking arg contract")
                 (Mov rax (Offset r9 (* 8 (add1 arg_idx))))   ;; get arg contract
@@ -777,13 +779,24 @@
                 (Mov r10 type-proc)
                 (Xor r8 r10)            ;; Untag closure
 
-                (Mov rdi r8)
+                (Mov rdi r8) ;; used in call below
 
-                (Mov r10 (Offset r8 8))  ;; Get env size
+                (Mov r10 (Offset r8 8)) ;; Get env size
                 (Sal r10 3)
-                (Add r8 r10)             ;; Move past env
+                (Add r8 r10)            ;; Move past env
+                (Add r8 16)             ;; ptr ptr list
+
+                (Label loop-start)
+                (Mov r10 (Offset r8 0)) ;; loop until is r10 = *r8 nullptr
+                (Cmp r10 0)
+                (Je loop-end)
+
+                (Mov r8 r10)
+                (Add r8 8)
+                (Jmp loop-start)
+                (Label loop-end)
                 ;; TODO: append to list
-                (Mov (Offset r8 16) rbx) ;; Store pointer to new contract list
+                (Mov (Offset r8 0) rbx) ;; Store pointer to new contract list
                 (Mov (Offset rbx 0) rax) ;; Put contract in list
                 (Mov r10 0)
                 (Mov (Offset rbx 8) r10) ;; Null tail
