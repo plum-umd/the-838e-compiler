@@ -752,9 +752,7 @@
                 (Xor rdx r10)
                 (Mov rdx (Offset rdx 0)) ;; address of lambda
 
-                (Push r8)
-                (Push r9)
-                (Push rax)
+                (Push r9) ;; save r9 (parent contract)
 
                 (Push rax)  ;; push lambda pointer
                 (Lea rcx ret)
@@ -766,17 +764,34 @@
                 (Label ret)
                 (Add rsp 8) ;; pop lambda pointer
 
-                (Cmp rax (imm->bits #t))
+                (Cmp rax (imm->bits #t)) ;; error if contract fails
                 (Jne 'raise_error)
 
-                (Pop rax)
-                (Pop r9)
-                (Pop r8)
+                (Pop r9) ;; restore r9
 
                 (Jmp done-c)
                 (Label fn-c)
-                ;;;; Here we know we have a function contract
-                ;;;; TODO: assert-proc r8
+                ;; Here we know we have a function contract
+                ;; TODO: assert-proc r8
+
+                (Mov r10 type-proc)
+                (Xor r8 r10)            ;; Untag closure
+
+                (Mov rdi r8)
+
+                (Mov r10 (Offset r8 8))  ;; Get env size
+                (Sal r10 3)
+                (Add r8 r10)             ;; Move past env
+                ;; TODO: append to list
+                (Mov (Offset r8 16) rbx) ;; Store pointer to new contract list
+                (Mov (Offset rbx 0) rax) ;; Put contract in list
+                (Mov r10 0)
+                (Mov (Offset rbx 8) r10) ;; Null tail
+                (Add rbx 16)
+
+                (Push r9)
+                (Call 'print_closure)
+                (Pop r9)
 
                 (Label done-c)
                 ;;;; Finished this contract
