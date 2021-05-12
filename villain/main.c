@@ -33,7 +33,7 @@ void print_result(vl_val x)
 {
 
   if ((x & 0x7000000000000002) == 0x1000000000000002) {
-    printf("#<closure: 0x%lX>", x);
+    printf("#<closure: 0x%lX>\n", x);
     return;
   }
   switch (vl_typeof(x)) {
@@ -67,7 +67,6 @@ void print_result(vl_val x)
     printf(")");
     break;
   case VL_STR:
-    printf("test");
     putchar('"');
     print_str(vl_unwrap_str(x));
     putchar('"');
@@ -95,6 +94,7 @@ void print_result(vl_val x)
     printf("Unknown type: 0x%lX", x);
     break;
   }
+  printf("\n");
 }
 
 void print_vector(vl_vec *v)
@@ -149,16 +149,16 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void print_contract(vl_val contract, int64_t indent) {
-  if ((contract & 0x7000000000000002) == 0x1000000000000002) {
+void print_contract(int64_t *contract, int64_t indent) {
+  if ((((int64_t)contract) & 0x7000000000000002) == 0x1000000000000002) {
     for (int i = 0; i < indent; i++) {printf(" ");}
     printf("FlatContract\n");
   } else {
-    int64_t count = *((int64_t*)contract);
+    int64_t count = contract[0];
     for (int i = 0; i < indent; i++) {printf(" ");}
     printf("FnContract (arg count: %ld)\n", count);
     for (int i = 0; i < count; i++) {
-      int64_t next = ((int64_t*)contract)[i + 1];
+      int64_t next = contract[i + 1];
       print_contract(next, indent + 1);
     }
   }
@@ -182,9 +182,10 @@ void print_closure(int64_t *closure) {
   for (int i = 0; i < free_vars; i++) {
     printf(" ");
     print_result(env[i]);
-    printf(" (0x%lX)\n",env[i]);
   }
   printf("contracts:\n");
   print_contract_list((int64_t*)closure[2 + free_vars]);
   printf("\n");
 }
+
+void println() { printf("\n"); }

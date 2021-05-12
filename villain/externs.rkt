@@ -4,7 +4,7 @@
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
 (define (externs p)
-  (append (list (Extern 'call_test) (Extern 'print_closure) (Extern 'print_contract)) (match p
+  (append (list (Extern 'print_result) (Extern 'println) (Extern 'print_closure) (Extern 'print_contract)) (match p
      [(Letrec fs ls e)
         (remove-duplicates (append (externs-es ls)
                                    (externs-e e)))]
