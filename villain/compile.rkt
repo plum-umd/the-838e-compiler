@@ -636,8 +636,6 @@
               (move-args c-ct (sub1 i)))]))
 
 
-;; TODO: on calls 
-
 ;; Id [Listof Expr] CEnv -> Asm
 ;; The return address is placed above the arguments, so callee pops
 ;; arguments and return address is next frame
@@ -655,24 +653,27 @@
              (Mov r8 type-proc)
              (Xor rax r8)
 
-             (Mov rdi rax)
-             (Call 'print_closure)
-             (Mov rax (Offset rsp (* 8 (add1 (length es)))))
-             (Mov r8 type-proc)
-             (Xor rax r8)
+             ;(Mov rdi rax)
+             ;(Call 'print_closure)
+             ;(Mov rax (Offset rsp (* 8 (add1 (length es)))))
+             ;(Mov r8 type-proc)
+             ;(Xor rax r8)
+
+             (do-contract-stuff (length es))
 
              ;; TODO: here we have the function arguments on the stack and the
              ;;       closure pointer in rax. Read the contract out of the
              ;;       closure and check each arugment.
              ;;       alg: 
-             ;;         * assert contract is function contract
-             ;;         * assert sub contract count == (length es)
-             ;;         * loop over sub contracts
+             ;;         * TODO: assert contract is function contract
+             ;;         * TODO: assert sub contract count == (length es)
+             ;;         * For each arg_i (count statically known):
+             ;;           * Get contract_i
              ;;           * if flat contract (is_proc):
              ;;             * exec function on corresponding arg
              ;;           * otherwise it's a fn contract:
              ;;             * assert-proc corresonding arg
-             ;;             * append to contract list
+             ;;             * append to arg contract list
 
              (copy-closure-env-to-stack)
              (Mov rcx (imm->bits (length es)))
@@ -692,11 +693,12 @@
              (Mov r8 type-proc)
              (Xor rax r8)
 
-             (Mov rdi rax)
-             (Call 'print_closure)
-             (Mov rax (Offset rsp (* 8 (add1 (length es)))))
-             (Mov r8 type-proc)
-             (Xor rax r8)
+             ;;(Mov rdi rax)
+             ;;(Call 'print_closure)
+             ;;(Mov rax (Offset rsp (* 8 (add1 (length es)))))
+             ;;(Mov r8 type-proc)
+             ;;(Xor rax r8)
+             (do-contract-stuff (length es))
 
              (copy-closure-env-to-stack)
              (Mov rcx (imm->bits (length es)))
@@ -704,6 +706,87 @@
              (Jmp rdx)  ; (Offset rax 0)
              (Label ret)
              (Add rsp 16)))))   
+
+;; makes a lot of assumptions about what compile call does with regs and the
+;; stack. Be careful.
+;; rax contains untagged pointer to closure
+(define (do-contract-stuff argc)
+  (let ((no-contracts (gensym 'no_contracts))) (seq
+    (%% "begin contract checking")
+    (Push rax)
+    (Mov r8 (Offset rax 8)) ;; get env size
+    (Sal r8 3)
+    (Mov r9 rax)
+    (Add r9 r8) 
+    (Mov r9 (Offset r9 16)) ;; points to contract list
+    (Cmp r9 0) 
+    (Je no-contracts)       ;; if contracts list pointer is null skip
+                            ;; TODO: This will need to be a loop over
+                            ;;       contract list
+    (Mov r9 (Offset r9 0))  ;; get the contract pointer
+
+    ;; TODO: assert it's a fn contract
+
+    (apply append (map (lambda (arg_idx)
+           (let ((fn-c (gensym 'fn_c))
+                 (done-c (gensym 'done_c))
+                 (ret (gensym 'ret))
+                 (pass-c (gensym 'pass_c)))
+           ;; r9: ptr to contract of called closure (asssumed to be fn constract) (should no mutate)
+           (seq (%% "begin checking arg contract")
+                (Mov rax (Offset r9 (* 8 (add1 arg_idx))))   ;; get arg contract
+                (Mov r8 (Offset rsp (* 8 (- argc arg_idx)))) ;; load current fn arg
+
+                ;; if (is-proc rax)
+                (Mov rdx rax)
+                (Mov r10 proc-mask)
+                (And rdx r10)
+                (Mov r10 type-proc)
+                (Cmp rdx r10)
+
+                (Jne fn-c) 
+                ;;;; Here we know we have a flat contract
+
+                (Mov rdx rax)
+                (Mov r10 type-proc)
+                (Xor rdx r10)
+                (Mov rdx (Offset rdx 0)) ;; address of lambda
+
+                (Push r8)
+                (Push r9)
+                (Push rax)
+
+                (Push rax)  ;; push lambda pointer
+                (Lea rcx ret)
+                (Push rcx)  ;; push return address
+                (Push r8)   ;; push argument
+                (Mov rcx (imm->bits 1)) ;; set arg count
+                (Jmp rdx)   ;; do the call
+
+                (Label ret)
+                (Add rsp 8) ;; pop lambda pointer
+
+                (Cmp rax (imm->bits #t))
+                (Jne 'raise_error)
+
+                (Pop rax)
+                (Pop r9)
+                (Pop r8)
+
+                (Jmp done-c)
+                (Label fn-c)
+                ;;;; Here we know we have a function contract
+                ;;;; TODO: assert-proc r8
+
+                (Label done-c)
+                ;;;; Finished this contract
+
+                (%% "done checking arg contract"))))
+         (range 0 argc)))
+
+    (Label no-contracts)
+    (Pop rax)
+    (%% "done contract checking"))))
 
 (define (copy-closure-env-to-stack)
   (let ((loop (gensym 'copy_closure))
