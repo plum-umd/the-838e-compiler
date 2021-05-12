@@ -725,14 +725,14 @@
     (Je no-contracts)       ;; if contracts list pointer is null skip
                             ;; TODO: This will need to be a loop over
                             ;;       contract list
-    ;;(Push r9) ;; save contract list pointer for looping
+    (Push r9) ;; save contract list pointer for looping
     (Mov r9 (Offset r9 0))  ;; get the contract pointer
 
-    ;;(Push r9)
-    ;;(Mov rdi r9)
-    ;;(Mov rsi 0)
-    ;;(Call 'print_contract)
-    ;;(Pop r9)
+    (Push r9)
+    (Mov rdi r9)
+    (Mov rsi 0)
+    (Call 'print_contract)
+    (Pop r9)
 
     ;; TODO: assert it's a fn contract
 
@@ -746,7 +746,7 @@
            ;; r9: ptr to contract of called closure (asssumed to be fn constract) (should no mutate)
            (seq (%% "begin checking arg contract")
                 (Mov rax (Offset r9 (* 8 (add1 arg_idx))))   ;; get arg contract
-                (Mov r8 (Offset rsp (* 8 (+ 0 (- argc arg_idx))))) ;; load current fn arg
+                (Mov r8 (Offset rsp (* 8 (+ 1 (- argc arg_idx))))) ;; load current fn arg
 
                 (Push rax)
                 (Push r8)
@@ -830,9 +830,9 @@
                 (%% "done checking arg contract"))))
          (range 0 argc)))
 
-    ;;(Pop r9) ;; retreive pointer to contract list
-    ;;(Mov r9 (Offset r9 8)) ;; Now pointer to tail
-    ;;(Jmp more-contracts)
+    (Pop r9) ;; retreive pointer to contract list
+    (Mov r9 (Offset r9 8)) ;; Now pointer to tail
+    (Jmp more-contracts)
 
     (Label no-contracts)
     (Pop rax)
