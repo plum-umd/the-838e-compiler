@@ -711,7 +711,8 @@
 ;; stack. Be careful.
 ;; rax contains untagged pointer to closure
 (define (do-contract-stuff argc)
-  (let ((no-contracts (gensym 'no_contracts))) (seq
+  (let ((more-contracts (gensym 'more_contracts))
+        (no-contracts (gensym 'no_contracts))) (seq
     (%% "begin contract checking")
     (Push rax)
     (Mov r8 (Offset rax 8)) ;; get env size
@@ -719,11 +720,19 @@
     (Mov r9 rax)
     (Add r9 r8) 
     (Mov r9 (Offset r9 16)) ;; points to contract list
+    (Label more-contracts)
     (Cmp r9 0) 
     (Je no-contracts)       ;; if contracts list pointer is null skip
                             ;; TODO: This will need to be a loop over
                             ;;       contract list
+    ;;(Push r9) ;; save contract list pointer for looping
     (Mov r9 (Offset r9 0))  ;; get the contract pointer
+
+    ;;(Push r9)
+    ;;(Mov rdi r9)
+    ;;(Mov rsi 0)
+    ;;(Call 'print_contract)
+    ;;(Pop r9)
 
     ;; TODO: assert it's a fn contract
 
@@ -737,7 +746,7 @@
            ;; r9: ptr to contract of called closure (asssumed to be fn constract) (should no mutate)
            (seq (%% "begin checking arg contract")
                 (Mov rax (Offset r9 (* 8 (add1 arg_idx))))   ;; get arg contract
-                (Mov r8 (Offset rsp (* 8 (- argc arg_idx)))) ;; load current fn arg
+                (Mov r8 (Offset rsp (* 8 (+ 0 (- argc arg_idx))))) ;; load current fn arg
 
                 (Push rax)
                 (Push r8)
@@ -788,7 +797,7 @@
                 (Mov r10 type-proc)
                 (Xor r8 r10)            ;; Untag closure
 
-                (Mov rdi r8) ;; used in call below
+                ;;(Mov rdi r8) ;; used in call below
 
                 (Mov r10 (Offset r8 8)) ;; Get env size
                 (Sal r10 3)
@@ -811,15 +820,19 @@
                 (Mov (Offset rbx 8) r10) ;; Null tail
                 (Add rbx 16)
 
-                (Push r9)
-                (Call 'print_closure)
-                (Pop r9)
+                ;;(Push r9)
+                ;;(Call 'print_closure)
+                ;;(Pop r9)
 
                 (Label done-c)
                 ;;;; Finished this contract
 
                 (%% "done checking arg contract"))))
          (range 0 argc)))
+
+    ;;(Pop r9) ;; retreive pointer to contract list
+    ;;(Mov r9 (Offset r9 8)) ;; Now pointer to tail
+    ;;(Jmp more-contracts)
 
     (Label no-contracts)
     (Pop rax)
