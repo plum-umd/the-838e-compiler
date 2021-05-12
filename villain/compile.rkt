@@ -739,6 +739,15 @@
                 (Mov rax (Offset r9 (* 8 (add1 arg_idx))))   ;; get arg contract
                 (Mov r8 (Offset rsp (* 8 (- argc arg_idx)))) ;; load current fn arg
 
+                (Push rax)
+                (Push r8)
+                (Push r9)
+                (Mov rdi r8)
+                (Call 'print_result)
+                (Pop r9)
+                (Pop r8)
+                (Pop rax)
+
                 ;; if (is-proc rax)
                 (Mov rdx rax)
                 (Mov r10 proc-mask)
