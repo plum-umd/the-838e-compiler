@@ -1,5 +1,5 @@
 #lang racket
-(require "eval-file.rkt")
+(require "eval-file.rkt" "parse-program.rkt")
 
 (let* ((files (directory-list "benchmark/original"))
        (input-files (map (λ (f) (string-append "benchmark/original/" (path->string f))) files))
@@ -14,9 +14,8 @@
       (writeln
        `(begin
           (require jit/interp-heap)
-          (require jit/parse-program)
           (current-input-port (open-input-string "1"))
-          (interp (parse-program (quote ,prog))))
+          (interp ,(parse-program prog)))
        out)
       (close-input-port in)
       (close-output-port out))))
