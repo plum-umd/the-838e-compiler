@@ -1,0 +1,6 @@
+(begin
+	(void)
+        (let ((a (+ 1 (+ 2 3))))
+                (let ((b (if (zero? a) (read-byte) 1)))
+                        b)))
+~               
