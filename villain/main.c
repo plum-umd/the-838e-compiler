@@ -33,7 +33,8 @@ void print_result(vl_val x)
 {
 
   if ((x & 0x7000000000000002) == 0x1000000000000002) {
-    printf("#<closure: 0x%lX>\n", x);
+    print_closure(x ^ 0x1000000000000002);
+    //printf("#<closure: 0x%lX>", x);
     return;
   }
   switch (vl_typeof(x)) {
@@ -94,7 +95,7 @@ void print_result(vl_val x)
     printf("Unknown type: 0x%lX", x);
     break;
   }
-  printf("\n");
+  printf("");
 }
 
 void print_vector(vl_vec *v)
@@ -141,6 +142,7 @@ int main(int argc, char** argv)
 
   result = entry(heap);
 
+  printf("\n=v==v==v==v==RESULT==v==v==v==v=\n");
   print_result(result);
   if (vl_typeof(result) != VL_VOID)
     putchar('\n');
@@ -151,22 +153,23 @@ int main(int argc, char** argv)
 
 void print_contract(int64_t *contract, int64_t indent) {
   if ((((int64_t)contract) & 0x7000000000000002) == 0x1000000000000002) {
-    for (int i = 0; i < indent; i++) {printf(" ");}
-    printf("FlatContract\n");
+    //for (int i = 0; i < indent; i++) {printf(" ");}
+    printf("flat");
   } else {
     int64_t count = contract[0];
-    for (int i = 0; i < indent; i++) {printf(" ");}
-    printf("FnContract (arg count: %ld)\n", count);
+    //for (int i = 0; i < indent; i++) {printf(" ");}
+    printf("fn (%ld) {", count);
     for (int i = 0; i < count; i++) {
       int64_t next = contract[i + 1];
       print_contract(next, indent + 1);
+      printf(", ");
     }
+    printf("}");
   }
 }
 
 void print_contract_list(int64_t *contract_list) {
   if (contract_list == 0) {
-    printf("end of list\n");
   } else {
     print_contract(contract_list[0], 0);
     print_contract_list((int64_t*)contract_list[1]);
@@ -174,18 +177,17 @@ void print_contract_list(int64_t *contract_list) {
 }
 
 void print_closure(int64_t *closure) {
-  printf("Closure:\n");
+  printf("<Closure: ");
   int64_t free_vars = closure[1];
-  printf("num_free_vars: %ld\n", free_vars);
-  printf("environment:\n");
+  printf("vars: %ld env: { ", free_vars);
   int64_t *env = closure + 2;
   for (int i = 0; i < free_vars; i++) {
-    printf(" ");
     print_result(env[i]);
+    printf(", ");
   }
-  printf("contracts:\n");
+  printf("} contracts: { ");
   print_contract_list((int64_t*)closure[2 + free_vars]);
-  printf("\n");
+  printf("}>");
 }
 
 void println() { printf("\n"); }
