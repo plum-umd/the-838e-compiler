@@ -1,0 +1,2 @@
+#lang racket
+(begin (require jit/interp-heap) (require jit/parse-program) (current-input-port (open-input-string "1")) (interp (parse-program (quote (begin (begin (read-byte) (+ 1 2)) (let ((lst (cons #\r (cons #\b (cons #\c (quote ())))))) (let ((v (box (car lst)))) (cons v (cdr lst)))))))))

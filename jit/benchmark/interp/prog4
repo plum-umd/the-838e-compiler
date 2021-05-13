@@ -1,0 +1,2 @@
+#lang racket
+(begin (require jit/interp-heap) (require jit/parse-program) (current-input-port (open-input-string "1")) (interp (parse-program (quote (begin (void) (let ((a (+ 1 (+ 2 3)))) (let ((b (if (zero? a) (read-byte) 1))) b)))))))
