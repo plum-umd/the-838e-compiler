@@ -48,45 +48,49 @@
 
 
   ;;Evildoer examples
-  (check-equal? (run '(read-byte)) '(unload (cons () (read-byte))))
-  (check-equal? (run '(write-byte (add1 2))) '(unload (cons () (write-byte 3))))
-  (check-equal? (run '(peek-byte)) '(unload (cons () (peek-byte))))
+  (check-equal? (run '(read-byte)) '(unload (cons '() (read-byte))))
+  (check-equal? (run '(write-byte (add1 2))) '(unload (cons '() (write-byte 3))))
+  (check-equal? (run '(peek-byte)) '(unload (cons '() (peek-byte))))
   (check-equal? (run '(void)) (void))
   (check-equal? (run  '(eof-object? eof)) #t)
   (check-equal? (run '(begin 1 2)) 2)
   (check-equal? (run '(if (read-byte) (add1 1) (sub1 2)))
                 '(unload
                   (match
-                      (cons () (read-byte))
-                    (('err 'err)
-                     ((cons h v)
-                      (if v
-                          (interp-env-heap (add1 1) () h)
-                          (interp-env-heap (sub1 2) () h)))))))
+                    (cons '() (read-byte))
+                    ('err 'err)
+                    ((cons h v)
+                     (if v
+                         (interp-env-heap #s(Prim1 add1 #s(Int 1)) '() h)
+                         (interp-env-heap #s(Prim1 sub1 #s(Int 2)) '() h))))))
   (check-equal? (run '(if (zero? (read-byte)) (add1 1) (sub1 2)))
                 '(unload
                   (match
                       (match
-                          (cons () (read-byte))
-                        (('err 'err) ((cons h a) (interp-prim1 'zero? a h))))
-                    (('err 'err)
-                     ((cons h v)
+                        (cons '() (read-byte))
+                        ('err 'err)
+                        ((cons h a) (interp-prim1 'zero? a h)))
+                    ('err 'err)
+                    ((cons h v)
                       (if v
-                          (interp-env-heap (add1 1) () h)
-                          (interp-env-heap (sub1 2) () h)))))))
+                          (interp-env-heap #s(Prim1 add1 #s(Int 1)) '() h)
+                          (interp-env-heap #s(Prim1 sub1 #s(Int 2)) '() h))))))
   (check-equal? (run '(begin (eof-object? (read-byte)) (begin 2 (eof-object? eof))))
                 '(unload
                   (match
                       (match
-                          (cons () (read-byte))
-                        (('err 'err) ((cons h a) (interp-prim1 'eof-object? a h))))
-                    (('err 'err) (_ (interp-env-heap (begin 2 (eof-object? eof)) () ()))))))
+                          (cons '() (read-byte))
+                        ('err 'err)
+                        ((cons h a) (interp-prim1 'eof-object? a h)))
+                    ('err 'err)
+                    (_
+                     (interp-env-heap #s(Begin2 #s(Int 2) #s(Prim1 eof-object? #s(Eof))) '() '())))))
   (check-equal? (run '(add1 (peek-byte)))
                 '(unload
                  (match
-                     (cons () (peek-byte))
-                   (('err 'err) ((cons h a) (interp-prim1 'add1 a h))))))
-  (check-equal? (run '(if (zero? 0) (read-byte) 1)) '(unload (cons () (read-byte))))
+                     (cons '() (peek-byte))
+                   ('err 'err) ((cons h a) (interp-prim1 'add1 a h)))))
+  (check-equal? (run '(if (zero? 0) (read-byte) 1)) '(unload (cons '() (read-byte))))
   (check-equal? (run '(if (zero? 1) (read-byte) (void))) (void))
 
   ;;Extort Examples
@@ -123,34 +127,36 @@
                           (+ (+ x x) z))))
                 7)
 
-  (check-equal? (run '(let ((x 97)) (write-byte x))) '(unload (cons () (write-byte 97))))
+  (check-equal? (run '(let ((x 97)) (write-byte x))) '(unload (cons '() (write-byte 97))))
   (check-equal? (run '(let ((x 97)) (begin (write-byte x) x)))
                 '(unload
                   (match
-                      (cons () (write-byte 97))
-                    (('err 'err)
-                     (_ (interp-env-heap x (cons (cons 'x (cons 97 ())) ()) ()))))))
+                      (cons '() (write-byte 97))
+                    ('err 'err)
+                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '())))))
+
   (check-equal? (run '(let ((x 97)) (begin (read-byte) x)))
                 '(unload
                   (match
-                      (cons () (read-byte))
-                    (('err 'err)
-                     (_ (interp-env-heap x (cons (cons 'x (cons 97 ())) ()) ()))))))
+                      (cons '() (read-byte))
+                    ('err 'err)
+                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '())))))
+  
   (check-equal? (run '(let ((x 97)) (begin (peek-byte) x)))
                 '(unload
                   (match
-                      (cons () (peek-byte))
-                    (('err 'err)
-                     (_ (interp-env-heap x (cons (cons 'x (cons 97 ())) ()) ()))))))
+                      (cons '() (peek-byte))
+                    ('err 'err)
+                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '())))))
 
   ;;Hustle Examples
-  (check-equal? (run ''()) '())
+  (check-equal? (run ''()) ''())
   (check-equal? (run '(box 1)) '(box 1))
   (check-equal? (run '(cons 1 2)) '(cons 1 2))
   (check-equal? (run '(unbox (box 1))) 1)
   (check-equal? (run '(car (cons 1 2))) 1)
   (check-equal? (run '(cdr (cons 1 2))) 2)
-  (check-equal? (run '(cons 1 '())) '(cons 1 ()))
+  (check-equal? (run '(cons 1 '())) '(cons 1 '()))
   (check-equal? (run '(let ((x (cons 1 2)))
                         (begin (cdr x)
                                (car x))))

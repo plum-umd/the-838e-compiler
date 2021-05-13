@@ -1,6 +1,6 @@
 #lang racket
 (provide evaluate)
-(require "ast.rkt" "parse.rkt" "partial-evaluator.rkt" "unparse.rkt")
+(require "interpreter-ast.rkt" "parse-interpreter.rkt" "parse-program.rkt" "partial-evaluator.rkt" "unparse.rkt")
 
 ;;Given a program, return the result of partially evaluating it using the
 ;;interpreter.
@@ -21,12 +21,12 @@
          (unload (begin (read-line unload-in) (read unload-in)))
 
          ;;Parse the files and the program
-         (parsed-interp (parse interp))
-         (parsed-interp-prim (parse interp-prim))
-         (parsed-heap (parse heap))
-         (parsed-env (parse env))
-         (parsed-unload (parse unload))
-         (parsed-prog (parse prog))
+         (parsed-interp (parse-interpreter interp))
+         (parsed-interp-prim (parse-interpreter interp-prim))
+         (parsed-heap (parse-interpreter heap))
+         (parsed-env (parse-interpreter env))
+         (parsed-unload (parse-interpreter unload))
+         (parsed-prog (parse-program prog))
 
          ;;Extract the definitions
          (interp-defns (extract-definitions parsed-interp))
@@ -34,14 +34,15 @@
          (heap-defns (extract-definitions parsed-heap))
          (env-defns (extract-definitions parsed-env))
          (unload-defns (extract-definitions parsed-unload))
-         
-         (result-expr (eval 'interp (append interp-defns interp-prim-defns heap-defns env-defns unload-defns) parsed-prog)))
-    (unparse result-expr)))
+
+        
+         (result-expr (eval 'interp (append interp-defns interp-prim-defns heap-defns env-defns unload-defns) parsed-prog)))      
+       (unparse result-expr)))
 
 ;;Prog -> (Listof Defn)
 (define (extract-definitions prog)
   (match prog
-    [(Begin es)
+    [(IBegin es)
      (extract-definitions-helper es (list))]))
 
 ;;(Listof Prog) (Listof Defn) -> (Listof Defn)
@@ -49,7 +50,7 @@
   (match es
     ['() res]
     [(cons e es)
-     (if (Defn? e)
+     (if (IDefn? e)
          (extract-definitions-helper es (cons e res))
          (extract-definitions-helper es res))]))    
     

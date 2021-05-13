@@ -5,7 +5,7 @@
            "env.rkt"
            "unload.rkt"
            "interp-prims-heap.rkt"
-           "ast.rkt")
+           "program-ast.rkt")
 
   ;; type Answer* =
   ;; | (cons Heap Value*)

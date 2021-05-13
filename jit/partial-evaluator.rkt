@@ -9,11 +9,14 @@
 ;; it may still be an expression that is considered Red later on.
 
 (provide eval)
-(require "ast.rkt")
+(require "interpreter-ast.rkt")
+(require "program-ast.rkt")
 
-;;Annotation = Red | Green
+;;Expr = PExpr | IExpr
+;;Annotation = (Red IExpr) | (Green IExpr)
 (struct Red (e)   #:prefab)
 (struct Green (e) #:prefab)
+
 
 ;;Env = IEnv | PEnv
 ;;ENVValue = Expr | Annotation | Value
@@ -44,9 +47,9 @@
 ;;Symbol (Listof any) IEnv PEnv (Listof Defn) -> Annotation
 (define (eval-interp f args interp-env prog-env interp-fns)
   (let* ((interpreter (lookup-interpreter f interp-fns))
-         (f (Defn-f interpreter))
-         (xs (Defn-xs interpreter))
-         (body (Defn-e interpreter)))
+         (f (IDefn-f interpreter))
+         (xs (IDefn-xs interpreter))
+         (body (IDefn-e interpreter)))
     (debug "eval-interp" args interp-env prog-env)
     (if (equal? (length args) (length xs))
         ;;If number of arguments match, run the body of the appropriate interpreter function with parameters bound to arguments. The partial evaluator must be able
@@ -60,44 +63,44 @@
   (begin
     (debug "eval-i" e interp-env prog-env)
     (match e
-      [(Int i) (Green e)]
-      [(Bool b) (Green e)]
-      [(Char c) (Green e)]
-      [(Symbol s) (Green e)]
-      [(Eof) (Green e)]
-      [(Err) (Green e)]
-      [(Empty) (Green e)]
-      [(Var v) ;;This (Var v) is not from the program. This is the interpreter attempting to return the value of a variable v
+      [(IInt i) (Green e)]
+      [(IBool b) (Green e)]
+      [(IChar c) (Green e)]
+      [(ISymbol s) (Green e)]
+      [(IEof) (Green e)]
+      [(IErr) (Green e)]
+      [(IEmpty) (Green e)]
+      [(IVar v)
        (let ((value (lookup v interp-env)))
-         (match value
-           [(? integer? i) (Green (Int i))]
-           [(? boolean? b) (Green (Bool b))]
-           [(? char? c) (Green (Char c))]
-           [(? symbol? s) (Green (Symbol s))]
-           [(? ast-expr? v) (Green v)] 
-           ))]
-      [(And es)
+         (Green (match value
+                  [(? symbol? s) (ISymbol s)]
+                  [(? integer? i) (IInt i)]
+                  [(? boolean? b) (IBool b)]
+                  [(? char? c) (IChar c)]
+                  [(? interpreter-ast? a) a]
+                  [(? program-ast? a) a])))]
+      [(IAnd es)
        (match es
-         ['() (Green (Bool #t))]
+         ['() (Green (IBool #t))]
          [_ (eval-and es interp-env prog-env interp-fns)])]
-      [(Or es)
+      [(IOr es)
        (match es
-         ['() (Green (Bool #f))]
+         ['() (Green (IBool #f))]
          [_ (eval-or es interp-env prog-env interp-fns)])]
-      [(If expr true false)
+      [(IIf expr true false)
        (let ((v (eval-i expr interp-env prog-env interp-fns)))
          (match v
            [(Green v)
             (match v
-              [(Bool b)
+              [(IBool b)
                (if (equal? b #f)
                    (eval-i false interp-env prog-env interp-fns)
                    (eval-i true interp-env prog-env interp-fns))]
               [_
                (eval-i true interp-env prog-env interp-fns)])]
            [(Red v)
-            (Red (If v true false))]))]   
-      [(Match expr cls)                  ;;This is the interpreter attempting to pattern match an expression expr.
+            (Red (IIf v true false))]))]   
+      [(IMatch expr cls)                  ;;This is the interpreter attempting to pattern match an expression expr.
        (let ((expr (eval-i expr interp-env prog-env interp-fns)))
          (match expr
            [(Green expr) 
@@ -109,32 +112,32 @@
               (eval-i e interp-env prog-env interp-fns))]
            [(Red expr) ;;Cannot further evaluate the match since the expression was not fully evaluated so return it to be evaluated at run time
             ;;after free varibales have been bound to their value in the interpreters environment
-            (Red (eval-fvs (Match expr cls) interp-env prog-env interp-fns))]))]
-      [(Begin2 e1 e2)
+            (Red (eval-fvs (IMatch expr cls) interp-env prog-env interp-fns))]))]
+      [(IBegin2 e1 e2)
        (let ((v1 (eval-i e1 interp-env prog-env interp-fns))
              (v2 (eval-i e2 interp-env prog-env interp-fns)))
          (match (cons v1 v2)
            [(cons (Red v1) (Red v2))
-            (Red (Begin2 v1 v2))]
+            (Red (IBegin2 v1 v2))]
            [(cons (Green v1) (Green v2))
             (Green v2)]
            [(cons (Green v1) (Red v2))
             (Red v2)]
            [(cons (Red v1) (Green v2))
-            (Red (Begin2 v1 v2))]))]
-      [(Let x b e)
+            (Red (IBegin2 v1 v2))]))]
+      [(ILet x b e)
        (let ((v (eval-i b interp-env prog-env interp-fns))) 
          (match v
            [(Green v1)   (eval-i e (extend x v1 interp-env) prog-env interp-fns)] 
            ;; extend the interp-env because this is a let in interp
-           [(Red v1)     (Red (Let x v1 e))]))]
-      [(App f es)
+           [(Red v1)     (Red (ILet x v1 e))]))]
+      [(IApp f es)
        (eval-i-app f es interp-env prog-env interp-fns)]
-      [(Prim0 p)
+      [(IPrim0 p)
        (eval-i-prim0 p interp-env prog-env interp-fns)]
-      [(Prim1 p e)
+      [(IPrim1 p e)
        (eval-i-prim1 p e interp-env prog-env interp-fns)]
-      [(Prim2 p e1 e2)
+      [(IPrim2 p e1 e2)
        (eval-i-prim2 p e1 e2 interp-env prog-env interp-fns)])))
 
 ;;Evaluate a list of expressions into value expressions.
@@ -150,12 +153,12 @@
     [(list e) (eval-i e interp-env prog-env interp-fns)]
     [(cons e es)
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Bool #f))
-        (Green (Bool #f))]
+       [(Green (IBool #f))
+        (Green (IBool #f))]
        [(Green _)
         (eval-and es interp-env prog-env interp-fns)]
        [(Red v)
-        (Red (And (cons v es)))])]))
+        (Red (IAnd (cons v es)))])]))
 
 ;;(Listof Expr) -> Annotation
 (define (eval-or es interp-env prog-env interp-fns)
@@ -163,12 +166,12 @@
     [(list e) (eval-i e interp-env prog-env interp-fns)]
     [(cons e es)
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Bool #f))
+       [(Green (IBool #f))
         (eval-or es interp-env prog-env interp-fns)]
        [(Green v)
         (Green v)]
        [(Red v)
-        (Red (Or (cons v es)))])]))
+        (Red (IOr (cons v es)))])]))
        
     
 ;;;;;;;;;;;;;;;;;;;;Primitives that accept no arguments;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -176,71 +179,71 @@
 (define (eval-i-prim0 p interp-env prog-env interp-fns)
   (match p
     ['void
-     (Green (Void))]
+     (Green (IVoid))]
     ['read-byte
-     (Red (Prim0 'read-byte))]
+     (Red (IPrim0 'read-byte))]
     ['peek-byte
-     (Red (Prim0 'peek-byte))]))
+     (Red (IPrim0 'peek-byte))]))
 
 ;;Symbol Expr IEnv PEnv (Listof Defn) -> Annotation
 (define (eval-i-prim1 p e interp-env prog-env interp-fns)
   (match p
     ['add1
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Int i))
-        (Green (Int (add1 i)))]
+       [(Green (IInt i))
+        (Green (IInt (add1 i)))]
        [(Red v)
-        (Red (Prim1 'add1 v))])] ;; I believe this should be add1
+        (Red (IPrim1 'add1 v))])] ;; I believe this should be add1
     ['sub1
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Int i))
-        (Green (Int (sub1 i)))]
+       [(Green (IInt i))
+        (Green (IInt (sub1 i)))]
        [(Red v)
-        (Red (Prim1 'sub1 v))])]
+        (Red (IPrim1 'sub1 v))])]
     ['zero?
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Int i))
-        (Green (Bool (zero? i)))]
+       [(Green (IInt i))
+        (Green (IBool (zero? i)))]
        [(Red v)
-        (Red (Prim1 'zero? v))])]
+        (Red (IPrim1 'zero? v))])]
     ['char?
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Char c)) (Green (Bool #t))]
-       [(Green _) (Green (Bool #f))]
+       [(Green (IChar c)) (Green (IBool #t))]
+       [(Green _) (Green (IBool #f))]
        [(Red v)
-        (Red (Prim1 'char? v))])]
+        (Red (IPrim1 'char? v))])]
     ['integer->char
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Int i))
-        (Green (Char (integer->char i)))]
+       [(Green (IInt i))
+        (Green (IChar (integer->char i)))]
        [(Red v)
-        (Red (Prim1 'integer->char v))])]
+        (Red (IPrim1 'integer->char v))])]
     ['char->integer
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Char c))
-        (Green (Int (char->integer c)))]
+       [(Green (IChar c))
+        (Green (IInt (char->integer c)))]
        [(Red v)
-        (Red (Prim1 'char->integer v))])]
+        (Red (IPrim1 'char->integer v))])]
     ['eof-object?
      (match (eval-i e interp-env prog-env interp-fns)
-       [(Green (Eof))
-        (Green (Bool #t))]
+       [(Green (IEof))
+        (Green (IBool #t))]
        [(Green _)
-        (Green (Bool #f))]
+        (Green (IBool #f))]
        [(Red v)
-        (Red (Prim1 'eof-object? v))])]
+        (Red (IPrim1 'eof-object? v))])]
     ['write-byte
      (match (eval-i e interp-env prog-env interp-fns)
        [(Green v)
-        (Red (Prim1 'write-byte v))]
+        (Red (IPrim1 'write-byte v))]
        [(Red v)
-        (Red (Prim1 'write-byte v))])]
+        (Red (IPrim1 'write-byte v))])]
     ['box
      (match (eval-i e interp-env prog-env interp-fns)
        [(Green v)
-        (Green (Prim1 'box v))]
+        (Green (IPrim1 'box v))]
        [(Red v)
-        (Red (Prim1 'box v))])]))
+        (Red (IPrim1 'box v))])]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;Primitives that accept two arguments;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;Symbol Expr Expr IEnv PEnv (Listof Defn) -> Annotation
@@ -248,30 +251,30 @@
   (match p
     ['+
      (match (eval-i e1 interp-env prog-env interp-fns)
-       [(Green (Int i1))
+       [(Green (IInt i1))
             (match (eval-i e2 interp-env prog-env interp-fns)
-              [(Green (Int i2))   (Green (Int (+ i1 i2)))]
-              [(Red v2)           (Red (Prim2 '+ (Int i1) v2))])]
+              [(Green (IInt i2))   (Green (IInt (+ i1 i2)))]
+              [(Red v2)           (Red (IPrim2 '+ (IInt i1) v2))])]
        [(Red v1)
             (match (eval-i e2 interp-env prog-env interp-fns)
-              [(Green (Int i2))   (Red (Prim2 '+ v1 (Int i2)))]
-              [(Red v2)           (Red (Prim2 '+ v1 v2))])])]
+              [(Green (IInt i2))   (Red (IPrim2 '+ v1 (IInt i2)))]
+              [(Red v2)           (Red (IPrim2 '+ v1 v2))])])]
     ['-
      (match (eval-i e1 interp-env prog-env interp-fns)
-       [(Green (Int i1))
+       [(Green (IInt i1))
             (match (eval-i e2 interp-env prog-env interp-fns)
-              [(Green (Int i2))   (Green (Int (- i1 i2)))]
-              [(Red v2)           (Red (Prim2 '- (Int i1) v2))])]
+              [(Green (IInt i2))   (Green (IInt (- i1 i2)))]
+              [(Red v2)           (Red (IPrim2 '- (IInt i1) v2))])]
        [(Red v1)
             (match (eval-i e2 interp-env prog-env interp-fns)
-              [(Green (Int i2))   (Red (Prim2 '- v1 (Int i2)))]
-              [(Red v2)           (Red (Prim2 '- v1 v2))])])]
+              [(Green (IInt i2))   (Red (IPrim2 '- v1 (IInt i2)))]
+              [(Red v2)           (Red (IPrim2 '- v1 v2))])])]
     ['cons
      (match (cons (eval-i e1 interp-env prog-env interp-fns) (eval-i e2 interp-env prog-env interp-fns))
-       [(cons (Green v1) (Green v2))  (Green (Prim2 'cons v1 v2))]
-       [(cons (Red v1) (Green v2))    (Red (Prim2 'cons v1 v2))]
-       [(cons (Green v1) (Red v2))    (Red (Prim2 'cons v1 v2))]
-       [(cons (Red v1) (Red v2))      (Red (Prim2 'cons v1 v2))])]))
+       [(cons (Green v1) (Green v2))  (Green (IPrim2 'cons v1 v2))]
+       [(cons (Red v1) (Green v2))    (Red (IPrim2 'cons v1 v2))]
+       [(cons (Green v1) (Red v2))    (Red (IPrim2 'cons v1 v2))]
+       [(cons (Red v1) (Red v2))      (Red (IPrim2 'cons v1 v2))])]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;Function Application (Built in Racket functions and interpreter defined functions);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -279,9 +282,10 @@
 (define (eval-i-app f es interp-env prog-env interp-fns)
   (if (interp-fn? f interp-fns)
       (let ((es2 (eval-i-es es interp-env prog-env interp-fns)))
+        
         (if (contains-red es2)
             ;;At least one argument could not be fully evaluate so keep the function application
-            (Red (App f (de-annotate-es es2)))
+            (Red (IApp f (de-annotate-es es2)))
             ;;All arguments were partially evaluated, evaluate the function call
             ;;Dispatch to the approptriate interpreter function stored in interp-fns
             (eval-interp f (de-annotate-es es2) (list) prog-env interp-fns)))
@@ -290,26 +294,25 @@
         ['integer?
          (if (equal? (length es) 1)
              (match (car (eval-i-es es interp-env prog-env interp-fns))
-               [(Green (Int i)) (Green (Bool #t))]
-               [_ (Green (Bool #f))])
+               [(Green (IInt i)) (Green (IBool #t))]
+               [_ (Green (IBool #f))])
              (error (string-append "integer? expected 1 argument but received " (number->string (length es)))))]
         ['byte?
          (if (equal? (length es) 1)    
              (match (car (eval-i-es es interp-env prog-env interp-fns))
-               [(Green (Int i)) (Green (Bool (byte? i)))]
-               [(Green (Bool b)) (Green (Bool (byte? b)))]
-               [(Green (Char c)) (Green (Bool (byte? c)))]
-               [(Green (Eof)) (Green (Bool (byte? eof)))]
-               [(Green (Err)) (Green (Bool #f))])
+               [(Green (IInt i)) (Green (IBool (byte? i)))]
+               [(Green (IBool b)) (Green (IBool (byte? b)))]
+               [(Green (IChar c)) (Green (IBool (byte? c)))]
+               [(Green (IEof)) (Green (IBool (byte? eof)))])
              (error (string-append "byte? expected 1 argument but received " (number->string (length es)))))]
         ['<=
          (if (>= (length es) 2)
-             (Green (Bool (apply <= (map Int-i (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))))
+             (Green (IBool (apply <= (map IInt-i (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))))
              (error (string-append "<= expected 2 or more arguments but received " (number->string (length es)))))]
         ['list  (Green (eval-i-list (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))]
         ['symbol=?
          (if (= (length es) 2)
-             (Green (Bool (apply symbol=? (map Symbol-s (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))))
+             (Green (IBool (apply symbol=? (map ISymbol-s (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))))
              (error (string-append "symbol=? expected 2 arguments but received " (number->string (length es)))))]
         ['length
          (if (equal? (length es) 1)
@@ -328,31 +331,31 @@
 ;;Expr -> Int
 (define (eval-list-ref lst i)
   (match i
-    [(Int 0)
+    [(IInt 0)
      (match lst
-       [(Prim2 'cons h t) h]
-       [(Empty) (error "list-ref: index out of bounds")])]
-    [(Int i)
+       [(IPrim2 'cons h t) h]
+       [(IEmpty) (error "list-ref: index out of bounds")])]
+    [(IInt i)
      (if (< i 0)
          (error "list-ref: negative index not allowed")
          (match lst
-           [(Prim2 'cons h t) (eval-list-ref t (Int (sub1 i)))]
-           [(Empty) (error "list-ref: index out of bounds")]))]))
+           [(IPrim2 'cons h t) (eval-list-ref t (IInt (sub1 i)))]
+           [(IEmpty) (error "list-ref: index out of bounds")]))]))
           
 ;;Return the length of a list given in AST form
 ;;Needed because we only represent lists as (Prim2 'cons h t)
 ;;Expr -> Int
 (define (eval-list-length lst)
   (match lst
-    [(Empty) (Int 0)]
-    [(Prim2 'cons h t) (Int (add1 (Int-i (eval-list-length t))))]))
+    [(IEmpty) (IInt 0)]
+    [(IPrim2 'cons h t) (IInt (add1 (IInt-i (eval-list-length t))))]))
 
 ;;Conver a list of arguments into Prim2 cons list
 ;;(Listof Expr) -> Expr
 (define (eval-i-list es)
   (match es
-    [(cons h t)   (Prim2 'cons h (eval-i-list t))]
-    [(list)       (Empty)]))
+    [(cons h t)   (IPrim2 'cons h (eval-i-list t))]
+    [(list)       (IEmpty)]))
 
 
 
@@ -386,10 +389,10 @@
     ['() (list)]
     [(cons h es)
      (let ((v (match h
-                [(Int i) i]
-                [(Bool b) b]
-                [(Char c) c]
-                [(Symbol s) s])))
+                [(IInt i) i]
+                [(IBool b) b]
+                [(IChar c) c]
+                [(ISymbol s) s])))
        (cons v (extract-value-es es)))]))
        
 
@@ -402,148 +405,151 @@
   (begin (debug "find-clause-i" expr interp-env prog-env)
   (match clauses
     ['() (error "program contains an invalid expression")]
-    [(cons (Clause p b) clauses)
+    [(cons (IClause p b) clauses)
      (match p
-       [(Int s)
-        (if (and (Int? expr) (equal? s (Int-i expr)))
+       [(IInt s)
+        (if (and (IInt? expr) (equal? s (IInt-i expr)))
             (cons interp-env (cons prog-env b))
             (find-clause-i clauses expr interp-env prog-env interp-fns))]
-       [(Bool v)
-        (if (and (Bool? expr) (equal? v (Bool-b expr)))
+       [(IBool v)
+        (if (and (IBool? expr) (equal? v (IBool-b expr)))
             (cons interp-env (cons prog-env b))
             (find-clause-i clauses expr interp-env prog-env interp-fns))]
-       [(Err)
-        (if (Err? expr)
+       [(ISymbol s)
+        (if (and (ISymbol? expr) (equal? s (ISymbol-s expr)))
             (cons interp-env (cons prog-env b))
             (find-clause-i clauses expr interp-env prog-env interp-fns))]
-       [(Var v) ;;A single varible v in a pattern matches any expression
+       [(IErr)
+        (if (IErr? expr)
+            (cons interp-env (cons prog-env b))
+            (find-clause-i clauses expr interp-env prog-env interp-fns))]
+       [(IVar v) ;;A single varible v in a pattern matches any expression
         (cons (extend v expr interp-env) (cons prog-env b))]
-       [(Empty)
+       [(IEmpty)
         (match expr
-          [(Empty)  (cons interp-env (cons prog-env b))]
+          [(IEmpty)  (cons interp-env (cons prog-env b))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Wild)
+       [(IWild)
         (cons interp-env (cons prog-env b))]
-       [(Cons h v)
+       [(ICons h v)
         (match expr
-          [(Prim2 'cons sh sv)
+          [(IPrim2 'cons sh sv)
            (cons (extend h sh (extend v sv interp-env)) (cons prog-env b))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pred p)
+       [(IPred p)
         (match p
           ['integer?
            (match expr
-             [(Int _) (cons interp-env (cons prog-env b))]
+             [(IInt _) (cons interp-env (cons prog-env b))]
              [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
           ['boolean?
            (match expr
-             [(Bool _) (cons interp-env (cons prog-env b))]
+             [(IBool _) (cons interp-env (cons prog-env b))]
              [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
           ['char?
            (match expr
-             [(Char _) (cons interp-env (cons prog-env b))]
+             [(IChar _) (cons interp-env (cons prog-env b))]
              [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
           ['eof-object?
            (match expr
-             [(Eof) (cons interp-env (cons prog-env b))]
+             [(IEof) (cons interp-env (cons prog-env b))]
              [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
           ['void?
            (match expr
-             [(Void) (cons interp-env (cons prog-env b))]
+             [(IVoid) (cons interp-env (cons prog-env b))]
              [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])])]
-       [(Pat (Empty))
+       [(IStruct es)
+        (match (list-ref es 0)
+          ['Empty
+           (match expr
+             [(Empty)
+              (cons interp-env (cons prog-env b))]
+             [_
+              (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Int
+           (match expr
+             [(Int i) (cons (extend (list-ref es 1) (IInt i) interp-env) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Bool
+           (match expr
+             [(Bool bool) (cons (extend (list-ref es 1) (IBool bool) interp-env) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Char
+           (match expr
+             [(Char char) (cons (extend (list-ref es 1) (IChar char) interp-env) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Eof
+           (match expr
+             [(Eof) (cons interp-env (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['If
+           (match expr
+             [(If e1 e2 e3) (cons (extend (list-ref es 1) e1 (extend (list-ref es 2) e2 (extend (list-ref es 3) e3 interp-env))) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Var
+           (match expr
+             [(Var e1) (cons (extend (list-ref es 1) e1 interp-env) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Prim0
+           (match expr
+             [(Prim0 p)
+              (cons (extend (list-ref es 1) p interp-env) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Prim1
+           (match expr
+             [(Prim1 pr expr) (cons (extend (list-ref es 1) pr (extend (list-ref es 2) expr interp-env)) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Prim2
+           (match expr
+             [(Prim2 pr v1 v2) (cons (extend (list-ref es 1) pr (extend (list-ref es 2) v1 (extend (list-ref es 3) v2 interp-env))) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Let
+           (match expr
+             [(Let x bi e) (cons (extend (list-ref es 3) e (extend (list-ref es 2) bi (extend (list-ref es 1) x interp-env))) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Begin2
+           (match expr
+             [(Begin2 e1 e2) (cons (extend (list-ref es 1) e1 (extend (list-ref es 2) e2 interp-env)) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])])]
+                        
+       [(IEnv-Cons (? symbol? s1) (? symbol? s2) (? symbol? s3))
         (match expr
-          [(Empty)
-           (cons interp-env (cons prog-env b))]
-          [_
-           (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Int (? symbol? s)))
-        (match expr
-          [(Int i) (cons (extend s i interp-env) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (If (? symbol? se1) (? symbol? se2) (? symbol? se3)))
-        (match expr
-          [(If e1 e2 e3) (cons (extend se1 e1 (extend se2 e2 (extend se3 e3 interp-env))) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Bool (? symbol? sb)))
-        (match expr
-          [(Bool bool) (cons (extend sb bool interp-env) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Char (? symbol? sb)))
-        (match expr
-          [(Char char) (cons (extend sb char interp-env) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Eof))
-        (match expr
-          [(Eof) (cons interp-env (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Var (? symbol? s1)))
-        (match expr
-          [(Var e1) (cons (extend s1 e1 interp-env) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Prim0 (? symbol? s)))
-        (match expr
-          [(Prim0 p)
-           (cons (extend s p interp-env) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Prim1 (? symbol? p) (? symbol? e)))
-        (match expr
-          [(Prim1 pr expr) (cons (extend p pr (extend e expr interp-env)) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Prim2 (? symbol? p) (? symbol? e1) (? symbol? e2)))
-        (match expr
-          [(Prim2 pr v1 v2) (cons (extend p pr (extend e2 v2 (extend e1 v1 interp-env))) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Let (? symbol? s1) (? symbol? s2) (? symbol? s3)))
-        (match expr
-          [(Let x bi e) (cons (extend s3 e (extend s2 bi (extend s1 x interp-env))) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Pat (Begin2 (? symbol? s1) (? symbol? s2)))
-        (match expr
-          [(Begin2 e1 e2) (cons (extend s1 e1 (extend s2 e2 interp-env)) (cons prog-env b))]
-          [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(Symbol s)
-        (if (and (Symbol? expr) (equal? s (Symbol-s expr)))
-            (cons interp-env (cons prog-env b))
-            (find-clause-i clauses expr interp-env prog-env interp-fns))]
-       [(Env-Cons (? symbol? s1) (? symbol? s2) (? symbol? s3))
-        (match expr
-          [(Prim2 'cons (Prim2 'cons x (Prim2 'cons bi (Empty))) rest)
+          [(IPrim2 'cons (IPrim2 'cons x (IPrim2 'cons bi (IEmpty))) rest)
               (cons (extend s1 x (extend s2 bi (extend s3 rest interp-env))) (cons prog-env b))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(List-S-PWVs s (list (PWV ps vs) ...))
+       [(IList-S-PWVs s (list (IPWV ps vs) ...))
         (match expr
-          [(Prim2 'cons (Symbol h) t)
-           (if (and (equal? s h) (Prim2? t) (equal? (Prim2-p t) 'cons))
+          [(IPrim2 'cons (ISymbol h) t)
+           (if (and (equal? s h) (IPrim2? t) (equal? (IPrim2-p t) 'cons))
                (let ((res (match-pwvs ps vs t interp-env prog-env interp-fns)))
                  (if res
                    (cons res (cons prog-env b))
                    (find-clause-i clauses expr interp-env prog-env interp-fns)))
                (find-clause-i clauses expr interp-env prog-env interp-fns))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(List-S-Vs s (list vs ...))
+       [(IList-S-Vs s (list vs ...))
         (match expr
-          [(Prim2 'cons (Symbol h) t)
-           (if (and (equal? s h) (Prim2? t) (equal? (Prim2-p t) 'cons))
+          [(IPrim2 'cons (ISymbol h) t)
+           (if (and (equal? s h) (IPrim2? t) (equal? (IPrim2-p t) 'cons))
                (let ((res (match-vs vs t interp-env prog-env interp-fns)))
                  (if res
                    (cons res (cons prog-env b))
                    (find-clause-i clauses expr interp-env prog-env interp-fns)))
                (find-clause-i clauses expr interp-env prog-env interp-fns))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(List-S-Ps s (list ps ...))
+       [(IList-S-Ps s (list ps ...))
         (match expr
-          [(Prim2 'cons (Symbol h) t)           
-           (if (and (equal? s h) (Prim2? t) (equal? (Prim2-p t) 'cons))
+          [(IPrim2 'cons (ISymbol h) t)           
+           (if (and (equal? s h) (IPrim2? t) (equal? (IPrim2-p t) 'cons))
                (let ((res (match-ps ps t interp-env prog-env interp-fns)))
                  (if res
                      (cons interp-env (cons prog-env b))
                      (find-clause-i clauses expr interp-env prog-env interp-fns)))
                (find-clause-i clauses expr interp-env prog-env interp-fns))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
-       [(List-S-LSV s1 (list s2 var))
+       [(IList-S-LSV s1 (list s2 var))
         (match expr
-          [(Prim2 'cons (Symbol v1) (Prim2 'cons (Prim2 'cons (Symbol v2) (Prim2 'cons v3 (Empty))) (Empty)))
+          [(IPrim2 'cons (ISymbol v1) (IPrim2 'cons (IPrim2 'cons (ISymbol v2) (IPrim2 'cons v3 (IEmpty))) (IEmpty)))
            (if (and (equal? s1 v1) (equal? s2 v2))
                (cons (extend var v3 interp-env) (cons prog-env b))
                (find-clause-i clauses expr interp-env prog-env interp-fns))]
@@ -561,36 +567,36 @@
     (match (cons ps vs)
       [(cons '() '())
        (match lst
-         [(Empty) interp-env]
+         [(IEmpty) interp-env]
          [_ #f])]
       [(cons (cons 'integer? ps) (cons v vs))
        (match lst
-         [(Prim2 'cons (Int i) lst)
-          (match-pwvs ps vs lst (extend v (Int i) interp-env) prog-env interp-fns)]
+         [(IPrim2 'cons (IInt i) lst)
+          (match-pwvs ps vs lst (extend v (IInt i) interp-env) prog-env interp-fns)]
          [_ #f])]
       [(cons (cons 'boolean? ps) (cons v vs))
        (match lst
-         [(Prim2 'cons (Bool b) lst)
-          (match-pwvs ps vs lst (extend v (Bool b) interp-env) prog-env interp-fns)]
+         [(IPrim2 'cons (IBool b) lst)
+          (match-pwvs ps vs lst (extend v (IBool b) interp-env) prog-env interp-fns)]
          [_ #f])]
       [(cons (cons 'char? ps) (cons v vs))
        (match lst
-         [(Prim2 'cons (Char c) lst)
-          (match-pwvs ps vs lst (extend v (Char c) interp-env) prog-env interp-fns)]
+         [(IPrim2 'cons (IChar c) lst)
+          (match-pwvs ps vs lst (extend v (IChar c) interp-env) prog-env interp-fns)]
          [_ #f])]
       [(cons (cons 'byte? ps) (cons v vs))
        (match lst
-         [(Prim2 'cons (Int i) lst)
+         [(IPrim2 'cons (IInt i) lst)
           (if (byte? i)
-              (match-pwvs ps vs lst (extend v (Int i) interp-env) prog-env interp-fns)
+              (match-pwvs ps vs lst (extend v (IInt i) interp-env) prog-env interp-fns)
               #f)]
          [_ #f])]
       [(cons (cons s ps) (cons v vs)) ;;Any other predicate is assumed to be defined in one of the interpreter files
        (match lst
-         [(Prim2 'cons h lst)
-          (let ((res (eval-i (App s (list h)) interp-env prog-env interp-fns)))
+         [(IPrim2 'cons h lst)
+          (let ((res (eval-i (IApp s (list h)) interp-env prog-env interp-fns)))
             (match res
-              [(Green (Bool #t)) (match-pwvs ps vs lst (extend v h interp-env) prog-env interp-fns)]
+              [(Green (IBool #t)) (match-pwvs ps vs lst (extend v h interp-env) prog-env interp-fns)]
               [_ #f]))]
          [_ #f])])))
 
@@ -604,36 +610,36 @@
     (match ps
       ['()
        (match lst
-         [(Empty) #t]
+         [(IEmpty) #t]
          [_ #f])]
       [(cons 'integer? ps)
        (match lst
-         [(Prim2 'cons (Int i) lst)
+         [(IPrim2 'cons (IInt i) lst)
           (match-ps ps lst interp-env prog-env interp-fns)]
          [_ #f])]
       [(cons 'boolean? ps)
        (match lst
-         [(Prim2 'cons (Bool b) lst)
+         [(IPrim2 'cons (IBool b) lst)
           (match-ps ps lst interp-env prog-env interp-fns)]
          [_ #f])]
       [(cons 'char? ps)
        (match lst
-         [(Prim2 'cons (Char c) lst)
+         [(IPrim2 'cons (IChar c) lst)
           (match-ps ps lst interp-env prog-env interp-fns)]
          [_ #f])]
       [(cons 'byte? ps)
        (match lst
-         [(Prim2 'cons (Int i) lst)
+         [(IPrim2 'cons (IInt i) lst)
           (if (byte? i)
               (match-ps ps lst interp-env prog-env interp-fns)
               #f)]
          [_ #f])]
       [(cons s ps) ;;Any other predicate is assumed to be defined in one of the interpreter files
        (match lst
-         [(Prim2 'cons h lst)
-          (let ((res (eval-i (App s (list h)) interp-env prog-env interp-fns)))
+         [(IPrim2 'cons h lst)
+          (let ((res (eval-i (IApp s (list h)) interp-env prog-env interp-fns)))
             (match res
-              [(Green (Bool #t)) (match-ps ps lst interp-env prog-env interp-fns)]
+              [(Green (IBool #t)) (match-ps ps lst interp-env prog-env interp-fns)]
               [_ #f]))]
          [_ #f])])))
 
@@ -647,12 +653,12 @@
     (match vs
       [(cons v vs)
        (match lst
-         [(Prim2 'cons h lst)
+         [(IPrim2 'cons h lst)
           (match-vs vs lst (extend v h interp-env) prog-env interp-fns)]
          [_ #f])]
       ['()
        (match lst
-         [(Empty) interp-env]
+         [(IEmpty) interp-env]
          [_ #f])])))
 
 
@@ -676,7 +682,7 @@
 (define (interp-fn? f interp-fns)
   (match interp-fns
     ['() #f]
-    [(cons (Defn fn xs e) interp-fns)
+    [(cons (IDefn fn xs e) interp-fns)
      (if (equal? f fn)
          #t
          (interp-fn? f interp-fns))]))
@@ -686,61 +692,66 @@
 (define (lookup-interpreter f lst)
   (match lst
     ['() (error (string-append (symbol->string f) " is not an interpreter function"))]
-    [(cons (Defn fun xs e) lst)
+    [(cons (IDefn fun xs e) lst)
      (if (equal? fun f)
-         (Defn fun xs e)
+         (IDefn fun xs e)
          (lookup-interpreter f lst))]))
 
 ;;Find all the free variables within an expression. Every variable is free. It is up to the surrounding expression to remove it if it is bound.
 ;;Expr -> (Listof Symbol)
 (define (free-vars e)
   (match e
-    [(Int i) '()]
-    [(Bool b) '()]
-    [(Char c) '()]
-    [(Eof) '()]
-    [(Void) '()]
-    [(Var v) (list v)]
-    [(If e1 e2 e3)
+    [(IInt i) '()]
+    [(IBool b) '()]
+    [(IChar c) '()]
+    [(IEof) '()]
+    [(IEmpty) '()]
+    [(IErr) '()]
+    [(ISymbol s) '()]
+    [(IVoid) '()]
+    [(IVar v) (list v)]
+    [(IIf e1 e2 e3)
      (append (free-vars e1) (free-vars e2) (free-vars e3))]
-    [(Begin2 e1 e2)
+    [(ILet x e1 e2)
+     (append (free-vars e1) (remove* (free-vars e2) (list x)))]
+    [(IOr es)
+     (foldl (λ (e a) (append (free-vars e) a)) es)]
+    [(IAnd es)
+     (foldl (λ (e a) (append (free-vars e) a)) es)]
+    [(IPrim0 _) '()]
+    [(IPrim1 _ e1) (free-vars e1)]
+    [(IPrim2 _ e1 e2) (append (free-vars e1) (free-vars e2))]
+    [(IBegin2 e1 e2)
      (append (free-vars e1) (free-vars e2))]
-    [(App f es)
+    [(IApp f es)
      (apply append (map free-vars es))]
-    [(Match e cls)
-     (append (free-vars e) (apply append (map (λ (c) (remove* (pattern-vars (Clause-p c)) (free-vars (Clause-e c)))) cls)))]))
+    [(IMatch e cls)
+     (append (free-vars e) (apply append (map (λ (c) (remove* (pattern-vars (IClause-p c)) (free-vars (IClause-e c)))) cls)))]))
 
 ;;Pattern -> (List of symbols)
 (define (pattern-vars p)
   (match p
-    [(Int i) '()]
-    [(Bool b) '()]
-    [(Char c) '()]
-    [(Eof) '()]
-    [(Empty) '()]
-    [(Symbol s) '()]
-    [(Var v) (list v)]
-    [(Wild) '()]
-    [(Err) '()]
-    [(Cons h v) (list h v)]
-    [(Box b) (list b)]
-    [(Env-Cons v1 v2 v3) (list v1 v2 v3)]
-    [(Pred p) '()]
-    [(PWV _ v) (list v)]
-    [(List-S-PWVs _ pwvs) (map (λ (pwv)
+    [(IInt i) '()]
+    [(IBool b) '()]
+    [(IChar c) '()]
+    [(IEof) '()]
+    [(IEmpty) '()]
+    [(ISymbol s) '()]
+    [(IVar v) (list v)]
+    [(IWild) '()]
+    [(IErr) '()]
+    [(ICons h v) (list h v)]
+    [(IBox b) (list b)]
+    [(IEnv-Cons v1 v2 v3) (list v1 v2 v3)]
+    [(IPred p) '()]
+    [(IPWV _ v) (list v)]
+    [(IList-S-PWVs _ pwvs) (map (λ (pwv)
                               (match pwv
-                                [(PWV _ v) v])) pwvs)]
-    [(List-S-Ps _ _) '()]
-    [(List-S-Vs _ vs) vs]
-    [(List-S-LSV _ (list _ v)) (list v)]
-    [(Pat (Int s)) (list s)]
-    [(Pat (Bool b)) (list b)]
-    [(Pat (Char s)) (list s)]
-    [(Pat (Eof)) '()]
-    [(Pat (Prim0 p)) (list p)]
-    [(Pat (Begin2 e1 e2)) (list e1 e2)]
-    [(Pat (Prim1 s1 s2)) (list s1 s2)]
-    [(Pat (If s1 s2 s3)) (list s1 s2 s3)]))
+                                [(IPWV _ v) v])) pwvs)]
+    [(IList-S-Ps _ _) '()]
+    [(IList-S-Vs _ vs) vs]
+    [(IList-S-LSV _ (list _ v)) (list v)]
+    [(IStruct es) (sub1 (length es))]))
 
 ;;Return the expression with free variables filled out
 ;;Expr IEnv PEnv (Listof Defn) -> Expr
@@ -750,35 +761,44 @@
 ;;Expr (Listof Symbols) IEnv PEnv (Listof Defn)
 (define (eval-fvs-h e bound-vs interp-env prog-env interp-fns)
   (match e
-    [(Int i) e]
-    [(Bool b) e]
-    [(Char c) e]
-    [(Symbol s) e]
-    [(Eof) e]
-    [(Err) e]
-    [(Empty) e]
-    [(Var v) (if (member v bound-vs)
-                 (Var v)
-                 (Green-e (eval-i (Var v) interp-env prog-env interp-fns)))]
-    [(If e1 e2 e3)
-     (If (eval-fvs-h e1 bound-vs interp-env prog-env interp-fns)
+    [(IInt i) e]
+    [(IBool b) e]
+    [(IChar c) e]
+    [(ISymbol s) e]
+    [(IEof) e]
+    [(IErr) e]
+    [(IEmpty) e]
+    [(IVar v) (if (member v bound-vs)
+                 (IVar v)
+                 (Green-e (eval-i (IVar v) interp-env prog-env interp-fns)))]
+                   
+    [(IIf e1 e2 e3)
+     (IIf (eval-fvs-h e1 bound-vs interp-env prog-env interp-fns)
          (eval-fvs-h e2 bound-vs interp-env prog-env interp-fns)
          (eval-fvs-h e3 bound-vs interp-env prog-env interp-fns))]
-    [(App f es)
-     (App f (map (λ (e) (eval-fvs-h e bound-vs interp-env prog-env interp-fns)) es))]
-    [(Prim0 p)
-     (Prim0 p)]
-    [(Prim1 p e)
-     (Prim1 p (eval-fvs-h e bound-vs interp-env prog-env interp-fns))]
-    [(Prim2 p e1 e2)
-     (Prim2 p (eval-fvs-h e1 bound-vs interp-env prog-env interp-fns) (eval-fvs-h e2 bound-vs interp-env prog-env interp-fns))]
-    [(Begin2 e1 e2)
-     (Begin2
+    [(ILet x e1 e2)
+     (ILet x
+           (eval-fvs-h e1 bound-vs interp-env prog-env interp-fns)
+           (eval-fvs-h e2 bound-vs interp-env prog-env interp-fns))]
+    [(IOr es)
+     (IOr (map (λ (e) (eval-fvs-h e bound-vs interp-env prog-env interp-fns)) es))]
+    [(IAnd es)
+     (IAnd (map (λ (e) (eval-fvs-h e bound-vs interp-env prog-env interp-fns)) es))]
+    [(IApp f es)
+     (IApp f (map (λ (e) (eval-fvs-h e bound-vs interp-env prog-env interp-fns)) es))]
+    [(IPrim0 p)
+     (IPrim0 p)]
+    [(IPrim1 p e)
+     (IPrim1 p (eval-fvs-h e bound-vs interp-env prog-env interp-fns))]
+    [(IPrim2 p e1 e2)
+     (IPrim2 p (eval-fvs-h e1 bound-vs interp-env prog-env interp-fns) (eval-fvs-h e2 bound-vs interp-env prog-env interp-fns))]
+    [(IBegin2 e1 e2)
+     (IBegin2
       (eval-fvs-h e1 bound-vs interp-env prog-env interp-fns)
       (eval-fvs-h e2 bound-vs interp-env prog-env interp-fns))]
-    [(Match e cls)
-     (Match (eval-fvs-h e bound-vs interp-env prog-env interp-fns)
-            (map (λ (c) (Clause (Clause-p c) (eval-fvs-h (Clause-e c) (append (pattern-vars (Clause-p c)) bound-vs) interp-env prog-env interp-fns))) cls))]))
+    [(IMatch e cls)
+     (IMatch (eval-fvs-h e bound-vs interp-env prog-env interp-fns)
+            (map (λ (c) (IClause (IClause-p c) (eval-fvs-h (IClause-e c) (append (pattern-vars (IClause-p c)) bound-vs) interp-env prog-env interp-fns))) cls))]))
      
              
 ;;Print the string s if the debug? global variable is true

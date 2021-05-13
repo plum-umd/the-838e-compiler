@@ -1,0 +1,4 @@
+(let ((x (cons 1 (cons 2 (cons 3 (cons 4 '()))))))
+           (let ((y (car x)))
+             (let ((z (car (cdr x))))
+               (+ y z))))
