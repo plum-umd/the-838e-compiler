@@ -1,0 +1,7 @@
+(begin 
+	(begin
+		(read-byte)
+		(+ 1 2))
+	(let ((lst (cons #\r (cons #\b (cons #\c '())))))
+		(let ((v (box (car lst))))
+			(cons v (cdr lst)))))

@@ -15,7 +15,7 @@
                          jit/program-ast)
                 ,(evaluate f-content))))
     (displayln "#lang racket" f-out)
-    (displayln res f-out)
+    (writeln res f-out)
     (close-input-port f-in)
     (close-output-port f-out)))
     
