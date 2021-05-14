@@ -5,7 +5,7 @@
 
 ;; String -> Void
 ;; Compile contents of given file name,
-;; emit asm code on stdout
+;; emit Wasm code on stdout
 (define (main fn)
   (let ((p (open-input-file fn)))
     (begin

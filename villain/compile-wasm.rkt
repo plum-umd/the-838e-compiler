@@ -350,8 +350,11 @@
         i32.const ,word-size
         i32.add
         global.set $hp
-        local.get $a            ;; the counter starts from the length (≡ cnt i = 0)
-                                ;; the counter counts down by word-size (≡ i++)
+        local.get $a            ;; the counter starts from the length and counts
+                                ;; down by (imm->bits 1). At the same time, in
+                                ;; each iteration, the heap ptr is increased by
+                                ;; word-size (≡ i++, where i is the index of the
+                                ;; word of str on the heap)
         i32.eqz                 ;; check if counter = 0
         br_if 1                 ;; if so, break to the outer block (with index 1)
         global.get $hp
