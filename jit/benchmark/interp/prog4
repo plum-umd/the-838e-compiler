@@ -1,2 +1,2 @@
 #lang racket
-(begin (require jit/interp-heap) (current-input-port (open-input-string "1")) (interp #s(Begin2 #s(Prim0 void) #s(Let a #s(Prim2 + #s(Int 1) #s(Prim2 + #s(Int 2) #s(Int 3))) #s(Let b #s(If #s(Prim1 zero? #s(Var a)) #s(Prim0 read-byte) #s(Int 1)) #s(Var b))))))
+(begin (require jit/interp-heap) (current-input-port (open-input-string "1")) (interp #s(Prog () #s(Begin2 #s(Prim0 void) #s(Let a #s(Prim2 + #s(Int 1) #s(Prim2 + #s(Int 2) #s(Int 3))) #s(Let b #s(If #s(Prim1 zero? #s(Var a)) #s(Prim0 read-byte) #s(Int 1)) #s(Var b)))))))

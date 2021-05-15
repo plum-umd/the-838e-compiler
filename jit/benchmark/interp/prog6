@@ -1,0 +1,2 @@
+#lang racket
+(begin (require jit/interp-heap) (current-input-port (open-input-string "1")) (interp #s(Prog (#s(Defn tri (i) #s(If #s(Prim1 zero? #s(Var i)) #s(Int 0) #s(Prim2 + #s(Var i) #s(App tri (#s(Prim1 sub1 #s(Var i)))))))) #s(App tri (#s(Int 100000))))))

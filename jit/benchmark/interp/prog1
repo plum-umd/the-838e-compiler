@@ -1,2 +1,2 @@
 #lang racket
-(begin (require jit/interp-heap) (current-input-port (open-input-string "1")) (interp #s(Let x #s(Prim2 cons #s(Int 1) #s(Prim2 cons #s(Int 2) #s(Prim2 cons #s(Int 3) #s(Prim2 cons #s(Int 4) #s(Empty))))) #s(Let y #s(Prim1 car #s(Var x)) #s(Let z #s(Prim1 car #s(Prim1 cdr #s(Var x))) #s(Prim2 + #s(Var y) #s(Var z)))))))
+(begin (require jit/interp-heap) (current-input-port (open-input-string "1")) (interp #s(Prog () #s(Let x #s(Prim2 cons #s(Int 1) #s(Prim2 cons #s(Int 2) #s(Prim2 cons #s(Int 3) #s(Prim2 cons #s(Int 4) #s(Empty))))) #s(Let y #s(Prim1 car #s(Var x)) #s(Let z #s(Prim1 car #s(Prim1 cdr #s(Var x))) #s(Prim2 + #s(Var y) #s(Var z))))))))

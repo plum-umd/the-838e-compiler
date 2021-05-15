@@ -1,0 +1,6 @@
+(begin 
+    (define (tri i) 
+        (if (zero? i) 
+            0
+            (+ i (tri (sub1 i)))))
+    (tri 100000))
