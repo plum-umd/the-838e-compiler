@@ -13,9 +13,10 @@
                          jit/unload
                          jit/interp-prims-heap
                          jit/program-ast)
+                 (current-input-port (open-input-string "1"))
                 ,(evaluate f-content))))
     (displayln "#lang racket" f-out)
-    (displayln res f-out)
+    (writeln res f-out)
     (close-input-port f-in)
     (close-output-port f-out)))
     

@@ -1,0 +1,2 @@
+#lang racket
+(begin (require jit/interp-heap) (current-input-port (open-input-string "1")) (interp #s(Begin2 #s(Begin2 #s(Prim0 read-byte) #s(Prim2 + #s(Int 1) #s(Int 2))) #s(Let lst #s(Prim2 cons #s(Char #\r) #s(Prim2 cons #s(Char #\b) #s(Prim2 cons #s(Char #\c) #s(Empty)))) #s(Let v #s(Prim1 box #s(Prim1 car #s(Var lst))) #s(Prim2 cons #s(Var v) #s(Prim1 cdr #s(Var lst))))))))

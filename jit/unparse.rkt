@@ -13,7 +13,7 @@
     [(IEof) 'eof]
     [(IErr) ''err]
     [(IEmpty) ''()]
-    [(IVoid) (void)]
+    [(IVoid) (list 'void)]
     [(IVar v) v]
     [(? program-ast? a) a]
     [(ISymbol s) (list 'quote s)]

@@ -51,7 +51,7 @@
   (check-equal? (run '(read-byte)) '(unload (cons '() (read-byte))))
   (check-equal? (run '(write-byte (add1 2))) '(unload (cons '() (write-byte 3))))
   (check-equal? (run '(peek-byte)) '(unload (cons '() (peek-byte))))
-  (check-equal? (run '(void)) (void))
+  (check-equal? (run '(void)) '(void))
   (check-equal? (run  '(eof-object? eof)) #t)
   (check-equal? (run '(begin 1 2)) 2)
   (check-equal? (run '(if (read-byte) (add1 1) (sub1 2)))
@@ -91,7 +91,7 @@
                      (cons '() (peek-byte))
                    ('err 'err) ((cons h a) (interp-prim1 'add1 a h)))))
   (check-equal? (run '(if (zero? 0) (read-byte) 1)) '(unload (cons '() (read-byte))))
-  (check-equal? (run '(if (zero? 1) (read-byte) (void))) (void))
+  (check-equal? (run '(if (zero? 1) (read-byte) (void))) '(void))
 
   ;;Extort Examples
   (check-equal? (run '(add1 #f)) ''err)

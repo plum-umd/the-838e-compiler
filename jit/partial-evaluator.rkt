@@ -791,6 +791,7 @@
 ;;Expr (Listof Symbols) IEnv PEnv (Listof Defn)
 (define (eval-fvs-h e bound-vs interp-env prog-env interp-fns)
   (match e
+    [(? program-ast? a) a]
     [(IInt i) e]
     [(IBool b) e]
     [(IChar c) e]
