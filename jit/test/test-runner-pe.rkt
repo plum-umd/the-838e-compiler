@@ -61,8 +61,8 @@
                     ('err 'err)
                     ((cons h v)
                      (if v
-                         (interp-env-heap #s(Prim1 add1 #s(Int 1)) '() h)
-                         (interp-env-heap #s(Prim1 sub1 #s(Int 2)) '() h))))))
+                         (interp-env-heap #s(Prim1 add1 #s(Int 1)) '() h '())
+                         (interp-env-heap #s(Prim1 sub1 #s(Int 2)) '() h '()))))))
   (check-equal? (run '(if (zero? (read-byte)) (add1 1) (sub1 2)))
                 '(unload
                   (match
@@ -73,8 +73,8 @@
                     ('err 'err)
                     ((cons h v)
                       (if v
-                          (interp-env-heap #s(Prim1 add1 #s(Int 1)) '() h)
-                          (interp-env-heap #s(Prim1 sub1 #s(Int 2)) '() h))))))
+                          (interp-env-heap #s(Prim1 add1 #s(Int 1)) '() h '())
+                          (interp-env-heap #s(Prim1 sub1 #s(Int 2)) '() h '()))))))
   (check-equal? (run '(begin (eof-object? (read-byte)) (begin 2 (eof-object? eof))))
                 '(unload
                   (match
@@ -84,7 +84,7 @@
                         ((cons h a) (interp-prim1 'eof-object? a h)))
                     ('err 'err)
                     (_
-                     (interp-env-heap #s(Begin2 #s(Int 2) #s(Prim1 eof-object? #s(Eof))) '() '())))))
+                     (interp-env-heap #s(Begin2 #s(Int 2) #s(Prim1 eof-object? #s(Eof))) '() '() '())))))
   (check-equal? (run '(add1 (peek-byte)))
                 '(unload
                  (match
@@ -133,21 +133,21 @@
                   (match
                       (cons '() (write-byte 97))
                     ('err 'err)
-                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '())))))
+                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '() '())))))
 
   (check-equal? (run '(let ((x 97)) (begin (read-byte) x)))
                 '(unload
                   (match
                       (cons '() (read-byte))
                     ('err 'err)
-                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '())))))
+                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '() '())))))
   
   (check-equal? (run '(let ((x 97)) (begin (peek-byte) x)))
                 '(unload
                   (match
                       (cons '() (peek-byte))
                     ('err 'err)
-                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '())))))
+                    (_ (interp-env-heap #s(Var x) (cons (cons 'x (cons 97 '())) '()) '() '())))))
 
   ;;Hustle Examples
   (check-equal? (run ''()) ''())
@@ -177,7 +177,70 @@
   (check-equal? (run '(box (cons 1 (cons 2 (box 1)))))
                 `(box (cons 1 (cons 2 (box 1)))))
   (check-equal? (run '(cons (+ 1 2) (box (if #t (zero? 0) 4))))
-                '(cons 3 (box #t))))
+                '(cons 3 (box #t)))
+
+  (check-equal? (run '(let ((x 1))
+                        (begin (write-byte 97)
+                               1)))
+                '(unload
+                  (match (cons '() (write-byte 97))
+                    ('err 'err)
+                    (_ (interp-env-heap #s(Int 1) (cons (cons 'x (cons 1 '())) '()) '() '())))))
+  (check-equal? (run '(let ((x 1))
+                        (let ((y 2))
+                          (begin (write-byte 97)
+                                 1))))
+                '(unload
+                    (match (cons '() (write-byte 97))
+                      ('err 'err)
+                      (_
+                        (interp-env-heap
+                        #s(Int 1)
+                        (cons (cons 'y (cons 2 '())) (cons (cons 'x (cons 1 '())) '()))
+                        '()
+                        '())))))
+
+  (check-equal? (run '(let ((x (cons 1 2)))
+                        (begin (write-byte 97)
+                               (car x))))
+                '(unload
+                  (match (cons (cons 2 (cons 1 '())) (write-byte 97))
+                    ('err 'err)
+                    (_
+                      (interp-env-heap
+                        #s(Prim1 car #s(Var x))
+                        (cons (cons 'x (cons (cons 'cons (cons 0 '())) '())) '())
+                        (cons 2 (cons 1 '()))
+                        '())))))
+                     
+  ;; Iniquity tests
+  (check-equal? (run
+                 '(begin (define (f x) x)
+                         (f 5)))
+                5)
+  (check-equal? (run
+                '(begin (define (tri x)
+                          (if (zero? x)
+                              0
+                              (+ x (tri (sub1 x)))))
+                        (tri 9)))
+              45)
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (if (empty? lst)
+                          0
+                          (+ 1 (len (cdr lst)))))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                3)
+    (check-equal? (run
+                 '(begin
+                    (define (tri i)
+                      (if (zero? i)
+                          0
+                          (+ i (tri (sub1 i)))))
+                    (tri 100)))
+                5050))
 
 
   

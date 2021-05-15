@@ -91,9 +91,10 @@
 (struct IList-S-PWVs (s pwvs)           #:prefab)
 (struct IList-S-Ps (s ps)               #:prefab)
 (struct IList-S-LSV (s l)               #:prefab)
-(struct IList-S-Vs (s vs)               #:prefab)         
+(struct IList-S-Vs (s vs)               #:prefab)
+(struct IList-Ss-L (vs h)               #:prefab)  
 
 (define (interpreter-ast? v)
   (or (IEof? v) (IVoid? v) (IEmpty? v) (IInt? v) (IBool? v) (IChar? v) (ISymbol? v) (IPrim0? v) (IPrim1? v) (IPrim2? v) 
       (IIf? v) (IBegin? v) (IBegin2? v) (IOr? v) (IAnd? v) (ILet? v) (IVar? v) (IApp? v) (IMatch? v) (IClause? v) (IWild? v) (ILit? v)
-      (ICons? v) (IEnv-Cons? v) (IBox? v) (IErr? v) (IStruct? v) (IPred? v) (IPWV? v) (IList-S-PWVs? v) (IList-S-Ps? v) (IList-S-LSV? v) (IList-S-Vs? v)))
+      (ICons? v) (IEnv-Cons? v) (IBox? v) (IErr? v) (IStruct? v) (IPred? v) (IPWV? v) (IList-S-PWVs? v) (IList-S-Ps? v) (IList-S-LSV? v) (IList-S-Vs? v) (IList-Ss-L? v)))

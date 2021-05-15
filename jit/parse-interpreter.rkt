@@ -83,7 +83,12 @@
     [(list 'list (list 'quote (? symbol? s1)) (? symbol? vs) ...) ;;To deal with patterns like (list 'char? v)
      (IList-S-Vs s1 vs)]
     [(list 'list (list 'quote (? symbol? s1)) (list 'list (list 'quote (? symbol? s2)) (? symbol? i))) ;;To deal with patterns like (list 'car (list 'cons v))
-     (IList-S-LSV s1 (list s2 i))]))
+     (IList-S-LSV s1 (list s2 i))]
+    [(list 'Prog ds e)            (IStruct (list 'Prog ds e))]
+    [(list 'Defn f xs e)          (IStruct (list 'Defn f xs e))]
+    [(list 'App f es)             (IStruct (list 'App f es))]
+    [(list 'list (? symbol? vs) '... (? symbol? h)) ;;To deal with patterns like (list vs ... h)
+      (IList-Ss-L vs h)]))
      
 
 ;;Given a symbol, determine if it is a primitive of the language

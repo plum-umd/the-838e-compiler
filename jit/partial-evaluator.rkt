@@ -77,6 +77,8 @@
                   [(? integer? i) (IInt i)]
                   [(? boolean? b) (IBool b)]
                   [(? char? c) (IChar c)]
+                  [(list (? program-ast? ds) ...) (if (zero? (length ds)) (IEmpty) ds)]
+                  [(list (? symbol? xs) ...) xs]
                   [(? interpreter-ast? a) a]
                   [(? program-ast? a) a])))]
       [(IAnd es)
@@ -243,7 +245,15 @@
        [(Green v)
         (Green (IPrim1 'box v))]
        [(Red v)
-        (Red (IPrim1 'box v))])]))
+        (Red (IPrim1 'box v))])]
+    ['empty?
+     (match (eval-i e interp-env prog-env interp-fns)
+       [(Green (IEmpty))
+        (Green (IBool #t))]
+       [(Green _)
+        (Green (IBool #f))]
+       [(Red v)
+        (Red (IPrim1 'empty? v))])]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;Primitives that accept two arguments;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;Symbol Expr Expr IEnv PEnv (Listof Defn) -> Annotation
@@ -316,12 +326,18 @@
              (error (string-append "symbol=? expected 2 arguments but received " (number->string (length es)))))]
         ['length
          (if (equal? (length es) 1)
-             (Green (eval-list-length (car (de-annotate-es (eval-i-es es interp-env prog-env interp-fns)))))
+             (match (car (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))) 
+              [(list (? symbol? xs) ...) (Green (IInt (length xs)))] 
+              [v (Green (eval-list-length v))])
              (error (string-append "length expected 1 argument but received " (number->string (length es)))))]
         ['list-ref
          (if (equal? (length es) 2)
              (Green (apply eval-list-ref (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))
              (error (string-append "list-ref expected 2 arguments but received " (number->string (length es)))))]
+        ['=
+         (if (= (length es) 2)
+             (Green (IBool (apply = (map IInt-i (de-annotate-es (eval-i-es es interp-env prog-env interp-fns))))))
+             (error (string-append "= expected 2 or more arguments but received " (number->string (length es)))))]
         [_ (error (string-append "partial evaluator does not support function "
                                  (symbol->string f)))])))
 
@@ -435,6 +451,8 @@
         (match expr
           [(IPrim2 'cons sh sv)
            (cons (extend h sh (extend v sv interp-env)) (cons prog-env b))]
+          [(cons sh sv)
+           (cons (extend h sh (extend v sv interp-env)) (cons prog-env b))]
           [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
        [(IPred p)
         (match p
@@ -510,6 +528,18 @@
           ['Begin2
            (match expr
              [(Begin2 e1 e2) (cons (extend (list-ref es 1) e1 (extend (list-ref es 2) e2 interp-env)) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Prog
+           (match expr
+             [(Prog ds e) (cons (extend (list-ref es 1) ds (extend (list-ref es 2) e interp-env)) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['App
+           (match expr
+             [(App f e) (cons (extend (list-ref es 1) f (extend (list-ref es 2) e interp-env)) (cons prog-env b))]
+             [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])]
+          ['Defn
+           (match expr
+             [(Defn f xs e) (cons (extend (list-ref es 1) f (extend (list-ref es 2) xs (extend (list-ref es 3) e interp-env))) (cons prog-env b))]
              [_ (find-clause-i clauses expr interp-env prog-env interp-fns)])])]
                         
        [(IEnv-Cons (? symbol? s1) (? symbol? s2) (? symbol? s3))

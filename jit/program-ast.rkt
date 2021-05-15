@@ -1,6 +1,11 @@
 #lang racket
 (provide (all-defined-out))
 
+;; type Prog = (Prog (Listof Defn) Expr)
+(struct Prog (ds e) #:prefab)
+
+;; type Defn = (Defn Id (Listof Id) Expr)
+(struct Defn (f xs e) #:prefab)
 
 ;; type Expr = (Eof)
 ;;           | (Void)
@@ -51,4 +56,4 @@
 
 (define (program-ast? v)
   (or (Eof? v) (Void? v) (Empty? v) (Int? v) (Bool? v) (Char? v) (Symbol? v) (Prim0? v) (Prim1? v) (Prim2? v)
-      (If? v) (Begin2? v) (Let? v) (Var? v) (App? v)))
+      (If? v) (Begin2? v) (Let? v) (Var? v) (App? v) (Prog? v) (Defn? v)))

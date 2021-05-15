@@ -101,26 +101,34 @@
                         (let ((y (box 3)))
                           (unbox y))))
                  3)
-  ;;; ;; Iniquity tests
-  ;;; (check-equal? (run
-  ;;;                '(begin (define (f x) x)
-  ;;;                        (f 5)))
-  ;;;               5)
-  ;;; (check-equal? (run
-  ;;;                '(begin (define (tri x)
-  ;;;                          (if (zero? x)
-  ;;;                              0
-  ;;;                              (+ x (tri (sub1 x)))))
-  ;;;                        (tri 9)))
-  ;;;               45)
-  ;;; (check-equal? (run
-  ;;;                '(begin
-  ;;;                   (define (len lst)
-  ;;;                     (if (empty? lst)
-  ;;;                         0
-  ;;;                         (+ 1 (len (cdr lst)))))
-  ;;;                   (len (cons 1 (cons 2 (cons 3 '()))))))
-  ;;;               3)
+  ;; Iniquity tests
+  (check-equal? (run
+                 '(begin (define (f x) x)
+                         (f 5)))
+                5)
+  (check-equal? (run
+                 '(begin (define (tri x)
+                           (if (zero? x)
+                               0
+                               (+ x (tri (sub1 x)))))
+                         (tri 9)))
+                45)
+  (check-equal? (run
+                 '(begin
+                    (define (len lst)
+                      (if (empty? lst)
+                          0
+                          (+ 1 (len (cdr lst)))))
+                    (len (cons 1 (cons 2 (cons 3 '()))))))
+                3)
+    (check-equal? (run
+                 '(begin
+                    (define (tri i)
+                      (if (zero? i)
+                          i
+                          (+ i (tri (sub1 i)))))
+                    (tri 10)))
+                55)
 
   ;;; (check-equal? (run '(<= 0 0)) #t)
   ;;; (check-equal? (run '(<= 0 1)) #t)
@@ -157,32 +165,32 @@
   (check-equal? (run '(let ((x 97)) (begin (peek-byte) x)) "b")
                 (cons 97 ""))
 
-;;;   ;; Hustle examples
-;;;   (check-equal? (run '(let ((x 1))
-;;;                         (begin (write-byte 97)
-;;;                                1))
-;;;                      "")
-;;;                 (cons 1 "a"))
+  ;; Hustle examples
+  (check-equal? (run '(let ((x 1))
+                        (begin (write-byte 97)
+                               1))
+                     "")
+                (cons 1 "a"))
 
-;;;   (check-equal? (run '(let ((x 1))
-;;;                         (let ((y 2))
-;;;                           (begin (write-byte 97)
-;;;                                  1)))
-;;;                      "")
-;;;                 (cons 1 "a"))
+  (check-equal? (run '(let ((x 1))
+                        (let ((y 2))
+                          (begin (write-byte 97)
+                                 1)))
+                     "")
+                (cons 1 "a"))
 
-;;;   (check-equal? (run '(let ((x (cons 1 2)))
-;;;                         (begin (write-byte 97)
-;;;                                (car x)))
-;;;                      "")
-;;;                 (cons 1 "a"))
-;;;   ;; Iniquity examples
-;;;   (check-equal? (run '(begin (define (print-alphabet i)
-;;;                                (if (zero? i)
-;;;                                    (void)
-;;;                                    (begin (write-byte (- 123 i))
-;;;                                           (print-alphabet (sub1 i)))))
-;;;                              (print-alphabet 26))
-;;;                      "")
-;;;                 (cons (void) "abcdefghijklmnopqrstuvwxyz"))
+  (check-equal? (run '(let ((x (cons 1 2)))
+                        (begin (write-byte 97)
+                               (car x)))
+                     "")
+                (cons 1 "a"))
+  ;; Iniquity examples
+  (check-equal? (run '(begin (define (print-alphabet i)
+                               (if (zero? i)
+                                   (void)
+                                   (begin (write-byte (- 123 i))
+                                          (print-alphabet (sub1 i)))))
+                             (print-alphabet 26))
+                     "")
+                (cons (void) "abcdefghijklmnopqrstuvwxyz"))
 )
