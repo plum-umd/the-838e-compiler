@@ -28,4 +28,16 @@ for FILE in *; do
 done
 
 
+echo
+echo "*************************************************Running compiled programs************************************************************"
 
+for FILE in *; do
+	echo
+	echo "-------------------------------------------${FILE}-------------------------------------------------------------"
+
+	cd ../../
+	make "./benchmark/compile/${FILE}.run"
+	chmod 755 "./benchmark/compile/${FILE}.run"
+	cd benchmark/original
+	time ../"compile/${FILE}.run" < ../compile/input
+done
