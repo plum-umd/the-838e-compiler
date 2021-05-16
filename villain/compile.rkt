@@ -654,7 +654,7 @@
              (Xor rax r8)
 
              (Push rax)
-             (check-contracts-args (length es))
+             (check-contracts-args rax (length es))
              (Pop rax)
 
              (copy-closure-env-to-stack)
@@ -662,6 +662,13 @@
              (Mov rdx (Offset rax 0))
              (Jmp rdx)   ; (Offset rax 0) contains the address of the label of λ
              (Label ret)
+
+             (Mov r8 (Offset rsp 0))
+             (Mov r9 type-proc)
+             (Xor r8 r9)
+
+             (check-return-contract r8 (length es))
+
              (Add rsp 8))         ; pop the pointer to λ closure off the stack
         (seq (%% "compile-nontail-call")
              (Sub rsp 8)
@@ -676,7 +683,7 @@
              (Xor rax r8)
 
              (Push rax)
-             (check-contracts-args (length es))
+             (check-contracts-args rax (length es))
              (Pop rax)
 
              (copy-closure-env-to-stack)
@@ -686,7 +693,11 @@
              (Label ret)
 
              ;; Return values is in $rax
-             (check-return-contract)
+             (Mov r8 (Offset rsp 0))
+             (Mov r9 type-proc)
+             (Xor r8 r9)
+
+             (check-return-contract r8 (length es))
 
              (Add rsp 16)))))   
 
@@ -727,7 +738,7 @@
 ;; OUT rax (#t or #f)
 ;; DIRTY: ALL
 (define (call-flat-contract closure-reg fn-reg arg-reg )
-  (let ((ret (gensym 'ret)))
+  (let ((ret (gensym 'contract_ret)))
     (seq
       (Push closure-reg)  ;; push lambda pointer
       (Lea rcx ret)
@@ -760,7 +771,7 @@
                 (Jmp done-c)
                 (Label fn-c)
                 ;; Here we know we have a function contract
-                ;; TODO: assert-proc r8
+                ;; TODO: assert-proc
 
                 (Mov r10 type-proc)
                 (Xor arg-reg r10)            ;; Untag closure
@@ -784,8 +795,6 @@
                 (Add rbx 16)
 
                 (Label done-c))))
-
-(define (check-return-contract) '())
 
 ;; IN: closure-reg: pointer to the closure whose contracts we iterat over
 ;; OUT: NONE
@@ -824,12 +833,27 @@
       (apply append (map (lambda (arg_idx)
         (seq (%% "begin checking arg contract")
              (Mov rax (Offset r9 (* 8 (add1 arg_idx))))         ;; get arg contract
+             ;; This assumes that for-each-contract pushes onet thing onto the stack
              (Mov r8 (Offset rsp (* 8 (+ 1 (- argc arg_idx))))) ;; load current fn arg
              (Push r9)
              (check-contract rax r8)
              (Pop r9)
              (%% "done checking arg contract")))
         (range 0 argc)))))
+
+(define (check-return-contract closure-reg argc) 
+  (seq
+    (Push rax)
+
+    (for-each-contract closure-reg r9
+      (seq (%% "begin checking return contract")
+           (Mov rax (Offset r9 (* 8 (add1 argc))))
+           (Mov r8 (Offset rsp 8))
+           (Push r9)
+           (check-contract rax r8)
+           (Pop r9)
+           (%% "end checking return contract")))
+    (Pop rax)))
 
 (define (copy-closure-env-to-stack)
   (let ((loop (gensym 'copy_closure))
