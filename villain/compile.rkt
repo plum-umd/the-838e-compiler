@@ -405,54 +405,6 @@
           (Cmp rcx (imm->bits (length xs))) ; arity check
           (Jne 'raise_error)
 
-          ;(%% "BEGIN contracts")
-          ;(match c
-          ;  [(FnContract cs)
-          ;   (apply append
-          ;          (map (lambda (x c)
-          ;                 (match c
-          ;                   [(FnContract cs) 
-          ;                     (seq (%% "BEGIN fn contract")
-          ;                          (Mov rax (Offset rsp (lookup x env)))
-          ;                          (assert-proc rax env)
-
-          ;                          (Mov r8 type-proc)
-          ;                          (Xor rax r8) ;; rax contains closure pointer
-
-          ;                          (Mov r8 (Offset rax 8)) ;; get size of heap
-          ;                          (Sal r8 3)
-          ;                          (Add rax 16) ;; move past fn pointer and arg count
-          ;                          (Add rax r8) ;; move past env on heap
-
-          ;                          ;; FIXME: handle non-empty lists
-          ;                          (Mov (Offset rax 0) rbx) ;; Pointer to a new contract list structure
-          ;                          (Mov r8 rbx)
-          ;                          (Add rbx 16)
-
-          ;                          ;; Initialize contract list
-          ;                          (Mov (Offset r8 0) rbx) ;; Pointer to a new fn_contract
-          ;                          (Mov rax 0)
-          ;                          (Mov (Offset r8 8) rax) ;; Null pointer to tail
-          ;                          (compile-contract c)
-
-          ;                          ;(Mov rdi (Offset rsp (lookup x env)))
-          ;                          ;(Mov r8 type-proc)
-          ;                          ;(Xor rdi r8)
-          ;                          ;(Call 'print_closure)
-
-          ;                          (%% "END fn contract"))]
-          ;                   [_ 
-          ;                     (seq (%% "BEGIN flat contract")
-          ;                          (compile-e-nontail
-          ;                            (If (LCall c (list (Var x)))
-          ;                                (Pass)
-          ;                                (Error))
-          ;                            env)
-          ;                          (%% "END flat contract"))]))
-          ;               xs (reverse (cdr (reverse cs)))))]
-          ;  [c (seq)])
-          ;(%% "END contracts")
-
           (compile-e-nontail e0 env)
           ; return
           (Add rsp (* 8 (+ (length xs) (length (fvs l))))) ; pop args & fvs
