@@ -1,6 +1,10 @@
 #lang racket
 (require "eval-file.rkt" "parse-program.rkt")
 
+;;Read the original programs from the original directory
+;;Output the result of evaluating the files into the simplified directory
+;;Output a ready to be interpreted s-expression for each original program to the interp directory
+;;Output the result of compiling the files into the compiled directory
 (let* ((files (directory-list "benchmark/original"))
        (input-files (map (λ (f) (string-append "benchmark/original/" (path->string f))) files))
        (output-eval-files (map (λ (f) (string-append "benchmark/simplified/" (path->string f))) files))
@@ -20,8 +24,4 @@
       (close-input-port in)
       (close-output-port out))))
           
-  
-;;Output the result of evaluating the files into the simplified directory
-
-;;Output the result of compiling the files into the compiled directory
 

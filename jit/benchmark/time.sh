@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#Simplify programs and prepare them for interpretation
+cd ../
+racket eval-benchmarks.rkt
+cd benchmark
+
 cd original
 
 echo "***********************************************Running partially evaluated programs*************************************************"
