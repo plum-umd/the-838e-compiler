@@ -653,27 +653,9 @@
              (Mov r8 type-proc)
              (Xor rax r8)
 
-             ;(Mov rdi rax)
-             ;(Call 'print_closure)
-             ;(Mov rax (Offset rsp (* 8 (add1 (length es)))))
-             ;(Mov r8 type-proc)
-             ;(Xor rax r8)
-
-             (do-contract-stuff (length es))
-
-             ;; TODO: here we have the function arguments on the stack and the
-             ;;       closure pointer in rax. Read the contract out of the
-             ;;       closure and check each arugment.
-             ;;       alg: 
-             ;;         * TODO: assert contract is function contract
-             ;;         * TODO: assert sub contract count == (length es)
-             ;;         * For each arg_i (count statically known):
-             ;;           * Get contract_i
-             ;;           * if flat contract (is_proc):
-             ;;             * exec function on corresponding arg
-             ;;           * otherwise it's a fn contract:
-             ;;             * assert-proc corresonding arg
-             ;;             * append to arg contract list
+             (Push rax)
+             (check-contracts-args (length es))
+             (Pop rax)
 
              (copy-closure-env-to-stack)
              (Mov rcx (imm->bits (length es)))
@@ -693,101 +675,87 @@
              (Mov r8 type-proc)
              (Xor rax r8)
 
-             ;;(Mov rdi rax)
-             ;;(Call 'print_closure)
-             ;;(Mov rax (Offset rsp (* 8 (add1 (length es)))))
-             ;;(Mov r8 type-proc)
-             ;;(Xor rax r8)
-             (do-contract-stuff (length es))
+             (Push rax)
+             (check-contracts-args (length es))
+             (Pop rax)
 
              (copy-closure-env-to-stack)
              (Mov rcx (imm->bits (length es)))
              (Mov rdx (Offset rax 0))
              (Jmp rdx)  ; (Offset rax 0)
              (Label ret)
+
+             ;; Return values is in $rax
+             (check-return-contract)
+
              (Add rsp 16)))))   
 
-;; makes a lot of assumptions about what compile call does with regs and the
-;; stack. Be careful.
-;; rax contains untagged pointer to closure
-(define (do-contract-stuff argc)
-  (let ((more-contracts (gensym 'more_contracts))
-        (no-contracts (gensym 'no_contracts))) (seq
-    (%% "begin contract checking")
-    (Push rax)
-    (Mov r8 (Offset rax 8)) ;; get env size
-    (Sal r8 3)
-    (Mov r9 rax)
-    (Add r9 r8) 
-    (Mov r9 (Offset r9 16)) ;; points to contract list
-    (Label more-contracts)
-    (Cmp r9 0) 
-    (Je no-contracts)       ;; if contracts list pointer is null skip
-                            ;; TODO: This will need to be a loop over
-                            ;;       contract list
-    (Push r9) ;; save contract list pointer for looping
-    (Mov r9 (Offset r9 0))  ;; get the contract pointer
+;; IN: closure-reg (untagged closure pointer)
+;; OUT: list-reg (pointer to pointer to contract list)
+;; DIRTY: r10
+(define (get-contract-list closure-reg list-reg) 
+  (seq
+    (%% "get-contract-list")
+    (Mov r10 (Offset closure-reg 8)) ;; get env size
+    (Sal r10 3)
+    (Mov list-reg closure-reg)
+    (Add list-reg r10) 
+    (Add list-reg 16)))
 
-    (Push r9)
-    (Mov rdi r9)
-    (Mov rsi 0)
-    (Call 'print_contract)
-    (Pop r9)
+;; IN: contract-reg
+;; DIRTY: r10, rdx
+(define (is-flat-contract contract-reg)
+  (seq
+    (%% "is-flat-contract")
+    (Mov rdx contract-reg)
+    (Mov r10 proc-mask)
+    (And rdx r10)
+    (Mov r10 type-proc)
+    (Cmp rdx r10)))
 
-    ;; TODO: assert it's a fn contract
+;; IN: closure-reg (tagged closure pointer)
+;; OUT: fn-reg (address of closure code)
+;; DIRTY: r10
+(define (get-fn-pointer closure-reg fn-reg)
+  (seq
+    (Mov fn-reg closure-reg)
+    (Mov r10 type-proc)
+    (Xor fn-reg r10)
+    (Mov fn-reg (Offset fn-reg 0))))
 
-    (apply append (map (lambda (arg_idx)
+;; IN: fn-ptr (address of code for contract)
+;; OUT rax (#t or #f)
+;; DIRTY: ALL
+(define (call-flat-contract closure-reg fn-reg arg-reg )
+  (let ((ret (gensym 'ret)))
+    (seq
+      (Push closure-reg)  ;; push lambda pointer
+      (Lea rcx ret)
+      (Push rcx)  ;; push return address
+      (Push arg-reg)   ;; push argument
+      (Mov rcx (imm->bits 1)) ;; set arg count
+      (Jmp fn-reg)   ;; do the call
+      (Label ret)
+      (Add rsp 8))))
+
+
+;; IN: contract-reg (pointer to a contract)
+;;     arg-reg (argument value)
+;; DIRTY: ALL
+(define (check-contract contract-reg arg-reg)
            (let ((fn-c (gensym 'fn_c))
                  (done-c (gensym 'done_c))
-                 (ret (gensym 'ret))
-                 (pass-c (gensym 'pass_c))
                  (loop-start (gensym 'loop_start))
                  (loop-end (gensym 'loop_end)))
-           ;; r9: ptr to contract of called closure (asssumed to be fn constract) (should no mutate)
-           (seq (%% "begin checking arg contract")
-                (Mov rax (Offset r9 (* 8 (add1 arg_idx))))   ;; get arg contract
-                (Mov r8 (Offset rsp (* 8 (+ 1 (- argc arg_idx))))) ;; load current fn arg
-
-                (Push rax)
-                (Push r8)
-                (Push r9)
-                (Mov rdi r8)
-                (Call 'print_result)
-                (Pop r9)
-                (Pop r8)
-                (Pop rax)
-
-                ;; if (is-proc rax)
-                (Mov rdx rax)
-                (Mov r10 proc-mask)
-                (And rdx r10)
-                (Mov r10 type-proc)
-                (Cmp rdx r10)
-
+           (seq (is-flat-contract contract-reg)
                 (Jne fn-c) 
                 ;;;; Here we know we have a flat contract
 
-                (Mov rdx rax)
-                (Mov r10 type-proc)
-                (Xor rdx r10)
-                (Mov rdx (Offset rdx 0)) ;; address of lambda
+                (get-fn-pointer contract-reg r9)
+                (call-flat-contract contract-reg r9 arg-reg)
 
-                (Push r9) ;; save r9 (parent contract)
-
-                (Push rax)  ;; push lambda pointer
-                (Lea rcx ret)
-                (Push rcx)  ;; push return address
-                (Push r8)   ;; push argument
-                (Mov rcx (imm->bits 1)) ;; set arg count
-                (Jmp rdx)   ;; do the call
-
-                (Label ret)
-                (Add rsp 8) ;; pop lambda pointer
-
-                (Cmp rax (imm->bits #t)) ;; error if contract fails
+                (Cmp contract-reg (imm->bits #t)) ;; error if contract fails
                 (Jne 'raise_error)
-
-                (Pop r9) ;; restore r9
 
                 (Jmp done-c)
                 (Label fn-c)
@@ -795,48 +763,73 @@
                 ;; TODO: assert-proc r8
 
                 (Mov r10 type-proc)
-                (Xor r8 r10)            ;; Untag closure
+                (Xor arg-reg r10)            ;; Untag closure
 
-                ;;(Mov rdi r8) ;; used in call below
-
-                (Mov r10 (Offset r8 8)) ;; Get env size
-                (Sal r10 3)
-                (Add r8 r10)            ;; Move past env
-                (Add r8 16)             ;; ptr ptr list
+                (get-contract-list arg-reg arg-reg)
 
                 (Label loop-start)
-                (Mov r10 (Offset r8 0)) ;; loop until is r10 = *r8 nullptr
+                (Mov r10 (Offset arg-reg 0)) ;; loop until is r10 = *r8 nullptr
                 (Cmp r10 0)
                 (Je loop-end)
 
-                (Mov r8 r10)
-                (Add r8 8)
+                (Mov arg-reg r10)
+                (Add arg-reg 8)
                 (Jmp loop-start)
                 (Label loop-end)
-                ;; TODO: append to list
-                (Mov (Offset r8 0) rbx) ;; Store pointer to new contract list
-                (Mov (Offset rbx 0) rax) ;; Put contract in list
+
+                (Mov (Offset arg-reg 0) rbx) ;; Store pointer to new contract list
+                (Mov (Offset rbx 0) contract-reg) ;; Put contract in list
                 (Mov r10 0)
                 (Mov (Offset rbx 8) r10) ;; Null tail
                 (Add rbx 16)
 
-                ;;(Push r9)
-                ;;(Call 'print_closure)
-                ;;(Pop r9)
+                (Label done-c))))
 
-                (Label done-c)
-                ;;;; Finished this contract
+(define (check-return-contract) '())
 
-                (%% "done checking arg contract"))))
-         (range 0 argc)))
+;; IN: closure-reg: pointer to the closure whose contracts we iterat over
+;; OUT: NONE
+;; DIRTY: ALL
+;; code-spec:
+;;   IN: contract-reg
+;;   OUT: NONE
+;;   DIRY: ANY
+(define (for-each-contract closure-reg contract-reg code)
+  (let ((more-contracts (gensym 'more_contracts))
+        (no-contracts (gensym 'no_contracts))) (seq
+    (%% "begin contract checking")
+    (get-contract-list closure-reg contract-reg) 
+    (Mov contract-reg (Offset contract-reg 0)) ;; r9 is now pointer to contract list
+    (Label more-contracts)
+    (Cmp contract-reg 0) 
+    (Je no-contracts)       ;; if contracts list pointer is null skip
+    (Push contract-reg) ;; save contract list pointer for looping
+    (Mov contract-reg (Offset contract-reg 0))  ;; get the contract pointer
+    ;; TODO: assert it's a fn contract
 
-    (Pop r9) ;; retreive pointer to contract list
-    (Mov r9 (Offset r9 8)) ;; Now pointer to tail
+    code
+
+    (Pop contract-reg) ;; retreive pointer to contract list
+    (Mov contract-reg (Offset contract-reg 8)) ;; Now pointer to tail
     (Jmp more-contracts)
 
     (Label no-contracts)
-    (Pop rax)
     (%% "done contract checking"))))
+
+;; IN: closure-reg: pointer to the closure whose contracts we iterat over
+;; OUT: NONE
+;; DIRTY: ALL
+(define (check-contracts-args closure-reg argc)
+    (for-each-contract closure-reg r9
+      (apply append (map (lambda (arg_idx)
+        (seq (%% "begin checking arg contract")
+             (Mov rax (Offset r9 (* 8 (add1 arg_idx))))         ;; get arg contract
+             (Mov r8 (Offset rsp (* 8 (+ 1 (- argc arg_idx))))) ;; load current fn arg
+             (Push r9)
+             (check-contract rax r8)
+             (Pop r9)
+             (%% "done checking arg contract")))
+        (range 0 argc)))))
 
 (define (copy-closure-env-to-stack)
   (let ((loop (gensym 'copy_closure))
