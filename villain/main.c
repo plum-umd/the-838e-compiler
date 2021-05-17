@@ -29,6 +29,8 @@ void print_vector(vl_vec *);
 void print_bignum(vl_bignum *);
 vl_str *symbol_to_str(vl_symbol s);
 
+void print_closure(int64_t *closure);
+
 void print_result(vl_val x)
 {
 
@@ -151,17 +153,15 @@ int main(int argc, char** argv)
   return 0;
 }
 
-void print_contract(int64_t *contract, int64_t indent) {
+void print_contract(int64_t *contract) {
   if ((((int64_t)contract) & 0x7000000000000002) == 0x1000000000000002) {
-    //for (int i = 0; i < indent; i++) {printf(" ");}
     printf("flat");
   } else {
     int64_t count = contract[0];
-    //for (int i = 0; i < indent; i++) {printf(" ");}
     printf("fn (%ld) {", count);
     for (int i = 0; i < count; i++) {
       int64_t next = contract[i + 1];
-      print_contract(next, indent + 1);
+      print_contract(next);
       printf(", ");
     }
     printf("}");
@@ -171,7 +171,7 @@ void print_contract(int64_t *contract, int64_t indent) {
 void print_contract_list(int64_t *contract_list) {
   if (contract_list == 0) {
   } else {
-    print_contract(contract_list[0], 0);
+    print_contract(contract_list[0]);
     print_contract_list((int64_t*)contract_list[1]);
   }
 }
