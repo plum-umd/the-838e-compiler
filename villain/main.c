@@ -4,6 +4,7 @@
 #include "runtime.h"
 #include <math.h>
 #include <gmp.h>
+#include <string.h>
 
 FILE* in;
 FILE* out;
@@ -35,8 +36,10 @@ void print_result(vl_val x)
 {
 
   if ((x & 0x7000000000000002) == 0x1000000000000002) {
-    print_closure(x ^ 0x1000000000000002);
-    //printf("#<closure: 0x%lX>", x);
+    // Calling print_closure can cause an infinite loop.  Would be easy enough
+    // to avoid by tracking a set of printed closures, but not worth it. 
+    //print_closure(x ^ 0x1000000000000002);
+    printf("#<closure: 0x%lX>", x);
     return;
   }
   switch (vl_typeof(x)) {
@@ -144,7 +147,6 @@ int main(int argc, char** argv)
 
   result = entry(heap);
 
-  printf("\n=v==v==v==v==RESULT==v==v==v==v=\n");
   print_result(result);
   if (vl_typeof(result) != VL_VOID)
     putchar('\n');
@@ -191,3 +193,7 @@ void print_closure(int64_t *closure) {
 }
 
 void println() { printf("\n"); }
+
+void my_memcpy(void *dst, void *src, size_t size) {
+  memcpy(dst, src, size);
+}

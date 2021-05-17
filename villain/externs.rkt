@@ -1,10 +1,17 @@
 #lang racket
 (provide externs char-op->uc symbol->label stdlib-ids stdlib-defs
-         stdlib-fs-ls externs-es)
+         stdlib-fs-ls externs-es contract-externs)
 (require "ast.rkt" "externs-stdlib.rkt" a86/ast)
 
+(define contract-externs
+  (list (Extern 'my_memcpy)
+        (Extern 'print_result)
+        (Extern 'println)
+        (Extern 'print_closure)
+        (Extern 'print_contract)))
+
 (define (externs p)
-  (append (list (Extern 'print_result) (Extern 'println) (Extern 'print_closure) (Extern 'print_contract)) (match p
+  (append contract-externs  (match p
      [(Letrec fs ls e)
         (remove-duplicates (append (externs-es ls)
                                    (externs-e e)))]
