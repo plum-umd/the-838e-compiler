@@ -8,7 +8,7 @@
 
 ;; Our current word-size for compilation to WebAssembly is 4 bytes (32 bits),
 ;; and current heap addresses can potentially go from 0 to 2^26. But in order to
-;; avoid overwriting the stack which grows downward from the address 2^26 - 4,
+;; avoid overwriting the user stack which grows downward from the address 2^26 - 4,
 ;; we should not allow the heap addresses to go beyond 2^25 and also should not
 ;; allow the stack address to go below 2^25.
 
@@ -17,11 +17,11 @@
 ;; and 26 to 31 of addresses can be used as tag bits. We currently use bits 1,
 ;; 2, 29, 30, and 31 as tag bits (please see wtypes.rkt). Bit 32 is the sign bit.
 
-;; We have a stack in memory that grows downward from the highest address of our
-;; memory.  This is different from the implicit operand stack that the stack
+;; We have a user stack in memory that grows downward from the highest address of
+;; our memory.  This is different from the implicit operand stack that the stack
 ;; machine of WebAssembly uses.  The stack that we refer to should be clear from
-;; the context. Explicity, we use stack in memory (or mem.) to refer to the
-;; stack we have in memory, and the operand (or op.) stack to refer to the
+;; the context. Explicitly, we use stack in memory (or mem.) or user stack to refer
+;; to the stack we have in memory, and the operand (or op.) stack to refer to the
 ;; operand stack of WebAssembly.
 
 ;; $b is used as scratch register in compile-string, string-ref, and make string.
@@ -35,7 +35,7 @@
                `(func $sendResult (result i32)
                   (local $a i32)         ;; local var (used as virtual register)
                   (local $b i32)         ;; virtual register
-                  (local $c i32)         ;; virtual registe
+                  (local $c i32)         ;; virtual register
                   ,@(compile-e e '())))) 
        `(module
           (import "writeBytejs" "writeByte" (func $writeByte (param i32)))
@@ -288,7 +288,7 @@
       `(,@(compile-e e2 (cons #f c))
         ,@(assert-integer)
         local.set $b              ;; $ b = the integer of index
-        global.get $sp           ;; get the tagged str ptr from the stack in mem. 
+        global.get $sp           ;; get the tagged str ptr from the user stack 
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -325,7 +325,7 @@
       `(,@(compile-e e2 (cons #f c))
         ,@(assert-char)
         local.set $b              ;; $ b = the char parameter
-        global.get $sp       ;; get the first parameter (integer) from stack in mem.
+        global.get $sp       ;; get the first parameter (integer) from the user stack.
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -337,7 +337,7 @@
         if
         call $error
         end
-        global.get $hp             ;; put the heap ptr on op. stack
+        global.get $hp             ;; put the heap ptr on the operand stack.
         local.get $a
         i32.store               ;; store the length on the heap at str_addr = $hp
         global.get $hp           ;; create the tagged ptr to the str
@@ -412,7 +412,7 @@
 ;;           i32.const ,(* word-size (length xs))
 ;;           global.get $sp
 ;;           i32.add
-;;           global.set $sp      ;; consider changing the memory stack ptr
+;;           global.set $sp      ;; consider changing the user stack ptr
 ;;           local.get $a)))
                      
 
@@ -426,7 +426,7 @@
        global.get $sp          
        i32.const ,(* word-size (length c))
        i32.sub
-;;     i32.set $sp     ;; consider decrementing the mem. stack ptr (akin to push)
+;;     i32.set $sp     ;; consider decrementing the user stack ptr (akin to push)
 ;;     i32.get $sp
        local.get $a
        i32.store)
@@ -438,13 +438,13 @@
     ['() (error "undefined variable:" x)]
     [(cons y rest)
      (match (eq? x y)
-       [#t (* word-size (sub1 len-c))]   ;; consider changing the mem. stack ptr
+       [#t (* word-size (sub1 len-c))]   ;; consider changing the user stack ptr
        [#f (- (lookup x rest len-c) word-size)])]))
 
 ;; Id CEnv -> Wasm
 (define (compile-variable x c)
   (let ((i (lookup x c (length c))))
-    `(global.get $sp    ;; the local var for top address of start of stack in mem.
+    `(global.get $sp    ;; the local var for top address of start of user stack.
       i32.const ,i
       i32.sub          ;; top address - (word-size * ((length c) -  offset))
       i32.load)))
@@ -570,9 +570,9 @@
 
 (define (compile-call f es c)
   (let ((h (* word-size (length c))))
-   `(,@(compile-es es c)     ;; put the arguments on the stack
-     global.get $sp          ;; change stack ptr to point to top of stack in mem (to
-     i32.const ,h            ;; the addr after env c, where first arg to f is)
+   `(,@(compile-es es c)     ;; put the arguments on the user stack
+     global.get $sp          ;; change stack ptr to point to top of the user stack
+     i32.const ,h            ;; (to the addr after C env, where first arg to f is)
      i32.sub
      global.set $sp
      call ,f
@@ -593,7 +593,7 @@
     `(func ,wa-f (result i32)
        (local $a i32)         ;; local var (used as virtual register)
        (local $b i32)         ;; virtual register
-       (local $c i32)         ;; virtual registe 
+       (local $c i32)         ;; virtual register
        ,@(compile-e e (reverse xs)))))
 
 ;; Symbol -> Wasm Identifier

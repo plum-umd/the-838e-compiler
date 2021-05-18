@@ -22,8 +22,6 @@ int main (int argc, char *argv[]) {
     fp = fopen(cfilename, "a+");
     fputs("#include <stdlib.h>\r\n", fp);
     fputs("int main (int argc, char *argv[]) {\r\n", fp);
-    sprintf(line1, "%s %s%s %s%s", "\r\n   system(\"wat2wasm ", filename, ".wat -o ", filename, ".wasm\"); \r\n");
-    fputs(line1, fp);
     sprintf(line2, "%s %s%s %s%s", "   system(\"node ", buf, "/jsmain.js ", filename, ".wasm\"); \r\n}\r\n");
     fputs(line2, fp);
     fclose(fp);

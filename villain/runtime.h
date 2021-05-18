@@ -7,7 +7,7 @@ extern FILE* out;
 extern void (*error_handler)();
 
 // in words
-#define heap_size 3000000
+#define heap_size 333400
 extern int64_t *heap;
 
 #endif

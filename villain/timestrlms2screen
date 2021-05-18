@@ -1,0 +1,42 @@
+#!/bin/bash
+echo
+echo "making all the executables by command 'make -f mkexeslms all'"
+echo
+make -f mkexeslms all
+echo
+
+if [ $1 -eq 1 ]
+  then
+    time ./str1000000lms.run
+    echo "executed: time ./str1000000lms.run (compiler to x86 with C runtime, packed string representation)"
+  elif [ $1 -eq 2 ]
+  then  
+    time ./str1000000lms.wrun
+    echo "executed: time ./str1000000lms.wrun (compiler to Wasm with Node.js runtime)"
+  elif [ $1 -eq 3 ]
+  then
+    time wasmtime ./str1000000lms_2.wasm
+    echo "executed: time wasmtime ./str1000000lms_2.wasm (compiler to Wasm with WebAssembly and Wasmtime runtime [with use of fd_write function. please set in compile-wasm_2.rkt])"
+    echo "make sure \$process_string is called in \$process_result in compile-wasm_2.rkt"
+  elif [ $1 -eq 5 ]
+  then
+    time ./str1000000lms.3_run
+    echo "executed: time ./str1000000lms.3_run (compiler to x86 with C runtime, nonpacked simple string representation"
+  elif [ $1 -eq 4 ]
+  then
+    time wasmtime ./str1000000lms_2.wasm
+    echo "executed: time wasmtime ./str1000000lms_2.wasm (compiler to Wasm with WebAssembly and Wasmtime runtime [with use of print_codepoint function. please set in compile-wasm_2.rkt])"
+    echo "make sure \$process_string_with_print_codepoint is called in \$process_result in compile-wasm_2.rkt"
+   else
+    echo "No match"
+fi
+
+echo
+
+if [ "$2" = "clean" ]
+  then
+  echo "removing the files by commands 'make -f mkexeslms clean' and 'rm str1000000lms.wasm'"
+  echo
+  make -f mkexeslms clean
+  rm str1000000lms.wasm
+fi

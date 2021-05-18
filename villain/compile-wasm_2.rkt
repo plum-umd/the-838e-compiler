@@ -4,31 +4,31 @@
 
 (define word-size 4)  ;; in bytes
 
-;; This is a version of compile.wasm that uses WebAssembly code and wasmtime as
-;; the runtime rather than node js. This is a partial implementation of this runtime
+;; This is a version of compile.wasm that uses WebAssembly code and Wasmtime as
+;; the runtime rather than Node.js. This is a partial implementation of this runtime
 ;; for the purpose of delineating the method to write the runtime in WebAssembly.
 
 ;; Note about addressing and type tags:
 
-;; Memory addresses 0 to 19999999 are reserved for writing the data that
+;; Memory addresses 0 to 2^24 - 1 are reserved for writing the data that
 ;; fd_write uses to print strings
 
 ;; Our current word-size for compilation to WebAssembly is 4 bytes (32 bits),
-;; and current heap addresses can potentially go from 20000000 to 2^26. But in order to
+;; and current heap addresses can potentially go from 2^24 to 2^26 - 4. But in order to
 ;; avoid overwriting the stack which grows downward from the address 2^26 - 4,
 ;; we should not allow the heap addresses to go beyond 2^25 and also should not
 ;; allow the stack address to go below 2^25.
 
 ;; So, bits 1 and 2 of heap addresses from the right (LSB) are 0, and the
-;; component of addresses in bits 3 to 25 can go from 5000000 to 2^23. So, bits 1, 2,
+;; component of addresses in bits 3 to 25 can go from 2^22 to 2^23. So, bits 1, 2,
 ;; and 26 to 31 of addresses can be used as tag bits. We currently use bits 1,
 ;; 2, 29, 30, and 31 as tag bits (please see wtypes.rkt). Bit 32 is the sign bit.
 
 ;; We have a stack in memory that grows downward from the highest address of our
 ;; memory.  This is different from the implicit operand stack that the stack
 ;; machine of WebAssembly uses.  The stack that we refer to should be clear from
-;; the context. Explicity, we use stack in memory (or mem.) to refer to the
-;; stack we have in memory, and the operand (or op.) stack to refer to the
+;; the context. Explicitly, we use stack in memory (or mem.) or user stack to refer
+;; to the stack we have in memory, and the operand (or op.) stack to refer to the
 ;; operand stack of WebAssembly.
 
 ;; $b is used as scratch register in compile-string, string-ref, and make string.
@@ -42,7 +42,7 @@
                `(func $program (result i32)
                   (local $a i32)         ;; local var (used as virtual register)
                   (local $b i32)         ;; virtual register
-                  (local $c i32)         ;; virtual registe
+                  (local $c i32)         ;; virtual register
                   ,@(compile-e e '())))
            (main-fn
                `(func $main (export "_start") ;; Based on demo.wat in WASI tutorial
@@ -81,15 +81,15 @@
                   call $fd_write
                   drop
                   i32.const 10          ;; line feed (\n)
-                  call $print_codepoint ;; this function was added to wasmtime's
-                                        ;; rust source code (alternatively can only
+                  call $print_codepoint ;; this function was added to Wasmtime's
+                                        ;; Rust source code (alternatively can only
                                         ;; use $fd_write which is faster for printing
                                         ;; very long strings (such as 1000000 λs) but
                                         ;; can overflow the data section of memory and
                                         ;; overwrite the heap section of memory [which
                                         ;; we have set to start from memory address
-                                        ;; 5000000] for even longer strings [for example
-                                        ;; about > 2500000 λs])
+                                        ;; 2^24] for even longer strings [for example
+                                        ;; about > 2 ^23 = 8388608 λs])
                   drop
                   ))
            (process-result-fn
@@ -240,7 +240,7 @@
                       i32.load         ;; load the char in str_addr[i] to op. stack
                       i32.const ,char-shift
                       i32.shr_s
-;                      call $print_codepoint  ;; print the char. Alternative to using wasmtime
+;                      call $print_codepoint  ;; print the char. Alternative to using Wasmtime's
                                               ;; fd_write function. Implemented below in
                                               ;; $process_string_with_print_codepoint
 
@@ -278,7 +278,7 @@
                       ))
            (process-string-with-print_codepoint-fn
                 ;; Alternative shorter but slower way of printing a string
-                ;; using the print_codepoint function added to wasmtime.
+                ;; using the print_codepoint function added to Wasmtime.
                 ;; Its advantage is that it will not overflow the data section memory.
                `(func $process_string_with_print_codepoint (param $str-ptr i32) (result i32)
                       (local $a i32) 
@@ -476,21 +476,21 @@
           (export "memory" (memory 0))
           (global $sp (mut i32) (i32.const 67108860))  ;; global variable $sp is
                 ;; the stack ptr initially pointing to the top address in memory 0.
-          (global $hp (mut i32) (i32.const 5000000))  ;; global variable $hp is
-                           ;; the heap pointer with start addr of 5000000 in
+          (global $hp (mut i32) (i32.const 16777216))  ;; global variable $hp is
+                           ;; the heap pointer with start addr of 2^24 = 16777216 in
                            ;; memory 0. (this will allow strings of up to length
-                           ;; (2^25 - 5000000) / 4 = 7138608 to be stored on the
-                           ;; heap, if the upper bound of heap is set to be
+                           ;; (2^25 - 16777216) / 4 = 2^22 = 4194304 to be stored on
+                           ;; the heap, if the upper bound of heap is set to be
                            ;; 2^25, and if a larger heap and a smaller stack is
-                           ;; allocated, strings of up to length of about
-                           ;; 15000000 (given that in this WebAssembly implementation
+                           ;; allocated, strings of up to length of about 3 . 2^22 =
+                           ;; 12582912 (given that in this WebAssembly implementation
                            ;; we are not using a packed string representation and
                            ;; each character in the string takes one word (4 bytes
-                           ;; in this implementation).
-                           ;; But for a string of about > 2500000 λs (with each λ taking
+                           ;; in this implementation)).
+                           ;; But for a string of about > 2^23 λs (with each λ taking
                            ;; 2 bytes in UTF-8 representation), WASI fd_write cannot
                            ;; be used for printing these strings, because we can write
-                           ;; the data for fd_write in memory addresses 8 to 5000000,
+                           ;; the data for fd_write in memory addresses 8 to 2^24,
                            ;; and the data for such strings will overflow this
                            ;; data section into the memory allocated for the heap.
             ,main-fn
@@ -741,7 +741,7 @@
       `(,@(compile-e e2 (cons #f c))
         ,@(assert-integer)
         local.set $b              ;; $ b = the integer of index
-        global.get $sp           ;; get the tagged str ptr from the stack in mem. 
+        global.get $sp           ;; get the tagged str ptr from the user stack 
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -780,7 +780,7 @@
       `(,@(compile-e e2 (cons #f c))
         ,@(assert-char)
         local.set $b              ;; $ b = the char parameter
-        global.get $sp       ;; get the first parameter (integer) from stack in mem.
+        global.get $sp       ;; get the first parameter (integer) from the user stack.
         i32.const ,(* word-size (length c))
         i32.sub
         i32.load
@@ -868,7 +868,7 @@
 ;;           i32.const ,(* word-size (length xs))
 ;;           global.get $sp
 ;;           i32.add
-;;           global.set $sp      ;; consider changing the memory stack ptr
+;;           global.set $sp      ;; consider changing the user stack ptr
 ;;           local.get $a)))
                      
 
@@ -882,7 +882,7 @@
        global.get $sp          
        i32.const ,(* word-size (length c))
        i32.sub
-;;     i32.set $sp     ;; consider decrementing the mem. stack ptr (akin to push)
+;;     i32.set $sp     ;; consider decrementing the user stack ptr (akin to push)
 ;;     i32.get $sp
        local.get $a
        i32.store)
@@ -894,13 +894,13 @@
     ['() (error "undefined variable:" x)]
     [(cons y rest)
      (match (eq? x y)
-       [#t (* word-size (sub1 len-c))]   ;; consider changing the mem. stack ptr
+       [#t (* word-size (sub1 len-c))]   ;; consider changing the user stack ptr
        [#f (- (lookup x rest len-c) word-size)])]))
 
 ;; Id CEnv -> Wasm
 (define (compile-variable x c)
   (let ((i (lookup x c (length c))))
-    `(global.get $sp    ;; the local var for top address of start of stack in mem.
+    `(global.get $sp    ;; the local var for top address of start of user stack.
       i32.const ,i
       i32.sub          ;; top address - (word-size * ((length c) -  offset))
       i32.load)))
@@ -1033,7 +1033,7 @@
 (define (compile-call f es c)
   (let ((h (* word-size (length c))))
    `(,@(compile-es es c)     ;; put the arguments on the stack
-     global.get $sp          ;; change stack ptr to point to top of stack in mem (to
+     global.get $sp          ;; change stack ptr to point to top of user stack (to
      i32.const ,h            ;; the addr after env c, where first arg to f is)
      i32.sub
      global.set $sp
@@ -1055,7 +1055,7 @@
     `(func ,wa-f (result i32)
        (local $a i32)         ;; local var (used as virtual register)
        (local $b i32)         ;; virtual register
-       (local $c i32)         ;; virtual registe 
+       (local $c i32)         ;; virtual register 
        ,@(compile-e e (reverse xs)))))
 
 ;; Symbol -> Wasm Identifier
