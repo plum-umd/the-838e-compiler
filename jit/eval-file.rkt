@@ -2,6 +2,9 @@
 (require "eval.rkt")
 (provide eval-file)
 
+
+;; NOTE: Requires the jit directory to be installed via raco
+;; Takes an input .rkt file and applies partial evaluation, outputting the result to the output file.
 (define (eval-file input output)
   (let* ((f-in (open-input-file input))
         (f-content (read f-in))
