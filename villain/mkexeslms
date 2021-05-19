@@ -1,0 +1,19 @@
+UNAME := $(shell uname)
+.PHONY: clean
+
+ifeq ($(UNAME), Darwin)
+  format=macho64
+else
+  format=elf64
+endif
+
+all:
+	make str1000000lms.run
+	make -f makewat str1000000lms.wrun
+	make -f makewat str1000000lms.wasm2
+	make -f 3_make str1000000lms.3_run
+
+clean:
+	rm -f str1000000lms.run str1000000lms.wrun str1000000lms.wat str1000000lms.wasm
+	rm -f str1000000lms_2.wasm str1000000lms_2.wat 
+	rm -f str1000000lms.3_run 

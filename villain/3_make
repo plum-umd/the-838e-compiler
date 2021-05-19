@@ -1,0 +1,33 @@
+UNAME := $(shell uname)
+.PHONY: test
+
+ifeq ($(UNAME), Darwin)
+  format=macho64
+else
+  format=elf64
+endif
+
+%.3_run: %.3_o 3_runtime.o
+	gcc 3_runtime.o $< -o $@
+	rm 3_*.o
+
+3_runtime.o: 3_main.o 3_char.o 3_io.o
+	ld -r 3_main.o 3_char.o 3_io.o -o 3_runtime.o
+
+3_main.o: 3_main.c 3_types.h 3_runtime.h
+	gcc -fPIC -c 3_main.c -o 3_main.o
+
+3_char.o: 3_char.c 3_types.h
+	gcc -fPIC -c 3_char.c -o 3_char.o
+
+3_io.o: 3_io.c 3_runtime.h
+	gcc -fPIC -c 3_io.c -o 3_io.o
+
+%.3_o: %.3_s
+	nasm -f $(format) -o $@ $<
+
+%.3_s: %.rkt
+	racket -t 3_compile-file.rkt -m $< > $@
+
+clean:
+	rm 3_*.o *.3_s *.3_run

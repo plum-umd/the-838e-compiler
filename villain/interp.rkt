@@ -212,7 +212,7 @@
     ['() '()]
     [(cons e es)
      (match (interp-env e r ds)
-       ['err e]
+       ['err 'err]
        [v (cons v (interp-env* es r ds))])]))
 
 ;; Defns -> Defns

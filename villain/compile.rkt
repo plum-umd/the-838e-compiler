@@ -412,6 +412,7 @@
       [(Prim1 p e)        (fvs e)]
       [(Prim2 p e1 e2)    (append (fvs e1) (fvs e2))]
       [(Prim3 p e1 e2 e3) (append (fvs e1) (fvs e2) (fvs e3))]
+      [(Mps p rest)       (apply append (map fvs rest))]
       [(If e1 e2 e3)      (append (fvs e1) (fvs e2) (fvs e3))]
       [(Begin e1 e2)      (append (fvs e1) (fvs e2))]
       [(Let x e1 e2)      (append (apply append (map fvs e1))
@@ -458,6 +459,7 @@
     [(Prim1 p e)        (λs e)]
     [(Prim2 p e1 e2)    (append (λs e1) (λs e2))]
     [(Prim3 p e1 e2 e3) (append (λs e1) (λs e2) (λs e3))]
+    [(Mps p rest)       (apply append (map λs rest))]
     [(If e1 e2 e3)      (append (λs e1) (λs e2) (λs e3))]
     [(Begin e1 e2)      (append (λs e1) (λs e2))]
     [(Let x e1 e2)      (append (apply append (map λs e1)) (λs e2))]

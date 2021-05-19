@@ -192,6 +192,9 @@
 (instruct Movsd (dst src) check:xsrc-xdest)
 (instruct Offset (r i)     check:offset)
 (instruct Extern (x)       check:label-symbol)
+;; A higher-level intermediate instruction
+;; Translated in compile-intmd-utils_2.rkt
+(instruct ICall   (x)      check:target)
 
 
 (provide offset? register? xregister? instruction? label?)
@@ -246,6 +249,8 @@
       (Addsd? x)
       (Subsd? x)
       (Movsd? x)
+      ;; higher-level intmd instruction
+      (ICall? x)
       )
   )
 

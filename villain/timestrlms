@@ -1,0 +1,33 @@
+#!/bin/bash
+echo
+echo "making all the executables by command 'make -f mkexeslms all'"
+echo
+make -f mkexeslms all
+echo
+echo "timing ${1} times"
+echo
+for count in $(seq 1 $1)
+do
+echo "timing number $count"
+echo
+echo "time ./str1000000lms.run > temp (compiler to x86 with C runtime, packed string representation)"
+time ./str1000000lms.run > temp
+echo
+echo "time ./str1000000lms.wrun > temp (compiler to Wasm with Node.js runtime)"
+time ./str1000000lms.wrun > temp
+echo
+echo "time wasmtime ./str1000000lms_2.wasm > temp (compiler to Wasm with WebAssembly and Wasmtime runtime using fd_write function)"
+time wasmtime ./str1000000lms_2.wasm > temp
+echo
+echo "time ./str1000000lms.3_run > temp (compiler to x86 with C runtime, nonpacked simple string representation"
+time ./str1000000lms.3_run > temp
+echo
+done
+
+if [ "$2" = "clean" ]
+  then
+  echo "removing the files by commands 'make -f mkexeslms clean' 'rm str1000000lms.wasm'"
+  echo
+  make -f mkexeslms clean
+  rm str1000000lms.wasm
+fi
