@@ -16,7 +16,7 @@
     (+ (* y w) x))
 
   (define (draw x y t)
-    (if (eq? (modulo (bxor (bxor x y) (>> t 10)) 11) 0)
+    (if (zero? (modulo (bxor (bxor x y) (>> t 10)) 11))
       255 0))
 
   (define (render fb coords w t)
