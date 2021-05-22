@@ -15,29 +15,28 @@
   (define (coord->idx x y w)
     (+ (* y w) x))
 
-  (define (render fb coords w)
+  (define (draw x y t)
+    (if (eq? (modulo (bxor (bxor x y) (>> t 10)) 11) 0)
+      255 0))
+
+  (define (render fb coords w t)
     (match coords
       ['() (void)]
       [(cons c cs)
        (let ([x (car c)]
              [y (cdr c)])
-          (if (= (modulo (* (sdl/get-tick)
-                           (+ x y))
-                         2) 
-                 0)
-            (vector-set! fb (coord->idx (car c) (cdr c) w) 255)
-            (vector-set! fb (coord->idx (car c) (cdr c) w) 0))
-          (render fb cs w))]))
+         (vector-set! fb (coord->idx x y w) (draw x y t))
+         (render fb cs w t))]))
 
   (define (render-loop fb coords w)
     (sdl/poll-events)
-    (render fb coords w)
+    (render fb coords w (sdl/get-tick))
     (sdl/render-fb fb)
     (render-loop fb coords w))
 
-  (let ([width 32]
-        [height 32]
-        [scale 8])
+  (let ([width 256]
+        [height 256]
+        [scale 3])
     (let ([fb (make-vector (* width height) 0)]
           [coords (mk-coords width height)])
 

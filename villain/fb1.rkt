@@ -37,18 +37,16 @@
          (render fb cs w))]))
 
   (define (render-loop fb coords w)
-    (sdl/pull-events)
+    (sdl/poll-events)
     (render fb coords w)
     (sdl/render-fb fb)
     (render-loop fb coords w))
 
-  (let ([width 256.0]
-        [height 256.0]
-        [scale 3.0])
-    (let ([w (exact-truncate width)]
-          [h (exact-truncate height)])
-      (let ([fb (make-vector (* w h) 0)]
-            [coords (mk-coords w h)])
+  (let ([width 256]
+        [height 256]
+        [scale 3])
+    (let ([fb (make-vector (* width height) 0)]
+          [coords (mk-coords width height)])
 
-        (sdl/init width height scale)
-        (render-loop fb coords w)))))
+      (sdl/init width height scale)
+      (render-loop fb coords width))))

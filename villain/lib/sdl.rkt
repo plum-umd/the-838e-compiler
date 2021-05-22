@@ -1,14 +1,14 @@
 #lang racket
 (provide sdl/init
-         sdl/pull-events
+         sdl/poll-events
          sdl/get-tick
          sdl/render-fb)
 
 (define (sdl/init width height scale)
   (ccall "sdl_init" width height scale))
 
-(define (sdl/pull-events)
-  (ccall "sdl_pull_events"))
+(define (sdl/poll-events)
+  (ccall "sdl_poll_events"))
 
 (define (sdl/get-tick)
   (ccall "sdl_get_tick"))
